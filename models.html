@@ -89,7 +89,7 @@
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
 </ul>
@@ -126,7 +126,7 @@
 <span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
    <span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or path to HF model checkpoint</span>
    <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                   <span class="c1"># supported APIs are: mlc, awq, hf</span>
-   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;abc123xyz456&#39;</span><span class="p">,</span>    <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
+   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;hf_abc123def&#39;</span><span class="p">,</span>    <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
    <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>      <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
 <span class="p">)</span>
 
@@ -136,6 +136,14 @@
    <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>You can run text completion from the command-line like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.completion<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--quantization<span class="w"> </span>q4f16_ft<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--prompt<span class="w"> </span><span class="s1">&#39;Once upon a time,&#39;</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="chat.html"><span class="std std-doc">Chat</span></a> section for examples of running multi-turn chat.</p>
 <section id="supported-architectures">
 <h2>Supported Architectures<a class="headerlink" href="#supported-architectures" title="Link to this heading"></a></h2>
 <ul class="simple">

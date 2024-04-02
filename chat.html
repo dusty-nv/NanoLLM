@@ -72,7 +72,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
 </ul>
@@ -103,16 +103,27 @@
              
   <section id="chat">
 <h1>Chat<a class="headerlink" href="#chat" title="Link to this heading"></a></h1>
-<p>This page includes information about managing multi-turn chat sessions, templating, and maintaining the embedding history.</p>
+<p>This page includes information about managing multi-turn chat sessions, templating, and maintaining the embedding history.  Here’s how to run it interactively from the terminal:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--api<span class="w"> </span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--quantization<span class="w"> </span>q4f16_ft
+</pre></div>
+</div>
+<p>If you load a multimodal model (like <code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code>), you can enter image filenames or URLs followed by a query to chat about images.  Enter <code class="docutils literal notranslate"><span class="pre">/reset</span></code> to reset the chat history.</p>
 <section id="templates">
 <h2>Templates<a class="headerlink" href="#templates" title="Link to this heading"></a></h2>
-<p>Built-in chat templates that are automatically determined from the model type, or settable with the <code class="docutils literal notranslate"><span class="pre">--chat-template</span></code> command-line argument:</p>
-<ul class="simple">
-<li><p>llama2</p></li>
-<li><p>vicuna</p></li>
-<li><p>ChatML</p></li>
-</ul>
-<p>See <code class="docutils literal notranslate"><span class="pre">nano_llm/chat/templates.py</span></code> for the template definitions.</p>
+<p>These are the built-in chat templates that are automatically determined from the model type, or settable with the <code class="docutils literal notranslate"><span class="pre">--chat-template</span></code> command-line argument:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">llama</span><span class="o">-</span><span class="mi">2</span>
+<span class="o">*</span> <span class="n">vicuna</span><span class="o">-</span><span class="n">v0</span><span class="p">,</span> <span class="n">vicuna</span><span class="o">-</span><span class="n">v1</span>
+<span class="o">*</span> <span class="n">stablelm</span><span class="o">-</span><span class="n">zephyr</span>
+<span class="o">*</span> <span class="n">chat</span><span class="o">-</span><span class="n">ml</span>
+<span class="o">*</span> <span class="n">sheared</span><span class="o">-</span><span class="n">llama</span>
+<span class="o">*</span> <span class="n">nous</span><span class="o">-</span><span class="n">obsidian</span>
+<span class="o">*</span> <span class="n">phi</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="n">chat</span><span class="p">,</span> <span class="n">phi</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="n">instruct</span>
+<span class="o">*</span> <span class="n">gemma</span>
+</pre></div>
+</div>
+<p>See <code class="docutils literal notranslate"><span class="pre">nano_llm/chat/templates.py</span></code> for them.  You can also specify a JSON file containing the template.</p>
 </section>
 <section id="chat-history">
 <h2>Chat History<a class="headerlink" href="#chat-history" title="Link to this heading"></a></h2>

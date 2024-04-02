@@ -52,7 +52,7 @@
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
 </ul>
@@ -83,7 +83,7 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
-<p>The recommended installation method is by running the Docker container image built by <a class="reference external" href="https://github.com/dusty-nv/jetson-containers">jetson-containers</a>.  First, clone that repo:</p>
+<p>To use the optimized API’s like MLC and AWQ built with CUDA, the recommended installation method is by running the Docker container image built by <a class="reference external" href="https://github.com/dusty-nv/jetson-containers">jetson-containers</a>.  First, clone that repo:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/dusty-nv/jetson-containers
 <span class="nb">cd</span><span class="w"> </span>jetson-containers
 pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
@@ -94,6 +94,19 @@ pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </
 </pre></div>
 </div>
 <p>This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code> for JetPack 6.0 DP)</p>
+<p>Once in the container, you should be able to <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">nano_llm</span></code> in a Python3 interpreter, and run the various example commands shown on this page like:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span>--quantization<span class="w"> </span>q4f16_ft
+</pre></div>
+</div>
+<p>Or you can run the container &amp; chat command in one go like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span>--env<span class="w"> </span><span class="nv">HUGGINGFACE_TOKEN</span><span class="o">=</span>hf_abc123def<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">$(</span>./autotag<span class="w"> </span>nano_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--quantization<span class="w"> </span>q4f16_ft
+</pre></div>
+</div>
+<p>Setting your <code class="docutils literal notranslate"><span class="pre">$HUGGINGFACE_TOKEN</span></code> is for models requiring authentication to download (like Llama-2)</p>
 </section>
 
 

@@ -8,7 +8,7 @@ from nano_llm import NanoLLM
 model = NanoLLM.from_pretrained(
    "meta-llama/Llama-2-7b-hf",  # HuggingFace repo/model name, or path to HF model checkpoint
    api='mlc',                   # supported APIs are: mlc, awq, hf
-   api_token='abc123xyz456',    # HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)
+   api_token='hf_abc123def',    # HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)
    quantization='q4f16_ft'      # q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights
 )
 
@@ -17,6 +17,17 @@ response = model.generate("Once upon a time,", max_new_tokens=128)
 for token in response:
    print(token, end='', flush=True)
 ```
+
+You can run text completion from the command-line like this:
+
+```bash
+python3 -m nano_llm.completion --api=mlc \
+  --model meta-llama/Llama-2-7b-chat-hf \
+  --quantization q4f16_ft \
+  --prompt 'Once upon a time,'
+```
+
+See the [Chat](chat.md) section for examples of running multi-turn chat.
 
 ## Supported Architectures
 

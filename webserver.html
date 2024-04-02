@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Websockets &mdash; NanoLLM 24.4 documentation</title>
+  <title>Webserver &mdash; NanoLLM 24.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -52,8 +52,8 @@
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Websockets</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#webserver-api">Webserver API</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Webserver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#server-api">Server API</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.web.WebServer"><code class="docutils literal notranslate"><span class="pre">WebServer</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_JSON"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_JSON</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_TEXT"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_TEXT</span></code></a></li>
@@ -90,7 +90,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Websockets</li>
+      <li class="breadcrumb-item active">Webserver</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/webserver.md.txt" rel="nofollow"> View page source</a>
       </li>
@@ -100,11 +100,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="websockets">
-<h1>Websockets<a class="headerlink" href="#websockets" title="Link to this heading"></a></h1>
-<p>There is a extensible webserver implemented using Flask and websockets that allows agents to serve frontend HTML pages, along with bi-directional messaging using websockets, including custom message types specific to each application.</p>
-<section id="webserver-api">
-<h2>Webserver API<a class="headerlink" href="#webserver-api" title="Link to this heading"></a></h2>
+  <section id="webserver">
+<h1>Webserver<a class="headerlink" href="#webserver" title="Link to this heading"></a></h1>
+<p>This is an extensible webserver implemented using Flask and websockets that allows agents to serve frontend HTML pages, along with bi-directional messaging using websockets, including custom message types specific to each application.</p>
+<section id="server-api">
+<h2>Server API<a class="headerlink" href="#server-api" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="nano_llm.web.WebServer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebServer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">web_host</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'0.0.0.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8050</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ws_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">49000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_cert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index.html'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mounts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'/tmp/uploads':</span> <span class="pre">'/uploads'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_callback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_trace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer" title="Link to this definition"></a></dt>
