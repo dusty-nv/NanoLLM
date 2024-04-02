@@ -21,3 +21,15 @@ Once in the container, you should be able to `import nano_llm` in a Python3 inte
 ```bash
 python3 -m nano_llm.chat --model meta-llama/Llama-2-7b-chat-hf --api=mlc --quantization q4f16_ft
 ```
+
+Or you can run the container & chat command in one go like this:
+
+```bash
+./run.sh --env HUGGINGFACE_TOKEN=hf_abc123def \
+  $(./autotag nano_llm) \
+  python3 -m nano_llm.chat --api=mlc \
+    --model meta-llama/Llama-2-7b-chat-hf \
+    --quantization q4f16_ft
+```
+
+Setting your `$HUGGINGFACE_TOKEN` is for models requiring authentication to download (like Llama-2)
