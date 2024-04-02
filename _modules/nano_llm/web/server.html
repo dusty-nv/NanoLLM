@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nano_llm.web.server &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">nano_llm.web.server</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for nano_llm.web.server</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">PIL</span>
+<span class="kn">import</span> <span class="nn">ssl</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">flask</span>
+<span class="kn">import</span> <span class="nn">queue</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span>
+
+<span class="kn">from</span> <span class="nn">websockets.sync.server</span> <span class="kn">import</span> <span class="n">serve</span> <span class="k">as</span> <span class="n">websocket_serve</span>
+<span class="kn">from</span> <span class="nn">websockets.exceptions</span> <span class="kn">import</span> <span class="n">ConnectionClosed</span>
+
+<div class="viewcode-block" id="WebServer">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer">[docs]</a>
+<span class="k">class</span> <span class="nc">WebServer</span><span class="p">():</span>
+    <span class="n">MESSAGE_JSON</span> <span class="o">=</span> <span class="mi">0</span>     <span class="c1">#: JSON websocket message (dict)</span>
+    <span class="n">MESSAGE_TEXT</span> <span class="o">=</span> <span class="mi">1</span>     <span class="c1">#: Text websocket message (str)</span>
+    <span class="n">MESSAGE_BINARY</span> <span class="o">=</span> <span class="mi">2</span>   <span class="c1">#: Binary websocket message (bytes)</span>
+    <span class="n">MESSAGE_FILE</span> <span class="o">=</span> <span class="mi">3</span>     <span class="c1">#: File upload from client (bytes)</span>
+    <span class="n">MESSAGE_AUDIO</span> <span class="o">=</span> <span class="mi">4</span>    <span class="c1">#: Audio samples (bytes, int16)</span>
+    <span class="n">MESSAGE_IMAGE</span> <span class="o">=</span> <span class="mi">5</span>    <span class="c1">#: Image message (PIL.Image)</span>
+
+<div class="viewcode-block" id="WebServer.__init__">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">web_host</span><span class="o">=</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="n">web_port</span><span class="o">=</span><span class="mi">8050</span><span class="p">,</span> <span class="n">ws_port</span><span class="o">=</span><span class="mi">49000</span><span class="p">,</span>
+                 <span class="n">ssl_cert</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ssl_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="s1">&#39;index.html&#39;</span><span class="p">,</span>
+                 <span class="n">mounts</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;/tmp/uploads&#39;</span><span class="p">:</span><span class="s1">&#39;/uploads&#39;</span><span class="p">},</span> <span class="n">msg_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">web_trace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create HTTP/HTTPS Flask webserver with websocket messaging.</span>
+<span class="sd">    </span>
+<span class="sd">        Use this by either creating an instance and providing ``msg_callback``,</span>
+<span class="sd">        or inherit from it and implement ``on_message()`` in a subclass.</span>
+<span class="sd">        You can also add Flask routes to Webserver.app before ``start()`` is called.</span>
+<span class="sd">    </span>
+<span class="sd">        Args:</span>
+<span class="sd">        </span>
+<span class="sd">          web_host (str): network interface to bind to (0.0.0.0 for all)</span>
+<span class="sd">          web_port (int): port to serve HTTP/HTTPS webpages on</span>
+<span class="sd">          ws_port (int): port to use for websocket communication</span>
+<span class="sd">          ssl_cert (str): path to PEM-encoded SSL/TLS cert file for enabling HTTPS</span>
+<span class="sd">          ssl_key (str): path to PEM-encoded SSL/TLS cert key for enabling HTTPS</span>
+<span class="sd">          root (str): the root directory for serving site files (should have static/ and template/)</span>
+<span class="sd">          index (str): the name of the site&#39;s index page (should be under web/templates)</span>
+<span class="sd">          upload_dir (str): the path to save files uploaded from client (or None to disable uploads)</span>
+<span class="sd">          msg_callback (callable): websocket message handler (see WebServer.on_message() for signature)</span>
+<span class="sd">          web_trace (bool): if true, additional debug messages will be printed when --log-level=debug</span>
+<span class="sd">          </span>
+<span class="sd">        The kwargs are passed as variables to the Jinja render_template() used in the index file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">web_host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">web_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">root</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">trace</span> <span class="o">=</span> <span class="n">web_trace</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mounts</span> <span class="o">=</span> <span class="n">mounts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upload_dir</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alert_count</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;../web&#39;</span><span class="p">))</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_rx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_tx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span> <span class="o">=</span> <span class="n">msg_callback</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">]</span>
+            
+        <span class="c1"># flask server</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">flask</span><span class="o">.</span><span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> 
+            <span class="n">static_folder</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;static&#39;</span><span class="p">),</span>
+            <span class="n">template_folder</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;templates&#39;</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># setup default index route</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">view_func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">send_index</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+        
+        <span class="c1"># setup mounted paths</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">mount</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mounts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;/tmp&#39;</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;upload&#39;</span> <span class="ow">in</span> <span class="n">path</span> <span class="ow">or</span> <span class="s1">&#39;upload&#39;</span> <span class="ow">in</span> <span class="n">mount</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">upload_dir</span> <span class="o">=</span> <span class="n">path</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mounting webserver path </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">mount</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mount</span><span class="si">}</span><span class="s2">/&lt;path:path&gt;&quot;</span><span class="p">,</span> <span class="n">view_func</span><span class="o">=</span><span class="n">SendFromDirectory</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">send</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+            
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;webserver root directory: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="si">}</span><span class="s2">   upload directory: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">upload_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                 
+        <span class="c1"># SSL / HTTPS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssl_key</span> <span class="o">=</span> <span class="n">ssl_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssl_cert</span> <span class="o">=</span> <span class="n">ssl_cert</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">web_protocol</span> <span class="o">=</span> <span class="s2">&quot;http&quot;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssl_cert</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssl_key</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">web_protocol</span> <span class="o">=</span> <span class="s2">&quot;https&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">create_default_context</span><span class="p">(</span><span class="n">ssl</span><span class="o">.</span><span class="n">Purpose</span><span class="o">.</span><span class="n">CLIENT_AUTH</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span><span class="o">.</span><span class="n">load_cert_chain</span><span class="p">(</span><span class="n">certfile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssl_cert</span><span class="p">,</span> <span class="n">keyfile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssl_key</span><span class="p">)</span>
+            
+        <span class="c1"># websocket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ws_port</span> <span class="o">=</span> <span class="n">ws_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ws_port&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ws_port</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ws_server</span> <span class="o">=</span> <span class="n">websocket_serve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_websocket</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ws_port</span><span class="p">,</span> <span class="n">ssl_context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ws_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ws_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">(),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">web_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">ssl_context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_reloader</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># https://stackoverflow.com/a/52282788</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;asyncio&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;asyncio.coroutines&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;websockets.server&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;websockets.protocol&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebServer.start">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer.start">[docs]</a>
+    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Call this to start the webserver listening for new connections.</span>
+<span class="sd">        It will start new worker threads and then return control to the user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;starting webserver @ </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">web_protocol</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ws_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">web_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="WebServer.add_message_handler">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer.add_message_handler">[docs]</a>
+    <span class="k">def</span> <span class="nf">add_message_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Register a message handler that will be called when new websocket messages are recieved.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">callback</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span></div>
+
+            
+<div class="viewcode-block" id="WebServer.on_message">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer.on_message">[docs]</a>
+    <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">payload_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="n">MESSAGE_JSON</span><span class="p">,</span> <span class="n">msg_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handler for recieved websocket messages. Implement this in a subclass to process messages,</span>
+<span class="sd">        otherwise ``msg_callback`` needs to be provided during initialization.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">        </span>
+<span class="sd">          payload (dict|str|bytes): If this is a JSON message, will be a dict.</span>
+<span class="sd">                                    If this is a text message, will be a string.</span>
+<span class="sd">                                    If this is a binary message, will be a bytes array.  </span>
+<span class="sd">                                      </span>
+<span class="sd">          payload_size (int): size of the payload (in bytes)              </span>
+<span class="sd">          msg_type (int): MESSAGE_JSON (0), MESSAGE_TEXT (1), MESSAGE_BINARY (2)</span>
+<span class="sd">          msg_id (int): the monotonically-increasing message ID number</span>
+<span class="sd">          metadata (str): message-specific string or other data</span>
+<span class="sd">          timestamp (int): time that the message was sent</span>
+<span class="sd">          path (str): if this is a file or image upload, the file path on the server</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">callback</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">:</span>
+                <span class="n">callback</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">payload_size</span><span class="o">=</span><span class="n">payload_size</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="n">msg_type</span><span class="p">,</span> <span class="n">msg_id</span><span class="o">=</span><span class="n">msg_id</span><span class="p">,</span> 
+                         <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2"> did not implement on_message or have a msg_callback provided&quot;</span><span class="p">)</span></div>
+
+     
+<div class="viewcode-block" id="WebServer.send_message">
+<a class="viewcode-back" href="../../../webserver.html#nano_llm.web.WebServer.send_message">[docs]</a>
+    <span class="k">def</span> <span class="nf">send_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send a websocket message to client.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">timestamp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span>
+         
+        <span class="n">encoding</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="nb">type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="nb">type</span> <span class="o">=</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span>
+                <span class="n">encoding</span> <span class="o">=</span> <span class="s1">&#39;utf-8&#39;</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                <span class="nb">type</span> <span class="o">=</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_BINARY</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">type</span> <span class="o">=</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_JSON</span>
+                <span class="n">encoding</span> <span class="o">=</span> <span class="s1">&#39;ascii&#39;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;send_message() - no websocket clients connected, dropping </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msg_type_str</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span><span class="si">}</span><span class="s2"> message&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace</span> <span class="ow">and</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">isEnabledFor</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sending </span><span class="si">{</span><span class="n">WebServer</span><span class="o">.</span><span class="n">msg_type_str</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span><span class="si">}</span><span class="s2"> websocket message (type=</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2"> size=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span> <span class="o">&lt;=</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span><span class="p">:</span>
+                <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+                    
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_JSON</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># json.dumps() might have already been called</span>
+            <span class="c1">#print(&#39;sending JSON&#39;, payload)</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">encoding</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+                
+        <span class="c1"># do we even need this queue at all and can the websocket just send straight away?</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+                <span class="c1">#</span>
+                <span class="c1"># 32-byte message header format:</span>
+                <span class="c1">#</span>
+                <span class="c1">#   0   uint64  message_id    (message_count_tx)</span>
+                <span class="c1">#   8   uint64  timestamp     (milliseconds since Unix epoch)</span>
+                <span class="c1">#   16  uint16  magic_number  (42)</span>
+                <span class="c1">#   18  uint16  message_type  (0=json, 1=text, &gt;=2 binary)</span>
+                <span class="c1">#   20  uint32  payload_size  (in bytes)</span>
+                <span class="c1">#   24  uint32  unused        (padding)</span>
+                <span class="c1">#   28  uint32  unused        (padding)</span>
+                <span class="c1">#</span>
+                <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;!QQHHIII&#39;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_tx</span><span class="p">,</span>
+                    <span class="nb">int</span><span class="p">(</span><span class="n">timestamp</span><span class="p">),</span>
+                    <span class="mi">42</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">),</span>
+                    <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">payload</span>
+            <span class="p">]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_tx</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;failed to send websocket message to client (</span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span></div>
+
+    
+    <span class="k">def</span> <span class="nf">send_alert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">&#39;warning&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">3.5</span><span class="p">):</span>
+        <span class="n">alert</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">alert_count</span><span class="p">,</span>
+            <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%-I:%M:%S&#39;</span><span class="p">),</span>
+            <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">message</span><span class="p">,</span>
+            <span class="s1">&#39;level&#39;</span><span class="p">:</span> <span class="n">level</span><span class="p">,</span>
+            <span class="s1">&#39;category&#39;</span><span class="p">:</span> <span class="n">category</span><span class="p">,</span>
+            <span class="s1">&#39;timeout&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">timeout</span><span class="o">*</span><span class="mi">1000</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_message</span><span class="p">({</span><span class="s1">&#39;alert&#39;</span><span class="p">:</span> <span class="n">alert</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alert_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alert_count</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">alert</span>
+        
+    <span class="k">def</span> <span class="nf">on_websocket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">websocket</span><span class="p">):</span>      
+        <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span> <span class="o">=</span> <span class="n">websocket</span>  <span class="c1"># TODO handle multiple clients</span>
+        <span class="n">remote_address</span> <span class="o">=</span> <span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;new websocket connection from </span><span class="si">{</span><span class="n">remote_address</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        # empty the queue from before the connection was made</span>
+<span class="sd">        # (otherwise client will be flooded with old messages)</span>
+<span class="sd">        # TODO implement self.connected so the ws_queue doesn&#39;t grow so large without webclient connected...</span>
+<span class="sd">        while True:</span>
+<span class="sd">            try:</span>
+<span class="sd">                self.ws_queue.get(block=False)</span>
+<span class="sd">            except queue.Empty:</span>
+<span class="sd">                break</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">callback</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_callback</span><span class="p">:</span>
+                <span class="n">callback</span><span class="p">({</span><span class="s1">&#39;client_state&#39;</span><span class="p">:</span> <span class="s1">&#39;connected&#39;</span><span class="p">},</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">*</span><span class="mi">1000</span><span class="p">))</span>
+            
+        <span class="c1">#listener_thread = threading.Thread(target=self.websocket_listener, args=[websocket], daemon=True)</span>
+        <span class="c1">#listener_thread.start()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">websocket_listener</span><span class="p">(</span><span class="n">websocket</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ConnectionClosed</span> <span class="k">as</span> <span class="n">closed</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;websocket connection with </span><span class="si">{</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> was closed&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span> <span class="o">==</span> <span class="n">websocket</span><span class="p">:</span> <span class="c1"># if the client refreshed, the new websocket may already be created</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">websocket</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">              </span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        while True:</span>
+<span class="sd">            try:</span>
+<span class="sd">                websocket.send(self.ws_queue.get())</span>
+<span class="sd">            except ConnectionClosed as closed:</span>
+<span class="sd">                logging.info(f&quot;websocket connection with {remote_address} was closed&quot;)</span>
+<span class="sd">                return</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+    <span class="k">def</span> <span class="nf">websocket_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">websocket</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;listening on websocket connection from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">header_size</span> <span class="o">=</span> <span class="mi">32</span>
+            
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">websocket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;dropping text-mode websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s1"> &quot;</span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                <span class="k">continue</span>
+                
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">header_size</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dropping invalid websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> (size=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+                
+            <span class="n">msg_id</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">magic_number</span><span class="p">,</span> <span class="n">msg_type</span><span class="p">,</span> <span class="n">payload_size</span> <span class="o">=</span> \
+                <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="s1">&#39;!QQHHI&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+            
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="mi">32</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="n">magic_number</span> <span class="o">!=</span> <span class="mi">42</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dropping invalid websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> (magic_number=</span><span class="si">{</span><span class="n">magic_number</span><span class="si">}</span><span class="s2"> size=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">msg_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_rx</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;recieved websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> with out-of-order ID </span><span class="si">{</span><span class="n">msg_id</span><span class="si">}</span><span class="s2">  (last=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msg_count_rx</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_rx</span> <span class="o">=</span> <span class="n">msg_id</span>
+                
+            <span class="bp">self</span><span class="o">.</span><span class="n">msg_count_rx</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">msgPayloadSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="o">-</span> <span class="n">header_size</span>
+            
+            <span class="k">if</span> <span class="n">payload_size</span> <span class="o">!=</span> <span class="n">msgPayloadSize</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;recieved invalid websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> (payload_size=</span><span class="si">{</span><span class="n">payload_size</span><span class="si">}</span><span class="s2"> actual=</span><span class="si">{</span><span class="n">msgPayloadSize</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">);</span>
+            
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="n">header_size</span><span class="p">:]</span>
+            
+            <span class="k">if</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_JSON</span><span class="p">:</span>  <span class="c1"># json</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span><span class="p">:</span>  <span class="c1"># text</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace</span> <span class="ow">and</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">isEnabledFor</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;recieved </span><span class="si">{</span><span class="n">WebServer</span><span class="o">.</span><span class="n">msg_type_str</span><span class="p">(</span><span class="n">msg_type</span><span class="p">)</span><span class="si">}</span><span class="s2"> websocket message from </span><span class="si">{</span><span class="n">websocket</span><span class="o">.</span><span class="n">remote_address</span><span class="si">}</span><span class="s2"> (type=</span><span class="si">{</span><span class="n">msg_type</span><span class="si">}</span><span class="s2"> size=</span><span class="si">{</span><span class="n">payload_size</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">msg_type</span> <span class="o">&lt;=</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span><span class="p">:</span>
+                    <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+                
+            <span class="c1"># save uploaded files/images to the upload dir</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="kc">None</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">upload_dir</span> <span class="ow">and</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="p">(</span><span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_FILE</span> <span class="ow">or</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_IMAGE</span><span class="p">):</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">timestamp</span><span class="o">/</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y%m</span><span class="si">%d</span><span class="s1">_%H%M%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upload_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+                <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">save_upload</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">payload</span><span class="p">,</span> <span class="n">filename</span><span class="p">])</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+             
+            <span class="c1"># decode images in-memory</span>
+            <span class="k">if</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_IMAGE</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">payload</span> <span class="o">=</span> <span class="n">PIL</span><span class="o">.</span><span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
+                        <span class="n">payload</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;failed to load invalid/corrupted </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2"> image uploaded from client&quot;</span><span class="p">)</span>
+                    
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_message</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">payload_size</span><span class="o">=</span><span class="n">payload_size</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="n">msg_type</span><span class="p">,</span> <span class="n">msg_id</span><span class="o">=</span><span class="n">msg_id</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">timestamp</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+  
+    <span class="k">def</span> <span class="nf">save_upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;saving client upload to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">send_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">flask</span><span class="o">.</span><span class="n">render_template</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">msg_type_str</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_JSON</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;json&quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;text&quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_BINARY</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;binary&quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_FILE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;file&quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_AUDIO</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;audio&quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_IMAGE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;image&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unknown message type </span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+            
+
+<span class="k">class</span> <span class="nc">SendFromDirectory</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">root</span>
+    
+    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">flask</span><span class="o">.</span><span class="n">send_from_directory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

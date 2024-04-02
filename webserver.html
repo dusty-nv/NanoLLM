@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Websockets &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Utilities" href="utilities.html" />
+    <link rel="prev" title="Agents" href="agents.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Websockets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#webserver-api">Webserver API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.web.WebServer"><code class="docutils literal notranslate"><span class="pre">WebServer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_JSON"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_JSON</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_TEXT"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_TEXT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_BINARY"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_BINARY</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_FILE"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_FILE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_AUDIO"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_AUDIO</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.MESSAGE_IMAGE"><code class="docutils literal notranslate"><span class="pre">WebServer.MESSAGE_IMAGE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.__init__"><code class="docutils literal notranslate"><span class="pre">WebServer.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.start"><code class="docutils literal notranslate"><span class="pre">WebServer.start()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.add_message_handler"><code class="docutils literal notranslate"><span class="pre">WebServer.add_message_handler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.on_message"><code class="docutils literal notranslate"><span class="pre">WebServer.on_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.web.WebServer.send_message"><code class="docutils literal notranslate"><span class="pre">WebServer.send_message()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Websockets</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/webserver.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="websockets">
+<h1>Websockets<a class="headerlink" href="#websockets" title="Link to this heading"></a></h1>
+<p>There is a extensible webserver implemented using Flask and websockets that allows agents to serve frontend HTML pages, along with bi-directional messaging using websockets, including custom message types specific to each application.</p>
+<section id="webserver-api">
+<h2>Webserver API<a class="headerlink" href="#webserver-api" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebServer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">web_host</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'0.0.0.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8050</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ws_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">49000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_cert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index.html'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mounts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'/tmp/uploads':</span> <span class="pre">'/uploads'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_callback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_trace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_JSON">
+<span class="sig-name descname"><span class="pre">MESSAGE_JSON</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_JSON" title="Link to this definition"></a></dt>
+<dd><p>JSON websocket message (dict)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_TEXT">
+<span class="sig-name descname"><span class="pre">MESSAGE_TEXT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_TEXT" title="Link to this definition"></a></dt>
+<dd><p>Text websocket message (str)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_BINARY">
+<span class="sig-name descname"><span class="pre">MESSAGE_BINARY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_BINARY" title="Link to this definition"></a></dt>
+<dd><p>Binary websocket message (bytes)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_FILE">
+<span class="sig-name descname"><span class="pre">MESSAGE_FILE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_FILE" title="Link to this definition"></a></dt>
+<dd><p>File upload from client (bytes)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_AUDIO">
+<span class="sig-name descname"><span class="pre">MESSAGE_AUDIO</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_AUDIO" title="Link to this definition"></a></dt>
+<dd><p>Audio samples (bytes, int16)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.MESSAGE_IMAGE">
+<span class="sig-name descname"><span class="pre">MESSAGE_IMAGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#nano_llm.web.WebServer.MESSAGE_IMAGE" title="Link to this definition"></a></dt>
+<dd><p>Image message (PIL.Image)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">web_host</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'0.0.0.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8050</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ws_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">49000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_cert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'index.html'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mounts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'/tmp/uploads':</span> <span class="pre">'/uploads'}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_callback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">web_trace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer.__init__" title="Link to this definition"></a></dt>
+<dd><p>Create HTTP/HTTPS Flask webserver with websocket messaging.</p>
+<p>Use this by either creating an instance and providing <code class="docutils literal notranslate"><span class="pre">msg_callback</span></code>,
+or inherit from it and implement <code class="docutils literal notranslate"><span class="pre">on_message()</span></code> in a subclass.
+You can also add Flask routes to Webserver.app before <code class="docutils literal notranslate"><span class="pre">start()</span></code> is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>web_host</strong> (<em>str</em>) – network interface to bind to (0.0.0.0 for all)</p></li>
+<li><p><strong>web_port</strong> (<em>int</em>) – port to serve HTTP/HTTPS webpages on</p></li>
+<li><p><strong>ws_port</strong> (<em>int</em>) – port to use for websocket communication</p></li>
+<li><p><strong>ssl_cert</strong> (<em>str</em>) – path to PEM-encoded SSL/TLS cert file for enabling HTTPS</p></li>
+<li><p><strong>ssl_key</strong> (<em>str</em>) – path to PEM-encoded SSL/TLS cert key for enabling HTTPS</p></li>
+<li><p><strong>root</strong> (<em>str</em>) – the root directory for serving site files (should have static/ and template/)</p></li>
+<li><p><strong>index</strong> (<em>str</em>) – the name of the site’s index page (should be under web/templates)</p></li>
+<li><p><strong>upload_dir</strong> (<em>str</em>) – the path to save files uploaded from client (or None to disable uploads)</p></li>
+<li><p><strong>msg_callback</strong> (<em>callable</em>) – websocket message handler (see WebServer.on_message() for signature)</p></li>
+<li><p><strong>web_trace</strong> (<em>bool</em>) – if true, additional debug messages will be printed when –log-level=debug</p></li>
+</ul>
+</dd>
+</dl>
+<p>The kwargs are passed as variables to the Jinja render_template() used in the index file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer.start" title="Link to this definition"></a></dt>
+<dd><p>Call this to start the webserver listening for new connections.
+It will start new worker threads and then return control to the user.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.add_message_handler">
+<span class="sig-name descname"><span class="pre">add_message_handler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer.add_message_handler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer.add_message_handler" title="Link to this definition"></a></dt>
+<dd><p>Register a message handler that will be called when new websocket messages are recieved.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.on_message">
+<span class="sig-name descname"><span class="pre">on_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">payload</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer.on_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer.on_message" title="Link to this definition"></a></dt>
+<dd><p>Handler for recieved websocket messages. Implement this in a subclass to process messages,
+otherwise <code class="docutils literal notranslate"><span class="pre">msg_callback</span></code> needs to be provided during initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>payload</strong> (<em>dict</em><em>|</em><em>str</em><em>|</em><em>bytes</em>) – If this is a JSON message, will be a dict.
+If this is a text message, will be a string.
+If this is a binary message, will be a bytes array.</p></li>
+<li><p><strong>payload_size</strong> (<em>int</em>) – size of the payload (in bytes)</p></li>
+<li><p><strong>msg_type</strong> (<em>int</em>) – MESSAGE_JSON (0), MESSAGE_TEXT (1), MESSAGE_BINARY (2)</p></li>
+<li><p><strong>msg_id</strong> (<em>int</em>) – the monotonically-increasing message ID number</p></li>
+<li><p><strong>metadata</strong> (<em>str</em>) – message-specific string or other data</p></li>
+<li><p><strong>timestamp</strong> (<em>int</em>) – time that the message was sent</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – if this is a file or image upload, the file path on the server</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.web.WebServer.send_message">
+<span class="sig-name descname"><span class="pre">send_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">payload</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/web/server.html#WebServer.send_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.web.WebServer.send_message" title="Link to this definition"></a></dt>
+<dd><p>Send a websocket message to client.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="agents.html" class="btn btn-neutral float-left" title="Agents" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="utilities.html" class="btn btn-neutral float-right" title="Utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

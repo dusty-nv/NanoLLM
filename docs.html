@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text Chat &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Text Chat</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/docs.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p><a href="https://www.youtube.com/watch?v=9ObzbbBTbcc"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/llamaspeak_llava_clip.gif"></a></p>
+<ul class="simple">
+<li><p>Optimized LLM inference engine with support for AWQ and MLC quantization, multimodal agents, and live ASR/TTS.</p></li>
+<li><p>Web UI server using Flask, WebSockets, WebAudio, HTML5, Bootstrap5.</p></li>
+<li><p>Modes to run: <a class="reference internal" href="#text-chat"><span class="xref myst">Text Chat</span></a>, <a class="reference internal" href="#multimodal-chat"><span class="xref myst">Multimodal Chat</span></a>, <a class="reference internal" href="#voice-chat"><span class="xref myst">Voice Chat</span></a>, <a class="reference internal" href="#live-llava"><span class="xref myst">Live Llava</span></a></p></li>
+</ul>
+<blockquote>
+<div><p>[!NOTE]<br />
+Tested models:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-7b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-7b-chat-hf</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-13b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-13b-chat-hf</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-70b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-70b-chat-hf</span></code></a></p></li>
+</ul>
+<p>Small Language Models (<a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_slm.html">SLMs</a>)</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/stabilityai/stablelm-2-zephyr-1_6b"><code class="docutils literal notranslate"><span class="pre">stabilityai/stablelm-2-zephyr-1_6b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/stabilityai/stablelm-zephyr-3b"><code class="docutils literal notranslate"><span class="pre">stabilityai/stablelm-zephyr-3b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/NousResearch/Nous-Capybara-3B-V1.9"><code class="docutils literal notranslate"><span class="pre">NousResearch/Nous-Capybara-3B-V1.9</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0"><code class="docutils literal notranslate"><span class="pre">TinyLlama/TinyLlama-1.1B-Chat-v1.0</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT"><code class="docutils literal notranslate"><span class="pre">princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/google/gemma-2b-it"><code class="docutils literal notranslate"><span class="pre">google/gemma-2b-it</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/microsoft/phi-2"><code class="docutils literal notranslate"><span class="pre">microsoft/phi-2</span></code></a></p></li>
+</ul>
+<p>Vision Language Models (<a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_llava.html">VLMs</a>)</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.5-7b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.5-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.5-13b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.5-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.6-vicuna-7b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.6-vicuna-13b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-2.7b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-2.7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-7b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-13b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/NousResearch/Obsidian-3B-V0.5"><code class="docutils literal notranslate"><span class="pre">NousResearch/Obsidian-3B-V0.5</span></code></a></p></li>
+</ul>
+<p>For Llama-2 models, see <a class="reference internal" href="#/packages/llm/transformers/README.md#llama2"><span class="xref myst">here</span></a> to request your access token from HuggingFace.</p>
+</div></blockquote>
+<section id="text-chat">
+<h1>Text Chat<a class="headerlink" href="#text-chat" title="Link to this heading"></a></h1>
+<p>As an initial example, first test the console-based chat demo from <a class="reference internal" href="#chat/__main__.py"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">chat/__main__.py</span></code></span></a></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span>--env<span class="w"> </span><span class="nv">HUGGINGFACE_TOKEN</span><span class="o">=</span>&lt;YOUR-ACCESS-TOKEN&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--model<span class="o">=</span>meta-llama/Llama-2-7b-chat-hf
+</pre></div>
+</div>
+<p>The model will automatically be quantized the first time it’s loaded (in this case, with MLC and 4-bit).  Other fine-tuned versions of Llama that have the same architecture (or are supported by the quantization API you have selected) should be compatible - see <a class="reference external" href="https://github.com/mlc-ai/mlc-llm/tree/main/mlc_llm/relax_model">here</a> for MLC.</p>
+<section id="command-line-options">
+<h2>Command-Line Options<a class="headerlink" href="#command-line-options" title="Link to this heading"></a></h2>
+<p>Some of the noteworthy command-line options can be found in <a class="reference internal" href="#utils/args.py"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">utils/args.py</span></code></span></a></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Models</strong></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--model</span></code></p></td>
+<td><p>The repo/name of the original unquantized model from HuggingFace Hub (or local path)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--quant</span></code></p></td>
+<td><p>Either the API-specific quantization method to use, or path to quantized model</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--api</span></code></p></td>
+<td><p>The LLM model and quantization backend to use (<code class="docutils literal notranslate"><span class="pre">mlc,</span> <span class="pre">awq,</span> <span class="pre">auto_gptq,</span> <span class="pre">hf</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Prompts</strong></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--prompt</span></code></p></td>
+<td><p>Run this query (can be text, or a path to .txt file, and can be specified multiple times)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--system-prompt</span></code></p></td>
+<td><p>Sets the system instruction used at the beginning of the chat sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--chat-template</span></code></p></td>
+<td><p>Manually set the chat template (<code class="docutils literal notranslate"><span class="pre">llama-2</span></code>, <code class="docutils literal notranslate"><span class="pre">llava-1</span></code>, <code class="docutils literal notranslate"><span class="pre">vicuna-v1</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Generation</strong></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--max-context-len</span></code></p></td>
+<td><p>The maximum chat history context length (in tokens), lower to reduce memory usage</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--max-new-tokens</span></code></p></td>
+<td><p>The maximum number of output tokens to generate for each response (default: 128)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--min-new-tokens</span></code></p></td>
+<td><p>The minimum number of output tokens to generate (default: -1, disabled)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--do-sample</span></code></p></td>
+<td><p>Use token sampling during output with <code class="docutils literal notranslate"><span class="pre">--temperature</span></code> and <code class="docutils literal notranslate"><span class="pre">--top-p</span></code> settings</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--temperature</span></code></p></td>
+<td><p>Controls randomness of output with <code class="docutils literal notranslate"><span class="pre">--do-sample</span></code> (lower is less random, default: 0.7)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--top-p</span></code></p></td>
+<td><p>Controls determinism/diversity of output with <code class="docutils literal notranslate"><span class="pre">--do-sample</span></code> (default: 0.95)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--repetition-penalty</span></code></p></td>
+<td><p>Applies a penalty for repetitive outputs (default: 1.0, disabled)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="automated-prompts">
+<h2>Automated Prompts<a class="headerlink" href="#automated-prompts" title="Link to this heading"></a></h2>
+<p>During testing, you can specify prompts on the command-line that will run sequentially:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span>--env<span class="w"> </span><span class="nv">HUGGINGFACE_TOKEN</span><span class="o">=</span>&lt;YOUR-ACCESS-TOKEN&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--model<span class="o">=</span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--prompt<span class="w"> </span><span class="s1">&#39;hi, how are you?&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--prompt<span class="w"> </span><span class="s1">&#39;whats the square root of 900?&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--prompt<span class="w"> </span><span class="s1">&#39;whats the previous answer times 4?&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--prompt<span class="w"> </span><span class="s1">&#39;can I get a recipie for french onion soup?&#39;</span>
+</pre></div>
+</div>
+<p>You can also load JSON files containing prompt sequences, like from <a class="reference internal" href="#/data/prompts/qa.json"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">/data/prompts/qa.json</span></code></span></a></p>
+</section>
+</section>
+<section id="multimodal-chat">
+<h1>Multimodal Chat<a class="headerlink" href="#multimodal-chat" title="Link to this heading"></a></h1>
+<p>If you load a Llava vision-language model, you can enter image files into the prompt, followed by questions about them:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model<span class="o">=</span>liuhaotian/llava-v1.5-13b<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;/data/images/fruit.jpg&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;what kind of fruits do you see?&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;reset&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;/data/images/dogs.jpg&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;what breed of dogs are in the image?&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;reset&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;/data/images/path.jpg&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--prompt<span class="w"> </span><span class="s1">&#39;what does the sign say?&#39;</span>
+</pre></div>
+</div>
+<p>Llava was trained to converse about one image at a time, hence the chat history is reset between images (otherwise the model tends to combine the features of all the images in the chat so far).  Multiple questions can be asked about each image though.</p>
+<p>By omitting <code class="docutils literal notranslate"><span class="pre">--prompt</span></code>, you can chat interactively from the terminal.  If you enter an image filename, it will load that image, and then asking you for the prompt.  Entering <code class="docutils literal notranslate"><span class="pre">clear</span></code> or <code class="docutils literal notranslate"><span class="pre">reset</span></code> will reset the chat history.</p>
+</section>
+<section id="voice-chat">
+<h1>Voice Chat<a class="headerlink" href="#voice-chat" title="Link to this heading"></a></h1>
+<p><a href="https://www.youtube.com/watch?v=wzLHAgDxMjQ"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/llamaspeak_70b_yt.jpg" width="800px"></a></p>
+<blockquote>
+<div><p><a class="reference external" href="https://www.youtube.com/watch?v=wzLHAgDxMjQ">Interactive Voice Chat with Llama-2-70B on NVIDIA Jetson AGX Orin</a></p>
+</div></blockquote>
+<p>To enable the web UI and ASR/TTS for live conversations, follow the steps below.</p>
+<section id="start-riva-server">
+<h2>Start Riva Server<a class="headerlink" href="#start-riva-server" title="Link to this heading"></a></h2>
+<p>The ASR and TTS services use NVIDIA Riva with audio transformers and TensorRT.  The Riva server runs locally in it’s own container.  Follow the steps from the <a class="reference internal" href="#/packages/audio/riva-client"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">riva-client:python</span></code></span></a> package to run and test the Riva server on your Jetson.</p>
+<ol class="arabic simple">
+<li><p>Start the Riva server on your Jetson by following <a class="reference external" href="https://catalog.ngc.nvidia.com/orgs/nvidia/teams/riva/resources/riva_quickstart_arm64"><code class="docutils literal notranslate"><span class="pre">riva_quickstart_arm64</span></code></a></p></li>
+<li><p>Run some of the Riva ASR examples to confirm that ASR is working:  https://github.com/nvidia-riva/python-clients#asr</p></li>
+<li><p>Run some of the Riva TTS examples to confirm that TTS is working:  https://github.com/nvidia-riva/python-clients#tts</p></li>
+</ol>
+<p>You can also see this helpful video and guide from JetsonHacks for setting up Riva:  <a class="reference external" href="https://jetsonhacks.com/2023/08/07/speech-ai-on-nvidia-jetson-tutorial/"><strong>Speech AI on Jetson Tutorial</strong></a></p>
+</section>
+<section id="enabling-https-ssl">
+<h2>Enabling HTTPS/SSL<a class="headerlink" href="#enabling-https-ssl" title="Link to this heading"></a></h2>
+<p>Browsers require HTTPS in order to access the client’s microphone.  A self-signed SSL certificate was built into the container like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>openssl<span class="w"> </span>req<span class="w"> </span>-x509<span class="w"> </span>-newkey<span class="w"> </span>rsa:4096<span class="w"> </span>-keyout<span class="w"> </span>key.pem<span class="w"> </span>-out<span class="w"> </span>cert.pem<span class="w"> </span>-sha256<span class="w"> </span>-days<span class="w"> </span><span class="m">365</span><span class="w"> </span>-nodes<span class="w"> </span>-subj<span class="w"> </span><span class="s1">&#39;/CN=localhost&#39;</span>
+</pre></div>
+</div>
+<p>The container’s certificate is found under <code class="docutils literal notranslate"><span class="pre">/etc/ssl/private</span></code> and is automatically used, so HTTPS/SSL is enabled by default for these web UI’s (you can change the PEM certificate/key used by setting the <code class="docutils literal notranslate"><span class="pre">SSL_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">SSL_CERT</span></code> environment variables).  When you first navigate your browser to a page that uses these self-signed certificates, it will issue you a warning since they don’t originate from a trusted authority:</p>
+<img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/ssl_warning.jpg" width="400">
+<p>You can choose to override this, and it won’t re-appear again until you change certificates or your device’s hostname/IP changes.</p>
+</section>
+<section id="start-web-agent">
+<h2>Start Web Agent<a class="headerlink" href="#start-web-agent" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env<span class="w"> </span><span class="nv">HUGGINGFACE_TOKEN</span><span class="o">=</span>&lt;YOUR-ACCESS-TOKEN&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.agents.web_chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf
+</pre></div>
+</div>
+<p>You can then navigate your web browser to <code class="docutils literal notranslate"><span class="pre">https://HOSTNAME:8050</span></code> and unmute your microphone.</p>
+<ul class="simple">
+<li><p>The default port is 8050, but can be changed with <code class="docutils literal notranslate"><span class="pre">--web-port</span></code> (and <code class="docutils literal notranslate"><span class="pre">--ws-port</span></code> for the websocket port)</p></li>
+<li><p>To debug issues with client/server communication, use <code class="docutils literal notranslate"><span class="pre">--web-trace</span></code> to print incoming/outgoing websocket messages.</p></li>
+<li><p>During bot replies, the TTS model will pause output if you speak a few words in the mic to interrupt it.</p></li>
+<li><p>If you loaded a multimodal Llava model instead, you can drag-and-drop images from the client.</p></li>
+</ul>
+</section>
+</section>
+<section id="live-llava">
+<h1>Live Llava<a class="headerlink" href="#live-llava" title="Link to this heading"></a></h1>
+<p><a href="https://youtu.be/X-OXxPiUTuU" target="_blank"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/live_llava.gif"></a></p>
+<p>The <a class="reference internal" href="#agents/video_query.py"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">VideoQuery</span></code></span></a> agent processes an incoming camera or video feed on prompts in a closed loop with Llava.  Navigate your browser to <code class="docutils literal notranslate"><span class="pre">https://&lt;IP_ADDRESS&gt;:8050</span></code> after launching it, proceed past the <a class="reference internal" href="#enabling-httpsssl"><span class="xref myst">SSL warning</span></a>, and see this <a class="reference external" href="https://www.youtube.com/watch?v=dRmAGGuupuE"><strong>demo walkthrough</strong></a> video on using the web UI.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.agents.video_query<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model<span class="w"> </span>Efficient-Large-Model/VILA-2.7b<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-context-len<span class="w"> </span><span class="m">768</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-new-tokens<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--video-input<span class="w"> </span>/dev/video0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--video-output<span class="w"> </span>webrtc://@:8554/output
+</pre></div>
+</div>
+<p><a href="https://youtu.be/dRmAGGuupuE" target="_blank"><img width="750px" src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/live_llava_espresso.jpg"></a></p>
+<p>This uses <a class="reference external" href="https://github.com/dusty-nv/jetson-utils"><code class="docutils literal notranslate"><span class="pre">jetson_utils</span></code></a> for video I/O, and for options related to protocols and file formats, see <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md">Camera Streaming and Multimedia</a>.  In the example above, it captures a V4L2 USB webcam connected to the Jetson (under the device <code class="docutils literal notranslate"><span class="pre">/dev/video0</span></code>) and outputs a WebRTC stream.</p>
+<section id="processing-a-video-file-or-stream">
+<h2>Processing a Video File or Stream<a class="headerlink" href="#processing-a-video-file-or-stream" title="Link to this heading"></a></h2>
+<p>The example above was running on a live camera, but you can also read and write a <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md">video file or stream</a> by substituting the path or URL to the <code class="docutils literal notranslate"><span class="pre">--video-input</span></code> and <code class="docutils literal notranslate"><span class="pre">--video-output</span></code> command-line arguments like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span>/path/to/your/videos:/mount
+<span class="w">  </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.agents.video_query<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--model<span class="w"> </span>Efficient-Large-Model/VILA-2.7b<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--max-context-len<span class="w"> </span><span class="m">768</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--max-new-tokens<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--video-input<span class="w"> </span>/mount/my_video.mp4<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--video-output<span class="w"> </span>/mount/output.mp4<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--prompt<span class="w"> </span><span class="s2">&quot;What does the weather look like?&quot;</span>
+</pre></div>
+</div>
+<p>This example processes and pre-recorded video (in MP4, MKV, AVI, FLV formats with H.264/H.265 encoding), but it also can input/output live network streams like <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md#rtp">RTP</a>, <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md#rtsp">RTSP</a>, and <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md#webrtc">WebRTC</a> using Jetson’s hardware-accelerated video codecs.</p>
+</section>
+<section id="nanodb-integration">
+<h2>NanoDB Integration<a class="headerlink" href="#nanodb-integration" title="Link to this heading"></a></h2>
+<p>If you launch the <a class="reference internal" href="#agents/video_query.py"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">VideoQuery</span></code></span></a> agent with the <code class="docutils literal notranslate"><span class="pre">--nanodb</span></code> flag along with a path to your NanoDB database, it will perform reverse-image search on the incoming feed against the database by re-using the CLIP embeddings generated by the VLM.</p>
+<p>To enable this mode, first follow the <a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_nanodb.html">NanoDB tutorial</a> to download, index, and test the database.  Then launch VideoQuery like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./run.sh<span class="w"> </span><span class="k">$(</span>./autotag<span class="w"> </span>local_llm<span class="k">)</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>-m<span class="w"> </span>local_llm.agents.video_query<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model<span class="w"> </span>Efficient-Large-Model/VILA-2.7b<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-context-len<span class="w"> </span><span class="m">768</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-new-tokens<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--video-input<span class="w"> </span>/dev/video0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--video-output<span class="w"> </span>webrtc://@:8554/output<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--nanodb<span class="w"> </span>/data/nanodb/coco/2017
+</pre></div>
+</div>
+<p>You can also tag incoming images and add them to the database using the panel in the web UI:</p>
+<p><a href="https://youtu.be/dRmAGGuupuE"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/live_llava_bear.jpg"></a></p>
+<blockquote>
+<div><p><a class="reference external" href="https://youtu.be/X-OXxPiUTuU">Live Llava 2.0 - VILA + Multimodal NanoDB on Jetson Orin</a> (container: <a class="reference internal" href="#/packages/llm/local_llm#live-llava"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">local_llm</span></code></span></a>)</p>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

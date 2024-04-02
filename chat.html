@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Plugins" href="plugins.html" />
+    <link rel="prev" title="Models" href="models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Chat</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#templates">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#chat-history">Chat History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.ChatHistory"><code class="docutils literal notranslate"><span class="pre">ChatHistory</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.num_tokens"><code class="docutils literal notranslate"><span class="pre">ChatHistory.num_tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.append"><code class="docutils literal notranslate"><span class="pre">ChatHistory.append()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.reset"><code class="docutils literal notranslate"><span class="pre">ChatHistory.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.to_list"><code class="docutils literal notranslate"><span class="pre">ChatHistory.to_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.system_prompt"><code class="docutils literal notranslate"><span class="pre">ChatHistory.system_prompt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_text"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_text()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_dict"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_image"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_chat"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_chat()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.find_wrap_entry"><code class="docutils literal notranslate"><span class="pre">ChatHistory.find_wrap_entry()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Chat</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/chat.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="chat">
+<h1>Chat<a class="headerlink" href="#chat" title="Link to this heading"></a></h1>
+<p>This page includes information about managing multi-turn chat sessions, templating, and maintaining the embedding history.</p>
+<section id="templates">
+<h2>Templates<a class="headerlink" href="#templates" title="Link to this heading"></a></h2>
+<p>Built-in chat templates that are automatically determined from the model type, or settable with the <code class="docutils literal notranslate"><span class="pre">--chat-template</span></code> command-line argument:</p>
+<ul class="simple">
+<li><p>llama2</p></li>
+<li><p>vicuna</p></li>
+<li><p>ChatML</p></li>
+</ul>
+<p>See <code class="docutils literal notranslate"><span class="pre">nano_llm/chat/templates.py</span></code> for the template definitions.</p>
+</section>
+<section id="chat-history">
+<h2>Chat History<a class="headerlink" href="#chat-history" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ChatHistory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chat_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Multimodal chat history that can contain a mix of media including text/images.</p>
+<p>ChatHistory objects can be indexed like a list of chat entry dicts,
+where each entry dict may have keys for <code class="docutils literal notranslate"><span class="pre">'text',</span> <span class="pre">'image',</span> <span class="pre">'role'</span></code>, ect:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">chat_history</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>  <span class="c1"># will return the n-th chat entry</span>
+</pre></div>
+</div>
+<p>Each type of media has a different embedding function (e.g. LLM’s typically
+do text token embedding internally, and images use CLIP + projection layers).
+From these, it assembles the embedding for the entire chat as input to the LLM.</p>
+<p>It uses templating to add the required special tokens as defined by different
+model architectures.  In normal 2-turn chat, there are ‘user’ and ‘bot’ roles
+defined, but arbitrary roles can be added, each with their own template.
+The system prompt can also be configured through the chat template.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.num_tokens">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_tokens</span></span><a class="headerlink" href="#nano_llm.ChatHistory.num_tokens" title="Link to this definition"></a></dt>
+<dd><p>Return the number of tokens used by the chat so far.
+embed_chat() needs to have been called for this to be upated,
+because otherwise the input wouldn’t have been tokenized yet.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.append">
+<span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'user'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.append"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.append" title="Link to this definition"></a></dt>
+<dd><p>Add a chat entry consisting of a text message, image, ect.
+See the ChatEntry() function for description of arguments.
+This can also accept an existing ChatEntry dict as msg.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.reset">
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">add_system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reset" title="Link to this definition"></a></dt>
+<dd><p>Reset the chat history, and optionally add the system prompt to the new chat.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.to_list">
+<span class="sig-name descname"><span class="pre">to_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.to_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.to_list" title="Link to this definition"></a></dt>
+<dd><p>Serialize the history to a list of dicts, where each dict is a chat entry
+with the non-critical keys removed (suitable for web transport, ect)</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.system_prompt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">system_prompt</span></span><a class="headerlink" href="#nano_llm.ChatHistory.system_prompt" title="Link to this definition"></a></dt>
+<dd><p>Get the system prompt, the typically hidden instruction at the beginning
+of the chat like “You are a curious and helpful AI assistant, …”</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed">
+<span class="sig-name descname"><span class="pre">embed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed" title="Link to this definition"></a></dt>
+<dd><p>Get the embedding for a general input (text, image, ect)</p>
+<p>The embedding type is typically ‘text’, ‘image’, and will attempted
+to be determined automatically if it isn’t explicitly specified.
+Paths that end in image extensions are assumed to be an image,
+otherwise strings are treated as text.</p>
+<p>The kwargs are passed through to the input type’s embedding function.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_text">
+<span class="sig-name descname"><span class="pre">embed_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_text" title="Link to this definition"></a></dt>
+<dd><p>Get the text embedding after applying the template for ‘user’, ‘bot’, ect.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_dict">
+<span class="sig-name descname"><span class="pre">embed_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_dict" title="Link to this definition"></a></dt>
+<dd><p>Get the embedding of a chat entry dict that can contain multiple embedding types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_image">
+<span class="sig-name descname"><span class="pre">embed_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_image" title="Link to this definition"></a></dt>
+<dd><p>Given an image, extract features and perfom the image embedding.
+This uses the CLIP encoder and a projection model that
+maps it into the embedding space the model expects.</p>
+<p>This is only applicable to vision VLM’s like Llava and Mini-GPT4,
+and will throw an exception if model.has_vision is False.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_chat">
+<span class="sig-name descname"><span class="pre">embed_chat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_chat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_chat" title="Link to this definition"></a></dt>
+<dd><p>Assemble the embedding of either the latest or entire chat.</p>
+<p>If use_cache is true (the default), and only the new embeddings will be returned.
+If use_cache is set to false, then the entire chat history will be returned.</p>
+<p>The kwargs are passed to the embedding functions - for example, return_tokens=True
+will return tokens for the chat rather than embeddings.</p>
+<p>This function returns an (embedding, position) tuple, where the embedding array
+contains the new embeddings (or tokens) from the chat, and position is the current
+overall position in the history (up to the model’s context window length)</p>
+<p>If the number of tokens in the chat history exceeds the length given in <cite>max_tokens</cite> argument
+(which is typically the model’s context window, minus the max generation length),
+then the chat history will drop all but the latest <cite>wrap_tokens</cite>, starting with a user prompt.
+If <cite>max_tokens</cite> is provided but <cite>wrap_tokens</cite> is not, then the overflow tokens will be truncated.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.find_wrap_entry">
+<span class="sig-name descname"><span class="pre">find_wrap_entry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.find_wrap_entry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.find_wrap_entry" title="Link to this definition"></a></dt>
+<dd><p>Find the oldest entry from which the chat doesn’t exceed the number of wrap_tokens,
+and that the entry should be a user query.  This is used to keep those more recent
+chat entries when the history overflows past the max context window of the model.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="models.html" class="btn btn-neutral float-left" title="Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="plugins.html" class="btn btn-neutral float-right" title="Plugins" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

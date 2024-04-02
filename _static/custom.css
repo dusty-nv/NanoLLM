@@ -1,0 +1,12 @@
+.wy-side-nav-search, .wy-nav-top {
+	background: #5d806b; /* '#5d7567'; #'566c5f'; '#4e5c54' */
+}
+
+.wy-side-nav-search input[type=text] {
+	border-color: #51665a;
+}
+
+.caption-text {
+	color: #799885;
+}
+	

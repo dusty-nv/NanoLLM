@@ -1,0 +1,18 @@
+# Installation
+
+The recommended installation method is by running the Docker container image built by [jetson-containers](https://github.com/dusty-nv/jetson-containers).  First, clone that repo:
+
+```bash
+git clone https://github.com/dusty-nv/jetson-containers
+cd jetson-containers
+pip3 install -r requirements.txt
+```
+
+Then you can start `nano_llm` container like this:
+
+```bash
+./run.sh $(./autotag nano_llm)
+```
+
+This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. `dustynv/nano_llm:r36.2.0` for JetPack 6.0 DP)
+

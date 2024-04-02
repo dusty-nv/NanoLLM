@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Models &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Chat" href="chat.html" />
+    <link rel="prev" title="Installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#supported-architectures">Supported Architectures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-api">Model API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.NanoLLM"><code class="docutils literal notranslate"><span class="pre">NanoLLM</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.from_pretrained"><code class="docutils literal notranslate"><span class="pre">NanoLLM.from_pretrained()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.generate"><code class="docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.tokenize"><code class="docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.detokenize"><code class="docutils literal notranslate"><span class="pre">NanoLLM.detokenize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_text"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_text()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_tokens()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_image"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.tokenizer"><code class="docutils literal notranslate"><span class="pre">NanoLLM.tokenizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.config_path"><code class="docutils literal notranslate"><span class="pre">NanoLLM.config_path</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.model_path"><code class="docutils literal notranslate"><span class="pre">NanoLLM.model_path</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.config"><code class="docutils literal notranslate"><span class="pre">NanoLLM.config</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.stats"><code class="docutils literal notranslate"><span class="pre">NanoLLM.stats</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.has_vision"><code class="docutils literal notranslate"><span class="pre">NanoLLM.has_vision</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#streaming">Streaming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.StreamingResponse"><code class="docutils literal notranslate"><span class="pre">StreamingResponse</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.tokens"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.text"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.text</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.input"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.input</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.model"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.kv_cache"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.kv_cache</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stopping"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stopping</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stopped"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stopped</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.__next__"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.__next__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stop"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stop()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/models.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="models">
+<h1>Models<a class="headerlink" href="#models" title="Link to this heading"></a></h1>
+<p>The <a class="reference internal" href="#model-api"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">NanoLLM</span></code></span></a> interface provides model loading, quantization, embeddings, and inference.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+   <span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or path to HF model checkpoint</span>
+   <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                   <span class="c1"># supported APIs are: mlc, awq, hf</span>
+   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;abc123xyz456&#39;</span><span class="p">,</span>    <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
+   <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>      <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
+<span class="p">)</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;Once upon a time,&quot;</span><span class="p">,</span> <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">response</span><span class="p">:</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="supported-architectures">
+<h2>Supported Architectures<a class="headerlink" href="#supported-architectures" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Llama</p></li>
+<li><p>Llava</p></li>
+<li><p>StableLM</p></li>
+<li><p>Phi-2</p></li>
+<li><p>Gemma</p></li>
+<li><p>Mistral</p></li>
+<li><p>GPT-Neox</p></li>
+</ul>
+<p>These include fine-tuned derivatives that share the same network architecture as above (for example, <a class="reference external" href="https://huggingface.co/lmsys/vicuna-7b-v1.5"><code class="docutils literal notranslate"><span class="pre">lmsys/vicuna-7b-v1.5</span></code></a> is a Llama model).  Others model types are supported via the various quantization APIs well - check the associated library documentation for details.</p>
+</section>
+<section id="model-api">
+<h2>Model API<a class="headerlink" href="#model-api" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">NanoLLM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.from_pretrained">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_pretrained</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.from_pretrained"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.from_pretrained" title="Link to this definition"></a></dt>
+<dd><p>Load a model from the given path or download it from HuggingFace Hub.
+Various inference and quantization APIs are supported, such as MLC and AWQ.
+If the API isn’t explicitly specified, it will be inferred from the type of model.</p>
+<p>Base class for local LLM APIs. It defines common Huggingface-like interfaces for
+model loading, text generation, tokenization, embeddings, and streaming.
+It also supports multimodal vision models like Llava and generating image embeddings with CLIP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>str</em>) – either the path to the model, or HuggingFace model repo/name.</p></li>
+<li><p><strong>api</strong> (<em>str</em>) – the model backend API to use:  ‘auto_gptq’, ‘awq’, ‘mlc’, or ‘hf’
+if left as None, it will attempt to be automatically determined.</p></li>
+<li><p><strong>quant</strong> (<em>str</em>) – for AWQ or MLC, either specify the quantization method,
+or the path to the quantized model (AWQ and MLC API’s only)</p></li>
+<li><p><strong>vision_model</strong> (<em>str</em>) – for VLMs, override the vision embedding model
+(typically <a class="reference external" href="https://huggingface.co/openai/clip-vit-large-patch14-336">openai/clip-vit-large-patch14-336</a>).
+Otherwise, it will use the CLIP variant from the config.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A loaded <cite>NanoLLM</cite> model instance using the determined API.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.generate">
+<span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">streaming</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.generate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.generate" title="Link to this definition"></a></dt>
+<dd><p>Generate output from input text, tokens, or an embedding.
+For detailed kwarg descriptions, see <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.GenerationConfig">transformers.GenerationConfig</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> (<em>str</em><em>|</em><em>list</em><em>[</em><em>int</em><em>]</em><em>|</em><em>torch.Tensor</em><em>|</em><em>np.ndarray</em>) – the prompt string, token IDs, or embedding.</p></li>
+<li><p><strong>streaming</strong> (<em>bool</em>) – if true (default), an iterator will be returned that outputs
+one token at a time.  Otherwise, return the full response.</p></li>
+<li><p><strong>max_new_tokens</strong> (<em>int</em>) – the number of tokens to output in addition to the prompt (default: 128)</p></li>
+<li><p><strong>min_new_tokens</strong> (<em>int</em>) – force the model to generate a set number of output tokens (default: -1)</p></li>
+<li><p><strong>do_sample</strong> (<em>bool</em>) – if True, temperature/top_p will be used.  Otherwise, greedy search (default: False)</p></li>
+<li><p><strong>repetition_penalty</strong> – the parameter for repetition penalty. 1.0 means no penalty (default: 1.0)</p></li>
+<li><p><strong>temperature</strong> (<em>float</em>) – randomness token sampling parameter (default=0.7, only used if <code class="docutils literal notranslate"><span class="pre">do_sample=True</span></code>)</p></li>
+<li><p><strong>top_p</strong> (<em>float</em>) – if set to float &lt; 1 and do_sample=True, only the smallest set of most probable tokens
+with probabilities that add up to top_p or higher are kept for generation (default 0.95)</p></li>
+<li><p><strong>stop_tokens</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – defaults to EOS token ID</p></li>
+<li><p><strong>kv_cache</strong> (<em>np.ndarray</em>) – previous kv_cache that the inputs will be appended to.  By default, a blank kv_cache
+will be created for each generation (i.e. a new chat).  This generation’s kv_cache
+will be set in the returned <a class="reference internal" href="#nano_llm.StreamingResponse" title="nano_llm.StreamingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamingResponse</span></code></a> iterator after the request is complete.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An asynchronous <a class="reference internal" href="#nano_llm.StreamingResponse" title="nano_llm.StreamingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamingResponse</span></code></a> iterator (when <code class="docutils literal notranslate"><span class="pre">streaming=True</span></code>) that outputs one decoded token string at a time.
+Otherwise, this function blocks and a string containing the full reply is returned after it’s been completed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.tokenize">
+<span class="sig-name descname"><span class="pre">tokenize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_special_tokens=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype=&lt;class</span> <span class="pre">'numpy.int32'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors='np'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.tokenize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.tokenize" title="Link to this definition"></a></dt>
+<dd><p>Tokenize the given string and return the encoded token ID’s.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – the text to tokenize.</p></li>
+<li><p><strong>add_special_tokens</strong> (<em>str</em>) – if BOS/EOS tokens (like <code class="docutils literal notranslate"><span class="pre">&lt;s&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">&lt;|endoftext|&gt;</span></code>) should automatically be added (default False)</p></li>
+<li><p><strong>dtype</strong> (<em>type</em>) – the numpy or torch datatype of the tensor to return.</p></li>
+<li><p><strong>return_tensors</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'np'</span></code> to return a <cite>np.ndarray</cite> or <code class="docutils literal notranslate"><span class="pre">'pt'</span></code> to return a <cite>torch.Tensor</cite></p></li>
+<li><p><strong>kwargs</strong> – additional arguments forwarded to the HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a> encode function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The token ID’s with the tensor type as indicated by <cite>return_tensors</cite> (either <cite>‘np’</cite> for <cite>np.ndarray</cite>
+or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) and datatype as indicated by <cite>dtype</cite> (by default <code class="docutils literal notranslate"><span class="pre">int32</span></code>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.detokenize">
+<span class="sig-name descname"><span class="pre">detokenize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_special_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.detokenize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.detokenize" title="Link to this definition"></a></dt>
+<dd><p>Detokenize the given token ID’s and return the decoded string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tokens</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>np.ndarray</em><em>, </em><em>torch.Tensor</em>) – the array of token ID’s</p></li>
+<li><p><strong>skip_special_tokens</strong> (<em>bool</em>) – if special tokens (like BOS/EOS) should be supressed from the output or not (default false)</p></li>
+<li><p><strong>kwargs</strong> – <p>additional arguments forwarded to the HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a> decode function.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The string containing the decoded text.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.embed_text">
+<span class="sig-name descname"><span class="pre">embed_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_special_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_text" title="Link to this definition"></a></dt>
+<dd><p>Tokenize the string with <a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a> and return its embedding as computed by <a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens" title="nano_llm.NanoLLM.embed_tokens"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.embed_tokens()</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – the text to tokenize and embed.</p></li>
+<li><p><strong>add_special_tokens</strong> (<em>str</em>) – if BOS/EOS tokens (like <code class="docutils literal notranslate"><span class="pre">&lt;s&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;|endoftext|&gt;</span></code>) should automatically be added (default False)</p></li>
+<li><p><strong>use_cache</strong> (<em>bool</em>) – if True, the text embedding will be cached and returned without additional computation if
+the same string was already embedded previously.  This is useful for things like the system prompt
+that are relatively static, but probably shouldn’t be used for dynamic user inputs that are unlikely
+to be re-used again (leading to unnecessarily increased memory usage).  The default is false.</p></li>
+<li><p><strong>return_tensors</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'np'</span></code> to return a <cite>np.ndarray</cite> or <code class="docutils literal notranslate"><span class="pre">'pt'</span></code> to return a <cite>torch.Tensor</cite></p></li>
+<li><p><strong>kwargs</strong> – <p>additional arguments forwarded to <a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a> and the HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a></p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The embedding with the tensor type as indicated by <cite>return_tensors</cite> (either <cite>‘np’</cite> for <cite>np.ndarray</cite>
+or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) with <code class="docutils literal notranslate"><span class="pre">float32</span></code> data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.embed_tokens">
+<span class="sig-name descname"><span class="pre">embed_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_tokens" title="Link to this definition"></a></dt>
+<dd><p>Compute the token embedding and return its tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tokens</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>np.ndarray</em><em>, </em><em>torch.Tensor</em>) – the array of token ID’s</p></li>
+<li><p><strong>return_tensors</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'np'</span></code> to return a <cite>np.ndarray</cite> or <code class="docutils literal notranslate"><span class="pre">'pt'</span></code> to return a <cite>torch.Tensor</cite></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The embedding with the tensor type as indicated by <cite>return_tensors</cite> (either <cite>‘np’</cite> for <cite>np.ndarray</cite>
+or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) with <code class="docutils literal notranslate"><span class="pre">float32</span></code> data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.embed_image">
+<span class="sig-name descname"><span class="pre">embed_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_image" title="Link to this definition"></a></dt>
+<dd><p>Compute the embedding of an image (for multimodel models with a vision encoder like CLIP),
+and apply any additional projection layers as specified by the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>pil.Image</em><em>, </em><em>np.ndarray</em><em>, </em><em>torch.Tensor</em><em>, </em><em>jetson.utils.cudaImage</em><em>, </em><em>__cuda_array_interface__</em>) – the image</p></li>
+<li><p><strong>crop</strong> (<em>bool</em>) – center-crop the image to square resolution instead of resizing the aspect ratio</p></li>
+<li><p><strong>return_tensors</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'np'</span></code> to return a <cite>np.ndarray</cite> or <code class="docutils literal notranslate"><span class="pre">'pt'</span></code> to return a <cite>torch.Tensor</cite> (on the GPU)</p></li>
+<li><p><strong>return_dict</strong> (<em>bool</em>) – if true, return a dict including the vision encoder’s <cite>hidden_state</cite> and <cite>embedding</cite></p></li>
+<li><p><strong>kwargs</strong> – additional arguments forwarded to the vision encoder (<cite>nano_llm.vision.CLIPImageEmbedding</cite>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The embedding with the tensor type as indicated by <cite>return_tensors</cite> (either <cite>‘np’</cite> for <cite>np.ndarray</cite>
+or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>), or a dict containing the embedding and vision encoder’s <cite>hidden_state</cite>
+if <code class="docutils literal notranslate"><span class="pre">return_dict=True</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.tokenizer">
+<span class="sig-name descname"><span class="pre">tokenizer</span></span><a class="headerlink" href="#nano_llm.NanoLLM.tokenizer" title="Link to this definition"></a></dt>
+<dd><p>HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a> instance used for tokenization/detokenization.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.config_path">
+<span class="sig-name descname"><span class="pre">config_path</span></span><a class="headerlink" href="#nano_llm.NanoLLM.config_path" title="Link to this definition"></a></dt>
+<dd><p>The local path to the model config file (<code class="docutils literal notranslate"><span class="pre">config.json</span></code>)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.model_path">
+<span class="sig-name descname"><span class="pre">model_path</span></span><a class="headerlink" href="#nano_llm.NanoLLM.model_path" title="Link to this definition"></a></dt>
+<dd><p>The local path to the model checkpoint/weights in HuggingFace format.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#nano_llm.NanoLLM.config" title="Link to this definition"></a></dt>
+<dd><p>Dict containing the model configuration (inspect it on the HuggingFace model card)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.stats">
+<span class="sig-name descname"><span class="pre">stats</span></span><a class="headerlink" href="#nano_llm.NanoLLM.stats" title="Link to this definition"></a></dt>
+<dd><p>Dict containing the latest generation performance statistics.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.has_vision">
+<span class="sig-name descname"><span class="pre">has_vision</span></span><a class="headerlink" href="#nano_llm.NanoLLM.has_vision" title="Link to this definition"></a></dt>
+<dd><p>True if this is a multimodal vision/language model.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="streaming">
+<h2>Streaming<a class="headerlink" href="#streaming" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">StreamingResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Asynchronous output iterator returned from <a class="reference internal" href="#nano_llm.NanoLLM.generate" title="nano_llm.NanoLLM.generate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></a>.
+Use it to stream the reply from the LLM as they are decoded token-by-token:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;Once upon a time,&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">response</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The entire response generated so far is also stored in <a class="reference internal" href="#nano_llm.StreamingResponse.tokens" title="nano_llm.StreamingResponse.tokens"><code class="xref py py-attr docutils literal notranslate"><span class="pre">StreamingResponse.tokens</span></code></a>
+and <a class="reference internal" href="#nano_llm.StreamingResponse.text" title="nano_llm.StreamingResponse.text"><code class="xref py py-attr docutils literal notranslate"><span class="pre">StreamingResponse.text</span></code></a>. To terminate processing prematurely, call <a class="reference internal" href="#nano_llm.StreamingResponse.stop" title="nano_llm.StreamingResponse.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">StreamingResponse.stop()</span></code></a>,
+which will signal the model to stop from generating additional output tokens.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.tokens">
+<span class="sig-name descname"><span class="pre">tokens</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.tokens" title="Link to this definition"></a></dt>
+<dd><p>accumulated output tokens generated so far (for the whole reply)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.text">
+<span class="sig-name descname"><span class="pre">text</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.text" title="Link to this definition"></a></dt>
+<dd><p>detokenized output text generated so far (for the whole reply)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.input">
+<span class="sig-name descname"><span class="pre">input</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.input" title="Link to this definition"></a></dt>
+<dd><p>the original input query from the user</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.model" title="Link to this definition"></a></dt>
+<dd><p>the <a class="reference internal" href="#nano_llm.NanoLLM" title="nano_llm.NanoLLM"><code class="xref py py-class docutils literal notranslate"><span class="pre">NanoLLM</span></code></a> model instance being used to generate the output</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.kv_cache">
+<span class="sig-name descname"><span class="pre">kv_cache</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.kv_cache" title="Link to this definition"></a></dt>
+<dd><p>the KV cache used by this request</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.stopping">
+<span class="sig-name descname"><span class="pre">stopping</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.stopping" title="Link to this definition"></a></dt>
+<dd><p>set if the user requested early termination</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.stopped">
+<span class="sig-name descname"><span class="pre">stopped</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.stopped" title="Link to this definition"></a></dt>
+<dd><p>set when generation has actually stopped</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.__next__">
+<span class="sig-name descname"><span class="pre">__next__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.__next__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.__next__" title="Link to this definition"></a></dt>
+<dd><p>Wait until the model generates more output, and return the new text (only the delta)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.stop" title="Link to this definition"></a></dt>
+<dd><p>Signal the model to halt output generation before the end of the reply.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="chat.html" class="btn btn-neutral float-right" title="Chat" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nano_llm.chat.history &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">nano_llm.chat.history</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for nano_llm.chat.history</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.templates</span> <span class="kn">import</span> <span class="n">ChatTemplate</span><span class="p">,</span> <span class="n">ChatTemplates</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">AttributeDict</span><span class="p">,</span> <span class="n">ImageExtensions</span><span class="p">,</span> <span class="n">ImageTypes</span><span class="p">,</span> <span class="n">replace_text</span><span class="p">,</span> <span class="n">print_table</span>
+
+
+<span class="k">def</span> <span class="nf">ChatEntry</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a chat entry consisting of a text message, image, ect as input.  </span>
+<span class="sd">    </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    </span>
+<span class="sd">      role (str) -- The chat&#39;s turn template to apply, typically &#39;user&#39; or &#39;bot&#39;.</span>
+<span class="sd">                    The role should have a corresponding entry in the active ChatTemplate.</span>
+<span class="sd">                    </span>
+<span class="sd">      msg (str|image) -- If a string, it should either contain text or a path</span>
+<span class="sd">                         to a txt, json, or image file that will be loaded.</span>
+
+<span class="sd">                         If an image, can be a np.ndarray, torch.Tensor, or PIL.Image.</span>
+<span class="sd">                                  </span>
+<span class="sd">                         If a dict, it will be passed through as the ChatEntry.</span>
+<span class="sd">                                  </span>
+<span class="sd">                         The embedding type of &#39;message&#39; will attempt to be automatically</span>
+<span class="sd">                         determined as text/image/ect, but if not possible, you should</span>
+<span class="sd">                         explicitly set its type by passing it in via kwargs instead.</span>
+<span class="sd">     </span>
+<span class="sd">    kwargs:</span>
+<span class="sd">    </span>
+<span class="sd">       For messages whose embedding type is unable to be determined automatically, or to create</span>
+<span class="sd">       a chat entry containing multiple message types, pass them in via kwargs like this:</span>
+<span class="sd">       </span>
+<span class="sd">         `entry = ChatEntry(role=&#39;user&#39;, text=&#39;abc&#39;, image=&#39;xyz.jpg&#39;)`</span>
+<span class="sd">         </span>
+<span class="sd">    Returns:</span>
+<span class="sd">    </span>
+<span class="sd">       A dict that has keys for &#39;role&#39;, &#39;text&#39;, &#39;image&#39;, ect.  This will return an AttributeDict,</span>
+<span class="sd">       so you can access it like entry.role, entry.text, and so on.</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">AttributeDict</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="n">role</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="n">ChatHistory</span><span class="o">.</span><span class="n">embedding_type</span><span class="p">(</span><span class="n">msg</span><span class="p">)]</span> <span class="o">=</span> <span class="n">msg</span>
+        
+    <span class="k">return</span> <span class="n">entry</span>
+    
+    
+<div class="viewcode-block" id="ChatHistory">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory">[docs]</a>
+<span class="k">class</span> <span class="nc">ChatHistory</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Multimodal chat history that can contain a mix of media including text/images.</span>
+<span class="sd">    </span>
+<span class="sd">    ChatHistory objects can be indexed like a list of chat entry dicts,</span>
+<span class="sd">    where each entry dict may have keys for &#39;text&#39;, &#39;image&#39;, &#39;role&#39;, ect.</span>
+<span class="sd">    </span>
+<span class="sd">       `chat_history[n]` will return the n-th chat entry</span>
+
+<span class="sd">    Each type of media has a different embedding function (e.g. LLM&#39;s typically </span>
+<span class="sd">    do text token embedding internally, and images use CLIP + projection layers). </span>
+<span class="sd">    From these, it assembles the embedding for the entire chat as input to the LLM.</span>
+<span class="sd">    </span>
+<span class="sd">    It uses templating to add the required special tokens as defined by different</span>
+<span class="sd">    model architectures.  In normal 2-turn chat, there are &#39;user&#39; and &#39;bot&#39; roles</span>
+<span class="sd">    defined, but arbitrary roles can be added, each with their own template.</span>
+<span class="sd">    The system prompt can also be configured through the chat template.</span>
+<span class="sd">    </span>
+<span class="sd">    TODO:  better caching of system prompt embeddings/ect</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">chat_template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">system_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">           </span>
+<span class="sd">           model (NanoLLM) -- the model instance used for embeddings</span>
+<span class="sd">           </span>
+<span class="sd">           chat_template (str|dict) -- either a chat template dict, or the name of the </span>
+<span class="sd">                                       chat template to use like &#39;llama-2&#39;, &#39;vicuna-v1&#39;</span>
+<span class="sd">                                       If None, will attempt to determine model type.</span>
+<span class="sd">                                  </span>
+<span class="sd">           system_prompt (str) -- set the default system prompt</span>
+<span class="sd">                                  if None, will use system prompt from the template.</span>
+<span class="sd">                                  </span>
+<span class="sd">           print_stats (bool) -- if True, generation performance will be printed to the terminal after EOS.</span>
+<span class="sd">                                 This also gets enabled by default if --debug or --verbose is used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">chat_template</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">ChatTemplate</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t automatically determine model type from </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, please set the --chat-template argument&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;using chat template &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; for model </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chat_template</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">chat_template</span><span class="p">):</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chat_template</span><span class="p">)</span> <span class="k">as</span> <span class="n">template_file</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">AttributeDict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">template_file</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">AttributeDict</span><span class="p">(</span><span class="n">ChatTemplates</span><span class="p">[</span><span class="n">chat_template</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chat_template</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">AttributeDict</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chat_template should be a str or dict (was </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">chat_template</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="s1">&#39;stop&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">]</span>
+                
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">input_ids</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token_id</span><span class="p">]</span>
+         
+        <span class="c1">#self.template.stop = [x for x in self.template.stop if x &gt;= 0]  # filter out ignored stop tokens</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;model &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;, chat template &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; stop tokens:  </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">batch_decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>      
+
+        <span class="k">if</span> <span class="n">system_prompt</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">system_prompt</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_embedding</span><span class="p">(</span><span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_text</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_embedding</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_embedding</span><span class="p">(</span><span class="s1">&#39;image&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_image</span><span class="p">)</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">print_stats</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;print_stats&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the number of tokens used by the chat so far.</span>
+<span class="sd">        embed_chat() needs to have been called for this to be upated,</span>
+<span class="sd">        because otherwise the input wouldn&#39;t have been tokenized yet.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">):</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_entry_keys</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="n">embed_key</span> <span class="o">=</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;_embedding&#39;</span>
+                <span class="k">if</span> <span class="n">embed_key</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="n">position</span> <span class="o">+=</span> <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">position</span>
+        
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the number of entries in the chat history</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the n-th chat entry with the subscript indexing operator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span>
+        
+<div class="viewcode-block" id="ChatHistory.append">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.append">[docs]</a>
+    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a chat entry consisting of a text message, image, ect.</span>
+<span class="sd">        See the ChatEntry() function for description of arguments.</span>
+<span class="sd">        This can also accept an existing ChatEntry dict as msg.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ChatEntry</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ChatHistory.reset">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.reset">[docs]</a>
+    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">add_system_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wrap_tokens</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset the chat history, and optionally add the system prompt to the new chat.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">wrap_tokens</span><span class="p">:</span>
+            <span class="n">wrap_entry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_wrap_entry</span><span class="p">(</span><span class="n">wrap_tokens</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">wrap_entry</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrapping chat to keep the most recent </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">)</span><span class="o">-</span><span class="n">wrap_entry</span><span class="si">}</span><span class="s2"> messages&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">entries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="n">wrap_entry</span><span class="p">:]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Chat history overflow couldn&#39;t find previous chat entry to wrap to (clearing chat)&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_embedding</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="n">add_system_prompt</span> <span class="ow">and</span> <span class="s1">&#39;system&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;system&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">])</span></div>
+
+     
+<div class="viewcode-block" id="ChatHistory.to_list">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.to_list">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the history to a list of dicts, where each dict is a chat entry</span>
+<span class="sd">        with the non-critical keys removed (suitable for web transport, ect)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">:</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_entry_keys</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">is_embedding</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="k">continue</span>
+                
+            <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">})</span>
+            
+        <span class="k">return</span> <span class="n">history</span></div>
+
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the system prompt, the typically hidden instruction at the beginning</span>
+<span class="sd">        of the chat like &quot;You are a curious and helpful AI assistant, ...&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        
+    <span class="nd">@system_prompt</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instruction</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the system prompt instruction string and reset the chat history.</span>
+<span class="sd">        TODO make it so this doesn&#39;t reset the chat history, but uncaches it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">instruction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        
+<div class="viewcode-block" id="ChatHistory.embed">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.embed">[docs]</a>
+    <span class="k">def</span> <span class="nf">embed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the embedding for a general input (text, image, ect)</span>
+<span class="sd">        </span>
+<span class="sd">        The embedding type is typically &#39;text&#39;, &#39;image&#39;, and will attempted</span>
+<span class="sd">        to be determined automatically if it isn&#39;t explicitly specified. </span>
+<span class="sd">        Paths that end in image extensions are assumed to be an image, </span>
+<span class="sd">        otherwise strings are treated as text.</span>
+<span class="sd">        </span>
+<span class="sd">        The kwargs are passed through to the input type&#39;s embedding function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">:</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_type</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="nb">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;type &#39;</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">&#39; did not have an embedding registered&quot;</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="ChatHistory.embed_text">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.embed_text">[docs]</a>
+    <span class="k">def</span> <span class="nf">embed_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the text embedding after applying the template for &#39;user&#39;, &#39;bot&#39;, ect.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">template</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">replace_text</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;$</span><span class="si">{MESSAGE}</span><span class="s1">&#39;</span><span class="p">:</span> <span class="n">text</span><span class="p">})</span>
+
+        <span class="k">if</span> <span class="n">return_tokens</span><span class="p">:</span>
+            <span class="n">embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">embed_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="n">use_cache</span><span class="p">)</span>
+            
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;embedding text </span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2"> -&gt; ```</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">```&quot;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">embedding</span></div>
+
+    
+<div class="viewcode-block" id="ChatHistory.embed_dict">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.embed_dict">[docs]</a>
+    <span class="k">def</span> <span class="nf">embed_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the embedding of a chat entry dict that can contain multiple embedding types.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span><span class="p">:</span>
+                <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+                
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;dict did not contain any entries with valid embedding types&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">embeddings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+                
+<div class="viewcode-block" id="ChatHistory.embed_image">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.embed_image">[docs]</a>
+    <span class="k">def</span> <span class="nf">embed_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given an image, extract features and perfom the image embedding.</span>
+<span class="sd">        This uses the CLIP encoder and a projection model that</span>
+<span class="sd">        maps it into the embedding space the model expects.</span>
+<span class="sd">        </span>
+<span class="sd">        This is only applicable to vision VLM&#39;s like Llava and Mini-GPT4,</span>
+<span class="sd">        and will throw an exception if model.has_vision is False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">[]</span> 
+
+        <span class="k">if</span> <span class="n">template</span><span class="p">:</span> <span class="c1"># get the text embedding for the template prefix</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;$</span><span class="si">{MESSAGE}</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">template</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_text</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;image template:  ```</span><span class="si">{</span><span class="n">template</span><span class="si">}</span><span class="s2">```&quot;</span><span class="p">)</span>
+
+        <span class="n">image_outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">embed_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">,</span> <span class="n">return_dict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_embedding</span> <span class="o">=</span> <span class="n">image_outputs</span><span class="o">.</span><span class="n">image_embeds</span>
+        
+        <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image_outputs</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span>
+        <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_text</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">print_stats</span><span class="p">:</span>
+            <span class="n">print_table</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vision</span><span class="o">.</span><span class="n">stats</span><span class="p">)</span>
+            
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;embedding image </span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">embeddings</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">embeddings</span></div>
+
+
+<div class="viewcode-block" id="ChatHistory.embed_chat">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.embed_chat">[docs]</a>
+    <span class="k">def</span> <span class="nf">embed_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wrap_tokens</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assemble the embedding of either the latest or entire chat.</span>
+<span class="sd">        </span>
+<span class="sd">        If use_cache is true (the default), and only the new embeddings will be returned.</span>
+<span class="sd">        If use_cache is set to false, then the entire chat history will be returned.</span>
+<span class="sd">        </span>
+<span class="sd">        The kwargs are passed to the embedding functions - for example, return_tokens=True</span>
+<span class="sd">        will return tokens for the chat rather than embeddings.</span>
+<span class="sd">        </span>
+<span class="sd">        This function returns an (embedding, position) tuple, where the embedding array</span>
+<span class="sd">        contains the new embeddings (or tokens) from the chat, and position is the current</span>
+<span class="sd">        overall position in the history (up to the model&#39;s context window length)</span>
+<span class="sd">        </span>
+<span class="sd">        If the number of tokens in the chat history exceeds the length given in `max_tokens` argument</span>
+<span class="sd">        (which is typically the model&#39;s context window, minus the max generation length),</span>
+<span class="sd">        then the chat history will drop all but the latest `wrap_tokens`, starting with a user prompt.</span>
+<span class="sd">        If `max_tokens` is provided but `wrap_tokens` is not, then the overflow tokens will be truncated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">num_user_prompts</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">open_user_prompt</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">):</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_entry_keys</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chat entry </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> had no valid/registered keys (</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+                
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;first&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="ow">and</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;role&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;user&#39;</span> <span class="ow">and</span> <span class="n">num_user_prompts</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">role_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;first&#39;</span><span class="p">]</span>  <span class="c1"># if the first non-system message has a different template</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">role</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chat template </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">template_name</span><span class="si">}</span><span class="s2"> didn&#39;t have an entry for role=</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">role_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">role</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">open_user_prompt</span><span class="p">:</span>
+                        <span class="n">role_template</span> <span class="o">=</span> <span class="n">role_template</span><span class="p">[</span><span class="n">role_template</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;$</span><span class="si">{MESSAGE}</span><span class="s1">&#39;</span><span class="p">):]</span> <span class="c1"># user prompt needs closed out from an image</span>
+                        <span class="n">open_user_prompt</span> <span class="o">=</span> <span class="kc">False</span>
+                
+                <span class="n">embed_key</span> <span class="o">=</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;_embedding&#39;</span>
+                <span class="n">cached</span> <span class="o">=</span> <span class="n">embed_key</span> <span class="ow">in</span> <span class="n">entry</span> <span class="ow">and</span> <span class="n">use_cache</span>
+                
+                <span class="k">if</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">isEnabledFor</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">cached</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;processing chat entry </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">  role=&#39;</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">&#39; template=&#39;</span><span class="si">{</span><span class="n">role_template</span><span class="si">}</span><span class="s2">&#39; open_user_prompt=</span><span class="si">{</span><span class="n">open_user_prompt</span><span class="si">}</span><span class="s2"> cached=</span><span class="si">{</span><span class="s1">&#39;true&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">cached</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=&#39;</span><span class="si">{</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">],</span><span class="w"> </span><span class="nb">str</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="nb">type</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">])</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">))</span>
+                
+                <span class="k">if</span> <span class="n">use_cache</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">embed_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span> <span class="c1"># TODO  and entry.role != &#39;bot&#39;  -- only compute bot embeddings when needed</span>
+                        <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="n">role_template</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                        
+                        <span class="c1"># bot message already included in kv_cache, except trailing template</span>
+                        <span class="c1"># TODO handle bot generation prompt and trailing template</span>
+                        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s1">&#39;bot&#39;</span><span class="p">:</span>
+                            <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">])</span>
+                            <span class="n">use_cache</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># all entries after this need to be included</span>
+                            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span>
+                                <span class="n">open_user_prompt</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># image is inside first half of a user prompt</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">position</span> <span class="o">+=</span> <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">position</span> <span class="o">+=</span> <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">embed_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="n">role_template</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span>
+                            <span class="n">open_user_prompt</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">embeddings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">])</span>
+                
+                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;role&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;user&#39;</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;text&#39;</span><span class="p">:</span>
+                    <span class="n">num_user_prompts</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#, position</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        if max_tokens and position + embeddings.shape[1] &gt; max_tokens:</span>
+<span class="sd">            if wrap_tokens:</span>
+<span class="sd">                self.reset(wrap_tokens=wrap_tokens)</span>
+<span class="sd">                embeddings, position = self.embed_chat(use_cache=False, max_tokens=max_tokens, wrap_tokens=wrap_tokens, **kwargs)</span>
+<span class="sd">                logging.warning(f&quot;Chat overflow, max history lenth {max_tokens} tokens exceeded (keeping the most recent {embeddings.shape[1]} tokens)&quot;)</span>
+<span class="sd">            else:</span>
+<span class="sd">                logging.warning(f&quot;Truncating chat history overflow to {max_tokens} tokens&quot;)</span>
+<span class="sd">                return embeddings[:,:max_tokens,:], position</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">return</span> <span class="n">embeddings</span><span class="p">,</span> <span class="n">position</span>      </div>
+
+
+    <span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">(</span><span class="n">use_cache</span><span class="o">=</span><span class="n">use_cache</span><span class="p">,</span> <span class="n">return_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">valid_entry_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">is_embedding</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>       
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_embedding&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+                
+            <span class="k">if</span> <span class="n">is_embedding</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span><span class="p">:</span>
+                <span class="k">continue</span>
+              
+            <span class="c1">#if exclude and key in exclude:</span>
+            <span class="c1">#    continue</span>
+            
+            <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">keys</span>
+        
+    <span class="k">def</span> <span class="nf">register_embedding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding_functions</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="n">AttributeDict</span><span class="p">(</span>
+            <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span>
+            <span class="n">uses_template</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="c1">#&#39;role_template&#39; in params</span>
+        <span class="p">)</span>
+        
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">embedding_type</span><span class="p">(</span><span class="nb">input</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">input</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ImageExtensions</span><span class="p">):</span>
+                <span class="k">return</span> <span class="s1">&#39;image&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;text&quot;</span> 
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">ImageTypes</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;image&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">input</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;text&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;couldn&#39;t find type of embedding for </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span><span class="si">}</span><span class="s2">, please specify the &#39;type&#39; argument&quot;</span><span class="p">)</span>
+            
+<div class="viewcode-block" id="ChatHistory.find_wrap_entry">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.ChatHistory.find_wrap_entry">[docs]</a>
+    <span class="k">def</span> <span class="nf">find_wrap_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrap_tokens</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the oldest entry from which the chat doesn&#39;t exceed the number of wrap_tokens,</span>
+<span class="sd">        and that the entry should be a user query.  This is used to keep those more recent</span>
+<span class="sd">        chat entries when the history overflows past the max context window of the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_entry_keys</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="n">embed_key</span> <span class="o">=</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;_embedding&#39;</span>
+                <span class="k">if</span> <span class="n">embed_key</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="n">position</span> <span class="o">+=</span> <span class="n">entry</span><span class="p">[</span><span class="n">embed_key</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;=</span> <span class="n">wrap_tokens</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">)):</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s1">&#39;user&#39;</span><span class="p">:</span>
+                                <span class="k">return</span> <span class="n">i</span></div>
+</div>
+
+            
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to NanoLLM! &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to NanoLLM!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-nanollm">
+<h1>Welcome to NanoLLM!<a class="headerlink" href="#welcome-to-nanollm" title="Link to this heading"></a></h1>
+<p>NanoLLM is a lightweight, high-performance library using optimized inferencing APIs for quantized LLM’s, multimodality, speech services, vector databases with RAG, and web frontends.  It can be used to build responsive, low-latency interactive agents that can be deployed on Jetson.</p>
+<section id="benchmarks">
+<h2>Benchmarks<a class="headerlink" href="#benchmarks" title="Link to this heading"></a></h2>
+<iframe width="637" height="400" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ9lFqOIZSfrdnS_0sa2WahzLbpbAbBCTlS049jpOchMCum1hIk-wE_lcNAmLkrZd0OQrI9IkKBfGp/pubchart?oid=1393594867&amp;format=interactive"></iframe><iframe width="637" height="400" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ9lFqOIZSfrdnS_0sa2WahzLbpbAbBCTlS049jpOchMCum1hIk-wE_lcNAmLkrZd0OQrI9IkKBfGp/pubchart?oid=1784494314&amp;format=interactive"></iframe><p>For more info, see the <a class="reference external" href="https://www.jetson-ai-lab.com/benchmarks.html">Benchmarks</a> on Jetson AI Lab.</p>
+</section>
+<section id="model-support">
+<h2>Model Support<a class="headerlink" href="#model-support" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>LLM</p>
+<ul>
+<li><p>Llama</p></li>
+<li><p>Mistral</p></li>
+<li><p>Mixtral</p></li>
+<li><p>GPT-2</p></li>
+<li><p>GPT-NeoX</p></li>
+</ul>
+</li>
+<li><p>SLM</p>
+<ul>
+<li><p>StableLM</p></li>
+<li><p>Phi-2</p></li>
+<li><p>Gemma</p></li>
+<li><p>TinyLlama</p></li>
+<li><p>ShearedLlama</p></li>
+<li><p>OpenLLama</p></li>
+</ul>
+</li>
+<li><p>VLM</p>
+<ul>
+<li><p>Llava</p></li>
+<li><p>VILA</p></li>
+<li><p>NousHermes/Obsidian</p></li>
+</ul>
+</li>
+<li><p>Speech</p>
+<ul>
+<li><p>Riva ASR</p></li>
+<li><p>Riva TTS</p></li>
+<li><p>XTTS</p></li>
+</ul>
+</li>
+</ul>
+<p>See the <a class="reference internal" href="models.html#models"><span class="std std-ref">Models</span></a> section for more info and API documentation.</p>
+</section>
+<section id="platform-support">
+<h2>Platform Support<a class="headerlink" href="#platform-support" title="Link to this heading"></a></h2>
+<p>Currently built for Jetson Orin and JetPack 6.  Containers are provided by <a class="reference external" href="https://www.github.com/dusty-nv/jetson-containers">jetson-containers</a>.</p>
+</section>
+<section id="videos">
+<h2>Videos<a class="headerlink" href="#videos" title="Link to this heading"></a></h2>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/UOjqF3YCGkY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><iframe width="720" height="405" src="https://www.youtube.com/embed/OJT-Ax0CkhU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><iframe width="720" height="405" src="https://www.youtube.com/embed/8Eu6zG0eEGY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><p>For more background on generative AI applications in edge devices, visit the <a class="reference external" href="https://www.jetson-ai-lab.com">Jetson AI Lab</a>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#supported-architectures">Supported Architectures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-api">Model API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#nano_llm.NanoLLM"><code class="docutils literal notranslate"><span class="pre">NanoLLM</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#streaming">Streaming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#nano_llm.StreamingResponse"><code class="docutils literal notranslate"><span class="pre">StreamingResponse</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="chat.html#templates">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chat.html#chat-history">Chat History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="chat.html#nano_llm.ChatHistory"><code class="docutils literal notranslate"><span class="pre">ChatHistory</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html#plugin-api">Plugin API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="plugins.html#nano_llm.Plugin"><code class="docutils literal notranslate"><span class="pre">Plugin</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="webserver.html#webserver-api">Webserver API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="webserver.html#nano_llm.web.WebServer"><code class="docutils literal notranslate"><span class="pre">WebServer</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#tensor-conversion">Tensor Conversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.convert_dtype"><code class="docutils literal notranslate"><span class="pre">convert_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.convert_tensor"><code class="docutils literal notranslate"><span class="pre">convert_tensor()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#audio">Audio</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.convert_audio"><code class="docutils literal notranslate"><span class="pre">convert_audio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.audio_rms"><code class="docutils literal notranslate"><span class="pre">audio_rms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.audio_silent"><code class="docutils literal notranslate"><span class="pre">audio_silent()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#images">Images</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.load_image"><code class="docutils literal notranslate"><span class="pre">load_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.is_image"><code class="docutils literal notranslate"><span class="pre">is_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.cuda_image"><code class="docutils literal notranslate"><span class="pre">cuda_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.torch_image"><code class="docutils literal notranslate"><span class="pre">torch_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.image_size"><code class="docutils literal notranslate"><span class="pre">image_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html#argument-parsing">Argument Parsing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#nano_llm.utils.ArgParser"><code class="docutils literal notranslate"><span class="pre">ArgParser</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="releases.html#id1">24.4</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="install.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

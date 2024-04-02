@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utilities &mdash; NanoLLM 24.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5151258b"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Release Notes" href="releases.html" />
+    <link rel="prev" title="Websockets" href="webserver.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            NanoLLM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webserver.html">Websockets</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tensor-conversion">Tensor Conversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.convert_dtype"><code class="docutils literal notranslate"><span class="pre">convert_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.convert_tensor"><code class="docutils literal notranslate"><span class="pre">convert_tensor()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#audio">Audio</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.convert_audio"><code class="docutils literal notranslate"><span class="pre">convert_audio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.audio_rms"><code class="docutils literal notranslate"><span class="pre">audio_rms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.audio_silent"><code class="docutils literal notranslate"><span class="pre">audio_silent()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#images">Images</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.load_image"><code class="docutils literal notranslate"><span class="pre">load_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.is_image"><code class="docutils literal notranslate"><span class="pre">is_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.cuda_image"><code class="docutils literal notranslate"><span class="pre">cuda_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.torch_image"><code class="docutils literal notranslate"><span class="pre">torch_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.image_size"><code class="docutils literal notranslate"><span class="pre">image_size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#argument-parsing">Argument Parsing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.utils.ArgParser"><code class="docutils literal notranslate"><span class="pre">ArgParser</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.Defaults"><code class="docutils literal notranslate"><span class="pre">ArgParser.Defaults</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.Audio"><code class="docutils literal notranslate"><span class="pre">ArgParser.Audio</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.Video"><code class="docutils literal notranslate"><span class="pre">ArgParser.Video</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.Riva"><code class="docutils literal notranslate"><span class="pre">ArgParser.Riva</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.__init__"><code class="docutils literal notranslate"><span class="pre">ArgParser.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.parse_args"><code class="docutils literal notranslate"><span class="pre">ArgParser.parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.utils.ArgParser.parse_prompt_args"><code class="docutils literal notranslate"><span class="pre">ArgParser.parse_prompt_args()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NanoLLM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/utilities.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Link to this heading"></a></h1>
+<p>Documented on this page are various utility functions that NanoLLM provides, including audio/image manipulation, tensor format conversion, argument parsing, ect.</p>
+<p>To use these, import them from <strong>nano_llm.utils</strong> (like <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">nano_llm.utils</span> <span class="pre">import</span> <span class="pre">convert_tensor</span></code>)</p>
+<section id="tensor-conversion">
+<h2>Tensor Conversion<a class="headerlink" href="#tensor-conversion" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.convert_dtype">
+<span class="sig-name descname"><span class="pre">convert_dtype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/tensor.html#convert_dtype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_dtype" title="Link to this definition"></a></dt>
+<dd><p>Convert a string, numpy type, or torch.dtype to either numpy or PyTorch</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.convert_tensor">
+<span class="sig-name descname"><span class="pre">convert_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/tensor.html#convert_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_tensor" title="Link to this definition"></a></dt>
+<dd><p>Convert tensors between numpy/torch/ect</p>
+</dd></dl>
+
+</section>
+<section id="audio">
+<h2>Audio<a class="headerlink" href="#audio" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.convert_audio">
+<span class="sig-name descname"><span class="pre">convert_audio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype=&lt;class</span> <span class="pre">'numpy.int16'&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/audio.html#convert_audio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_audio" title="Link to this definition"></a></dt>
+<dd><p>Convert between audio datatypes like float&lt;-&gt;int16 and apply sample re-scaling.
+If the samples are a raw bytes array, it’s assumed that they are in int16 format.
+Supports audio samples as byte buffer, numpy ndarray, and torch.Tensor.  Converted
+byte buffers will be returned as ndarray, otherwise the same object type as input.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.audio_rms">
+<span class="sig-name descname"><span class="pre">audio_rms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/audio.html#audio_rms"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.audio_rms" title="Link to this definition"></a></dt>
+<dd><p>Compute the average audio RMS (returns a float between 0 and 1)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.audio_silent">
+<span class="sig-name descname"><span class="pre">audio_silent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/audio.html#audio_silent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.audio_silent" title="Link to this definition"></a></dt>
+<dd><p>Detect if the audio samples are silent or muted.</p>
+<p>If threshold &lt; 0, false will be returned (silence detection disabled).
+If threshold &gt; 0, the audio’s average RMS will be compared to the threshold.
+If threshold = 0, it will check for any non-zero samples (faster than RMS)</p>
+<p>Returns true if audio levels are below threshold, otherwise false.</p>
+</dd></dl>
+
+</section>
+<section id="images">
+<h2>Images<a class="headerlink" href="#images" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.load_image">
+<span class="sig-name descname"><span class="pre">load_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#load_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.load_image" title="Link to this definition"></a></dt>
+<dd><p>Load an image from a local path or URL that will be downloaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – either a path or URL to the image.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">PIL.Image</span></code> instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.is_image">
+<span class="sig-name descname"><span class="pre">is_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#is_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.is_image" title="Link to this definition"></a></dt>
+<dd><p>Returns true if the object is a PIL.Image, np.ndarray, torch.Tensor, or jetson_utils.cudaImage</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.cuda_image">
+<span class="sig-name descname"><span class="pre">cuda_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#cuda_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.cuda_image" title="Link to this definition"></a></dt>
+<dd><p>Convert an image from <cite>PIL.Image</cite>, <cite>np.ndarray</cite>, <cite>torch.Tensor</cite>, or <cite>__gpu_array_interface__</cite>
+to a jetson_utils.cudaImage on the GPU (without using memory copies when possible)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.torch_image">
+<span class="sig-name descname"><span class="pre">torch_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#torch_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.torch_image" title="Link to this definition"></a></dt>
+<dd><p>Convert the image to a type that is compatible with PyTorch <code class="docutils literal notranslate"><span class="pre">(torch.Tensor,</span> <span class="pre">ndarray,</span> <span class="pre">PIL.Image)</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.utils.image_size">
+<span class="sig-name descname"><span class="pre">image_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#image_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.image_size" title="Link to this definition"></a></dt>
+<dd><p>Returns the dimensions of the image as a <code class="docutils literal notranslate"><span class="pre">(height,</span> <span class="pre">width,</span> <span class="pre">channels)</span></code> tuple.</p>
+</dd></dl>
+
+</section>
+<section id="argument-parsing">
+<h2>Argument Parsing<a class="headerlink" href="#argument-parsing" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ArgParser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extras</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['model',</span> <span class="pre">'chat',</span> <span class="pre">'generation',</span> <span class="pre">'log']</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/args.html#ArgParser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.ArgParser" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ArgumentParser</span></code></p>
+<p>Dynamically adds extra command-line args that are commonly used by various subsystems.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.Defaults">
+<span class="sig-name descname"><span class="pre">Defaults</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['model',</span> <span class="pre">'chat',</span> <span class="pre">'generation',</span> <span class="pre">'log']</span></em><a class="headerlink" href="#nano_llm.utils.ArgParser.Defaults" title="Link to this definition"></a></dt>
+<dd><p>The default options for model loading, chat, generation config, and logging.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.Audio">
+<span class="sig-name descname"><span class="pre">Audio</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['audio_input',</span> <span class="pre">'audio_output']</span></em><a class="headerlink" href="#nano_llm.utils.ArgParser.Audio" title="Link to this definition"></a></dt>
+<dd><p>Audio device I/O options</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.Video">
+<span class="sig-name descname"><span class="pre">Video</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['video_input',</span> <span class="pre">'video_output']</span></em><a class="headerlink" href="#nano_llm.utils.ArgParser.Video" title="Link to this definition"></a></dt>
+<dd><p>Video streaming I/O options</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.Riva">
+<span class="sig-name descname"><span class="pre">Riva</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['asr',</span> <span class="pre">'tts']</span></em><a class="headerlink" href="#nano_llm.utils.ArgParser.Riva" title="Link to this definition"></a></dt>
+<dd><p>ASR/TTS model options</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extras</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['model',</span> <span class="pre">'chat',</span> <span class="pre">'generation',</span> <span class="pre">'log']</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/args.html#ArgParser.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.ArgParser.__init__" title="Link to this definition"></a></dt>
+<dd><p>Populate an <code class="docutils literal notranslate"><span class="pre">argparse.ArgumentParser</span></code> with additional options as specified by the provided extras.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.parse_args">
+<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/args.html#ArgParser.parse_args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.ArgParser.parse_args" title="Link to this definition"></a></dt>
+<dd><p>Override for parse_args() that does some additional configuration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.utils.ArgParser.parse_prompt_args">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parse_prompt_args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prompts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/args.html#ArgParser.parse_prompt_args"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.ArgParser.parse_prompt_args" title="Link to this definition"></a></dt>
+<dd><p>Parse prompt command-line argument and return list of prompts.
+It’s assumed that the argparse argument was created like this:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--prompt&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If the prompt text is ‘default’, then default chat prompts will
+be assigned if <code class="docutils literal notranslate"><span class="pre">chat=True</span></code> (otherwise default completion prompts)</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="webserver.html" class="btn btn-neutral float-left" title="Websockets" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="releases.html" class="btn btn-neutral float-right" title="Release Notes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright NVIDIA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
