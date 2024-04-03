@@ -2,7 +2,7 @@
 Welcome to NanoLLM!
 ====================
 
-NanoLLM is a lightweight, high-performance library using optimized inferencing APIs for quantized LLM's, multimodality, speech services, vector databases with RAG, and web frontends.  It can be used to build responsive, low-latency interactive agents that can be deployed on Jetson.
+`NanoLLM <https://www.github.com/dusty-nv/NanoLLM>`_ is a lightweight, high-performance library using optimized inferencing APIs for quantized LLM's, multimodality, speech services, vector databases with RAG, and web frontends.  It can be used to build responsive, low-latency interactive agents that can be deployed on Jetson.
 
 ----------
 Benchmarks
