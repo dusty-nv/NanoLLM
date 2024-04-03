@@ -16,6 +16,8 @@ Then you can start `nano_llm` container like this:
 
 This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. `dustynv/nano_llm:r36.2.0` for JetPack 6.0 DP)
 
+### Running Models
+
 Once in the container, you should be able to `import nano_llm` in a Python3 interpreter, and run the various example commands shown on this page like:
 
 ```bash
@@ -33,3 +35,15 @@ Or you can run the container & chat command in one go like this:
 ```
 
 Setting your `$HUGGINGFACE_TOKEN` is for models requiring authentication to download (like Llama-2)
+
+### Building In Other Containers
+
+You can either add NanoLLM on top of your container by using it as a base image, or using NanoLLM as the base image in your Dockerfile.  When doing the former use the `--base` argument to `jetson-containers/build.sh` to build it off your container:
+
+```
+jetson-containers/build.sh --base my_container:latest --name my_container:llm nano_llm
+```
+
+Doing so will also install all the needed dependencies on top of your container (including CUDA, PyTorch, the LLM inference APIs, ect).  It should be based on the same version of Ubuntu as JetPack.  
+
+And in the event that you want to add your own container on top of NanoLLM - thereby skipping its build process - then you can just use a FROM statement (like `FROM dustynv/nano_llm:r36.2.0`) at the top of your Dockerfile.  Or you can make your own [package](https://github.com/dusty-nv/jetson-containers/blob/master/docs/packages.md) with jetson-containers for it. 

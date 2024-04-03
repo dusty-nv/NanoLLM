@@ -21,15 +21,26 @@ from jetson_utils import cudaFont, cudaMemcpy, cudaToNumpy, cudaDeviceSynchroniz
 
 class VideoQuery(Agent):
     """
-    Perpetual always-on closed-loop visual agent that applies prompts to a video stream.
+    Closed-loop visual agent that repeatedly applies a set of prompts to a video stream, and is also able to match
+    the incoming stream against a vector database, and then use the matching metadata for multimodal RAG.
+    Also serves an interactive web UI for the user to change queries, set event filters, and tag images in the database.
     """
     def __init__(self, model="liuhaotian/llava-v1.5-13b", nanodb=None, vision_scaling='resize', **kwargs):
+        """
+        Args:
+        
+          model (NanoLLM|str): the NanoLLM multimodal model instance, or name/path of a multimodal model to load.
+          nanodb (NanoDB|str): optional NanoDB plugin instance (or path to a NanoDB on disk) to match the incoming stream against.
+          vision_scaling (str): ``'resize'`` to ignore aspect ratio when downscaling to the often-square resolution of the vision encoder,
+                                or ``crop`` to center-crop the images first to maintain aspect ratio (while discarding pixels).
+          kwargs:  forwarded to the plugin initializers for ChatQuery, VideoSource, and VideoOutput
+        """                    
         super().__init__()
 
         if not vision_scaling:
             vision_scaling = 'resize'
             
-        # load model in another process for smooth streaming
+        #: The model plugin (ChatQuery)
         self.llm = ProcessProxy('ChatQuery', model=model, drop_inputs=True, vision_scaling=vision_scaling, **kwargs) #ProcessProxy((lambda **kwargs: ChatQuery(model, drop_inputs=True, **kwargs)), **kwargs)
         self.llm.add(PrintStream(color='green', relay=True).add(self.on_text))
         self.llm.start()
@@ -45,8 +56,8 @@ class VideoQuery(Agent):
             time.sleep(0.25)
             
         # create video streams    
-        self.video_source = VideoSource(**kwargs)
-        self.video_output = VideoOutput(**kwargs)
+        self.video_source = VideoSource(**kwargs)  #: The video source plugin
+        self.video_output = VideoOutput(**kwargs)  #: The video output plugin
         
         self.video_source.add(self.on_video, threaded=False)
         self.video_output.start()
@@ -86,7 +97,7 @@ class VideoQuery(Agent):
         self.keyboard_thread = threading.Thread(target=self.poll_keyboard)
         self.keyboard_thread.start()
 
-        # nanoDB
+        #: The `NanoDB <https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb>`_ vector database 
         if nanodb:
             self.db = NanoDB(
                 path=nanodb, 
@@ -130,6 +141,7 @@ class VideoQuery(Agent):
         web_title = kwargs.get('web_title')
         web_title = web_title if web_title else 'LIVE LLAVA'
         
+        #: the webserver (by default on ``https://localhost:8050``)
         self.server = WebServer(
             msg_callback=self.on_websocket, 
             index='video_query.html', 
@@ -141,10 +153,15 @@ class VideoQuery(Agent):
             **kwargs
         )
         
-        # event filters
+        #: event filters for parsing bot output and triggering actions when conditions are met.
         self.events = EventFilter(server=self.server)
    
     def on_video(self, image):
+        """
+        When a new frame is recieved from the video source, run the model on it with the set prompt,
+        applying RAG using the metadata from the most-similar match from the vector database (if enabled).
+        Then render the latest text from the model over the image, and send it to the output video stream.
+        """
         if self.pause_video:
             if not self.pause_image:
                 self.pause_image = cudaMemcpy(image)
@@ -182,6 +199,10 @@ class VideoQuery(Agent):
         self.video_output(image)
    
     def on_text(self, text):
+        """
+        When new output is recieved from the model, update the text to render,
+        and check if it satisfied any of the event filters when the output is complete.
+        """
         if self.eos:
             self.text = text  # new query response
             self.eos = False
@@ -198,6 +219,12 @@ class VideoQuery(Agent):
             self.eos = True
 
     def on_image_embedding(self, embedding):
+        """
+        Recieve the image embedding from CLIP that was used when the model processed
+        the last image, and search it against the database to find the most similar
+        images and their metadata for RAG.  Also, if the user requested the last image
+        be tagged, add the embedding to the vector database along with the metadata tags.
+        """
         if self.tag_image and self.last_image:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"/data/datasets/uploads/{timestamp}.jpg"
@@ -215,6 +242,10 @@ class VideoQuery(Agent):
             self.db(embedding)
         
     def on_search(self, results):
+        """
+        Recieve the similar matches from the vector database and update RAG with them,
+        along with the most recent results shown in the web UI.
+        """
         html = []
         
         for result in results:
@@ -245,6 +276,9 @@ class VideoQuery(Agent):
             self.rag_prompt = f"This image is of {result['metadata']['tags']}"
         
     def on_websocket(self, msg, msg_type=0, metadata='', **kwargs):
+        """
+        Websocket message handler from the client.
+        """
         if msg_type == WebServer.MESSAGE_JSON:
             #print(f'\n\n###############\n# WEBSOCKET JSON MESSAGE\n#############\n{msg}')
             if 'prompt' in msg:
@@ -311,6 +345,9 @@ class VideoQuery(Agent):
             logging.info(f"refresh rate:  {refresh_str}")
 
     def start(self):
+        """
+        Start the webserver & websocket listening in other threads.
+        """
         super().start()
         self.server.start()
         return self

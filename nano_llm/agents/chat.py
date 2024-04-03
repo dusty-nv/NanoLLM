@@ -16,15 +16,22 @@ class ChatAgent(Agent):
     Agent for two-turn multimodal chat.
     """
     def __init__(self, model="meta-llama/Llama-2-7b-chat-hf", interactive=True, **kwargs):
+        """
+        Args:
+          model (NanoLLM|str): either the loaded model instance, or model name/path to load.
+          interactive (bool): should the agent get user input from the terminal or not (default True)
+        """
         super().__init__()
         
         """
         # Equivalent to:
         self.pipeline = UserPrompt(interactive=interactive, **kwargs).add(
-            LLMQuery(model, **kwargs).add(
+            ChatQuery(model, **kwargs).add(
             PrintStream(relay=True).add(self.on_eos)     
         ))
         """
+        
+        #: input() → LLM → print() pipeline.
         self.pipeline = Pipeline([
             UserPrompt(interactive=interactive, **kwargs),
             ChatQuery(model, **kwargs),
@@ -32,7 +39,10 @@ class ChatAgent(Agent):
             self.on_eos    
         ])
         
+        #: The ``ChatQuery`` session manager
         self.chat = self.pipeline[0].find(ChatQuery)
+        
+        #: The loaded NanoLLM model instance
         self.model = self.chat.model
         
         self.interactive = interactive
@@ -42,6 +52,9 @@ class ChatAgent(Agent):
         self.print_input_prompt()
 
     def on_interrupt(self, signum, frame):
+        """
+        Interrupts the bot output when the user presses ``Ctrl+C``.
+        """
         curr_time = time.perf_counter()
         time_diff = curr_time - self.last_interrupt
         self.last_interrupt = curr_time

@@ -15,17 +15,17 @@ class Plugin(threading.Thread):
     Frequent categories of plugins:
     
       * sources:  text prompts, images/video
-      * llm_queries, RAG, dynamic LLM calls, image postprocessors
+      * process:  LLM queries, RAG, dynamic LLM calls, image post-processors
       * outputs:  print to stdout, save images/video
       
-    Parameters:
+    Inherited plugins should implement the :func:`process` function to handle incoming data.
     
-      output_channels (int) -- the number of sets of output connections the plugin has
-      relay (bool) -- if true, will relay any inputs as outputs after processing
-      drop_inputs (bool) -- if true, only the most recent input in the queue will be used
-      threaded (bool) -- if true, will spawn independent thread for processing the queue.
-      
-    TODO:  use queue.task_done() and queue.join() for external synchronization
+    Args:
+    
+      output_channels (int): the number of sets of output connections the plugin has
+      relay (bool): if true, will relay any inputs as outputs after processing
+      drop_inputs (bool): if true, only the most recent input in the queue will be used
+      threaded (bool): if true, will spawn independent thread for processing the queue.
     """
     def __init__(self, output_channels=1, relay=False, drop_inputs=False, threaded=True, **kwargs):
         """
@@ -48,32 +48,35 @@ class Plugin(threading.Thread):
 
     def process(self, input, **kwargs):
         """
-        Abstract process() function that plugin instances should implement.
-        Don't call this function externally unless threaded=False, because
+        Abstract function that plugin instances should implement to process incoming data.
+        Don't call this function externally unless ``threaded=False``, because
         otherwise the plugin's internal thread dispatches from the queue.
+
+        Args:
         
-        Plugins should return their output data (or None if there isn't any)
-        You can also call self.output() directly as opposed to returning it.
+          input: input data to process from the previous plugin in the pipeline
+          kwargs: optional processing arguments that accompany this data
+          
+        Returns:
         
-        kwargs:
-        
-          sender (Plugin) -- only present if data sent from previous plugin
+          Plugins should return their output data to be sent to downstream plugins.
+          You can also call :func:`output()` as opposed to returning it.
         """
         raise NotImplementedError(f"plugin {type(self)} has not implemented process()")
     
     def add(self, plugin, channel=0, **kwargs):
         """
-        Connect this plugin with another, as either an input or an output.
-        By default, this plugin will output to the specified plugin instance.
+        Connect the output queue from this plugin with the input queue of another plugin,
+        so that this plugin sends its output data to the other one.
         
-        Parameters:
+        Args:
         
-          plugin (Plugin|callable) -- either the plugin to link to, or a callback
-          
-          mode (str) -- 'input' if this plugin should recieve data from the other
-                        plugin, or 'output' if this plugin should send data to it.
+          plugin (Plugin|callable): either the plugin to link to, or a callback function.
+          channel (int) -- the output channel of this plugin to link the other plugin to.
                         
-        Returns a reference to this plugin instance (self)
+        Returns:
+
+          A reference to this plugin instance (self)
         """
         from nano_llm.plugins import Callback
         
@@ -91,42 +94,17 @@ class Plugin(threading.Thread):
             
         return self
     
-    def find(self, type):
-        """
-        Return the plugin with the specified type by searching for it among
-        the pipeline graph of inputs and output connections to other plugins.
-        """
-        if isinstance(self, type):
-            return self
-            
-        for output_channel in self.outputs:
-            for output in output_channel:
-                if isinstance(output, type):
-                    return output
-                plugin = output.find(type)
-                if plugin is not None:
-                    return plugin
-            
-        return None
-    
-    '''
-    def __getitem__(self, type):
-        """
-        Subscript indexing [] operator alias for find()
-        """
-        return self.find(type)
-    '''
-    
     def __call__(self, input=None, **kwargs):
         """
-        Callable () operator alias for the input() function
+        Callable () operator alias for the :func:`input()` function.
+        This is provided for a more intuitive way of processing data 
+        like ``plugin(data)`` instead of ``plugin.input(data)``
         """
         self.input(input, **kwargs)
         
     def input(self, input=None, **kwargs):
         """
-        Add data to the plugin's processing queue (or if threaded=False, process it now)
-        TODO:  multiple input channels?
+        Add data to the plugin's processing queue (or process it now if ``threaded=False``)
         """
         if self.threaded:
             #self.start() # thread may not be started if plugin only called from a callback
@@ -191,7 +169,7 @@ class Plugin(threading.Thread):
             
     def run(self):
         """
-        @internal processes the queue forever when created with threaded=True
+        Processes the queue forever and automatically run when created with ``threaded=True``
         """
         while True:
             try:
@@ -226,11 +204,17 @@ class Plugin(threading.Thread):
    
     def interrupt(self, clear_inputs=True, recursive=True, block=None):
         """
-        Interrupt any ongoing/pending processing, and optionally clear the input queue.
-        If recursive is true, then any downstream plugins will also be interrupted.
-        If block is true, this function will wait until any ongoing processing has finished.
-        This is done so that any lingering outputs don't cascade downstream in the pipeline.
-        If block is None, it will automatically be set to true if this plugin has outputs.
+        Interrupt any ongoing/pending processing, and optionally clear the input queue
+        along with any downstream queues, and optionally wait for processing of those 
+        requests to have finished.
+        
+        Args:
+        
+          clear_inputs (bool):  if True, clear any remaining inputs in this plugin's queue.
+          recursive (bool):  if True, then any downstream plugins will also be interrupted.
+          block (bool):  is true, this function will wait until any ongoing processing has finished.
+                         This is done so that any lingering outputs don't cascade downstream in the pipeline.
+                         If block is None, it will automatically be set to true if this plugin has outputs.
         """
         #logging.debug(f"interrupting plugin {type(self)}  clear_inputs={clear_inputs} recursive={recursive} block={block}")
         
@@ -263,4 +247,29 @@ class Plugin(threading.Thread):
                 self.input_queue.get(block=False)
             except queue.Empty:
                 return         
+
+    def find(self, type):
+        """
+        Return the plugin with the specified type by searching for it among
+        the pipeline graph of inputs and output connections to other plugins.
+        """
+        if isinstance(self, type):
+            return self
             
+        for output_channel in self.outputs:
+            for output in output_channel:
+                if isinstance(output, type):
+                    return output
+                plugin = output.find(type)
+                if plugin is not None:
+                    return plugin
+            
+        return None
+    
+    '''
+    def __getitem__(self, type):
+        """
+        Subscript indexing [] operator alias for find()
+        """
+        return self.find(type)
+    '''       

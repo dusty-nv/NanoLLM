@@ -13,15 +13,18 @@ from .voice_chat import VoiceChat
 
 class WebChat(VoiceChat):
     """
-    Adds webserver to ASR/TTS voice chat agent.
+    Adds webserver hooks to ASR/TTS voice chat agent and provide web UI.
+    When a multimodal model is loaded, the user can drag & drop images
+    to chat about into the UI.  Also supports streaming the client's
+    microphone and output speakers using WebAudio.
     """
     def __init__(self, **kwargs):
         """
-        Parameters:
+        Args:
         
-          upload_dir (str) -- the path to save files uploaded from the client
+          upload_dir (str): the path to save files uploaded from the client
           
-        See VoiceChat and WebServer for inherited arguments.
+        See :class:`VoiceChat` and :class:`WebServer` for inherited arguments.
         """
         super().__init__(**kwargs)
 
@@ -37,6 +40,9 @@ class WebChat(VoiceChat):
         self.server = WebServer(msg_callback=self.on_message, **kwargs)
         
     def on_message(self, msg, msg_type=0, metadata='', **kwargs):
+        """
+        Websocket message handler from the client.
+        """
         if msg_type == WebServer.MESSAGE_JSON:
             if 'chat_history_reset' in msg:
                 self.llm('/reset')
@@ -84,6 +90,9 @@ class WebChat(VoiceChat):
         self.server.send_message(audio, type=WebServer.MESSAGE_AUDIO)
         
     def send_chat_history(self):
+        """
+        Sanitize the chat history for HTML and send it to the client.
+        """
         history, num_tokens, max_context_len = self.llm.chat_state
             
         if self.asr and self.asr_history:
@@ -119,6 +128,9 @@ class WebChat(VoiceChat):
         })
  
     def start(self):
+        """
+        Start the webserver & websocket listening in other threads.
+        """
         super().start()
         self.server.start()
         return self
