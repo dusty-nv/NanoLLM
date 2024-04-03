@@ -55,7 +55,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.Plugin"><code class="docutils literal notranslate"><span class="pre">Plugin</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.process"><code class="docutils literal notranslate"><span class="pre">Plugin.process()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.add"><code class="docutils literal notranslate"><span class="pre">Plugin.add()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.find"><code class="docutils literal notranslate"><span class="pre">Plugin.find()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.__call__"><code class="docutils literal notranslate"><span class="pre">Plugin.__call__()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.input"><code class="docutils literal notranslate"><span class="pre">Plugin.input()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.output"><code class="docutils literal notranslate"><span class="pre">Plugin.output()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.num_outputs"><code class="docutils literal notranslate"><span class="pre">Plugin.num_outputs</span></code></a></li>
@@ -64,6 +64,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.dispatch"><code class="docutils literal notranslate"><span class="pre">Plugin.dispatch()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.interrupt"><code class="docutils literal notranslate"><span class="pre">Plugin.interrupt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.clear_inputs"><code class="docutils literal notranslate"><span class="pre">Plugin.clear_inputs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.find"><code class="docutils literal notranslate"><span class="pre">Plugin.find()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -104,7 +105,8 @@
 <h1>Plugins<a class="headerlink" href="#plugins" title="Link to this heading"></a></h1>
 <p>Plugins are wrappers around models (like LLM, ASR, TTS), post-processors, and I/O (such as video and audio streams) that can be connected together to form pipelines in tandem with other plugin nodes.  These are designed to reduce boilerplate code and quickly build up more complex agents.</p>
 <p>A plugin recieves input into a processing queue, processes it, and then outputs the results across its output channels.  Each output channel signifies a type of output the model has (for example, the <code class="docutils literal notranslate"><span class="pre">ChatQuery</span></code> plugin exposes outputs at the token, word, and sentence level) and each output channel can be connected to an arbitrary number of other plugin nodes.</p>
-<p>By default plugins are threaded and run off their own queue, but they can be configured to run inline (unthreaded) as well by passing <code class="docutils literal notranslate"><span class="pre">threaded=False</span></code> to the plugin’s initializer.  You can also use simple callback functions that gets wrapped as a plugin instance without needing to define a new Plugin class.</p>
+<p>By default plugins are threaded and run off their own queue, but they can be configured to run inline (unthreaded) by passing <code class="docutils literal notranslate"><span class="pre">threaded=False</span></code> to the plugin’s initializer.  They can also be interrupted with the <code class="docutils literal notranslate"><span class="pre">interrupt()</span></code> function to abandon the current request and any remaining data in the input queue (for example, if you wanted to stop LLM generation early, or mute TTS output)</p>
+<p>When creating new plugin types, implement the <code class="docutils literal notranslate"><span class="pre">process()</span></code> function to handle incoming data, and then return the outgoing data.  You can also use simple callback functions to recieve data instead of needing to define your own Plugin class (like <code class="docutils literal notranslate"><span class="pre">chat_plugin.add(my_function)</span></code> to recieve chat output)</p>
 <section id="plugin-api">
 <h2>Plugin API<a class="headerlink" href="#plugin-api" title="Link to this heading"></a></h2>
 <p>All plugins derive from the shared <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> interface:</p>
@@ -119,63 +121,71 @@ single-threaded or in an independent thread that processes data out of a queue.<
 <blockquote>
 <div><ul class="simple">
 <li><p>sources:  text prompts, images/video</p></li>
-<li><p>llm_queries, RAG, dynamic LLM calls, image postprocessors</p></li>
+<li><p>process:  LLM queries, RAG, dynamic LLM calls, image post-processors</p></li>
 <li><p>outputs:  print to stdout, save images/video</p></li>
 </ul>
 </div></blockquote>
+<p>Inherited plugins should implement the <a class="reference internal" href="#nano_llm.Plugin.process" title="nano_llm.Plugin.process"><code class="xref py py-func docutils literal notranslate"><span class="pre">process()</span></code></a> function to handle incoming data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>output_channels</strong> (<em>int</em>) – </p></li>
-<li><p><strong>relay</strong> (<em>bool</em>) – </p></li>
-<li><p><strong>drop_inputs</strong> (<em>bool</em>) – </p></li>
-<li><p><strong>threaded</strong> (<em>bool</em>) – </p></li>
+<li><p><strong>output_channels</strong> (<em>int</em>) – the number of sets of output connections the plugin has</p></li>
+<li><p><strong>relay</strong> (<em>bool</em>) – if true, will relay any inputs as outputs after processing</p></li>
+<li><p><strong>drop_inputs</strong> (<em>bool</em>) – if true, only the most recent input in the queue will be used</p></li>
+<li><p><strong>threaded</strong> (<em>bool</em>) – if true, will spawn independent thread for processing the queue.</p></li>
 </ul>
 </dd>
 </dl>
-<p>TODO:  use queue.task_done() and queue.join() for external synchronization</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.process">
 <span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.process"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.process" title="Link to this definition"></a></dt>
-<dd><p>Abstract process() function that plugin instances should implement.
-Don’t call this function externally unless threaded=False, because
+<dd><p>Abstract function that plugin instances should implement to process incoming data.
+Don’t call this function externally unless <code class="docutils literal notranslate"><span class="pre">threaded=False</span></code>, because
 otherwise the plugin’s internal thread dispatches from the queue.</p>
-<p>Plugins should return their output data (or None if there isn’t any)
-You can also call self.output() directly as opposed to returning it.</p>
-<p>kwargs:</p>
-<blockquote>
-<div><p>sender (Plugin) – only present if data sent from previous plugin</p>
-</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input</strong> – input data to process from the previous plugin in the pipeline</p></li>
+<li><p><strong>kwargs</strong> – optional processing arguments that accompany this data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Plugins should return their output data to be sent to downstream plugins.
+You can also call <a class="reference internal" href="#nano_llm.Plugin.output" title="nano_llm.Plugin.output"><code class="xref py py-func docutils literal notranslate"><span class="pre">output()</span></code></a> as opposed to returning it.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.add">
 <span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add" title="Link to this definition"></a></dt>
-<dd><p>Connect this plugin with another, as either an input or an output.
-By default, this plugin will output to the specified plugin instance.</p>
+<dd><p>Connect the output queue from this plugin with the input queue of another plugin,
+so that this plugin sends its output data to the other one.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>plugin</strong> (<a class="reference internal" href="#nano_llm.Plugin" title="nano_llm.Plugin"><em>Plugin</em></a><em>|</em><em>callable</em>) – </p></li>
-<li><p><strong>mode</strong> (<em>str</em>) – plugin, or ‘output’ if this plugin should send data to it.</p></li>
+<li><p><strong>plugin</strong> (<a class="reference internal" href="#nano_llm.Plugin" title="nano_llm.Plugin"><em>Plugin</em></a><em>|</em><em>callable</em>) – either the plugin to link to, or a callback function.</p></li>
+<li><p><strong>channel</strong> (<em>int</em>) – </p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A reference to this plugin instance (self)</p>
+</dd>
 </dl>
-<p>Returns a reference to this plugin instance (self)</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.Plugin.find">
-<span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.find" title="Link to this definition"></a></dt>
-<dd><p>Return the plugin with the specified type by searching for it among
-the pipeline graph of inputs and output connections to other plugins.</p>
+<dt class="sig sig-object py" id="nano_llm.Plugin.__call__">
+<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.__call__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.__call__" title="Link to this definition"></a></dt>
+<dd><p>Callable () operator alias for the <a class="reference internal" href="#nano_llm.Plugin.input" title="nano_llm.Plugin.input"><code class="xref py py-func docutils literal notranslate"><span class="pre">input()</span></code></a> function.
+This is provided for a more intuitive way of processing data
+like <code class="docutils literal notranslate"><span class="pre">plugin(data)</span></code> instead of <code class="docutils literal notranslate"><span class="pre">plugin.input(data)</span></code></p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.input">
 <span class="sig-name descname"><span class="pre">input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.input" title="Link to this definition"></a></dt>
-<dd><p>Add data to the plugin’s processing queue (or if threaded=False, process it now)
-TODO:  multiple input channels?</p>
+<dd><p>Add data to the plugin’s processing queue (or process it now if <code class="docutils literal notranslate"><span class="pre">threaded=False</span></code>)</p>
 </dd></dl>
 
 <dl class="py method">
@@ -199,7 +209,7 @@ TODO:  multiple input channels?</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.run" title="Link to this definition"></a></dt>
-<dd><p>&#64;internal processes the queue forever when created with threaded=True</p>
+<dd><p>Processes the queue forever and automatically run when created with <code class="docutils literal notranslate"><span class="pre">threaded=True</span></code></p>
 </dd></dl>
 
 <dl class="py method">
@@ -211,17 +221,33 @@ TODO:  multiple input channels?</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.interrupt">
 <span class="sig-name descname"><span class="pre">interrupt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">clear_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.interrupt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.interrupt" title="Link to this definition"></a></dt>
-<dd><p>Interrupt any ongoing/pending processing, and optionally clear the input queue.
-If recursive is true, then any downstream plugins will also be interrupted.
-If block is true, this function will wait until any ongoing processing has finished.
+<dd><p>Interrupt any ongoing/pending processing, and optionally clear the input queue
+along with any downstream queues, and optionally wait for processing of those
+requests to have finished.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>clear_inputs</strong> (<em>bool</em>) – if True, clear any remaining inputs in this plugin’s queue.</p></li>
+<li><p><strong>recursive</strong> (<em>bool</em>) – if True, then any downstream plugins will also be interrupted.</p></li>
+<li><p><strong>block</strong> (<em>bool</em>) – is true, this function will wait until any ongoing processing has finished.
 This is done so that any lingering outputs don’t cascade downstream in the pipeline.
-If block is None, it will automatically be set to true if this plugin has outputs.</p>
+If block is None, it will automatically be set to true if this plugin has outputs.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.clear_inputs">
 <span class="sig-name descname"><span class="pre">clear_inputs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.clear_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.clear_inputs" title="Link to this definition"></a></dt>
 <dd><p>Clear the input queue, dropping any data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.find">
+<span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.find" title="Link to this definition"></a></dt>
+<dd><p>Return the plugin with the specified type by searching for it among
+the pipeline graph of inputs and output connections to other plugins.</p>
 </dd></dl>
 
 </dd></dl>

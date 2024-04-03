@@ -47,7 +47,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#running-models">Running Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-in-other-containers">Building In Other Containers</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
@@ -94,6 +98,8 @@ pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </
 </pre></div>
 </div>
 <p>This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code> for JetPack 6.0 DP)</p>
+<section id="running-models">
+<h2>Running Models<a class="headerlink" href="#running-models" title="Link to this heading"></a></h2>
 <p>Once in the container, you should be able to <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">nano_llm</span></code> in a Python3 interpreter, and run the various example commands shown on this page like:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span>--quantization<span class="w"> </span>q4f16_ft
 </pre></div>
@@ -107,6 +113,16 @@ pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </
 </pre></div>
 </div>
 <p>Setting your <code class="docutils literal notranslate"><span class="pre">$HUGGINGFACE_TOKEN</span></code> is for models requiring authentication to download (like Llama-2)</p>
+</section>
+<section id="building-in-other-containers">
+<h2>Building In Other Containers<a class="headerlink" href="#building-in-other-containers" title="Link to this heading"></a></h2>
+<p>You can either add NanoLLM on top of your container by using it as a base image, or using NanoLLM as the base image in your Dockerfile.  When doing the former use the <code class="docutils literal notranslate"><span class="pre">--base</span></code> argument to <code class="docutils literal notranslate"><span class="pre">jetson-containers/build.sh</span></code> to build it off your container:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">jetson</span><span class="o">-</span><span class="n">containers</span><span class="o">/</span><span class="n">build</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">base</span> <span class="n">my_container</span><span class="p">:</span><span class="n">latest</span> <span class="o">--</span><span class="n">name</span> <span class="n">my_container</span><span class="p">:</span><span class="n">llm</span> <span class="n">nano_llm</span>
+</pre></div>
+</div>
+<p>Doing so will also install all the needed dependencies on top of your container (including CUDA, PyTorch, the LLM inference APIs, ect).  It should be based on the same version of Ubuntu as JetPack.</p>
+<p>And in the event that you want to add your own container on top of NanoLLM - thereby skipping its build process - then you can just use a FROM statement (like <code class="docutils literal notranslate"><span class="pre">FROM</span> <span class="pre">dustynv/nano_llm:r36.2.0</span></code>) at the top of your Dockerfile.  Or you can make your own <a class="reference external" href="https://github.com/dusty-nv/jetson-containers/blob/master/docs/packages.md">package</a> with jetson-containers for it.</p>
+</section>
 </section>
 
 

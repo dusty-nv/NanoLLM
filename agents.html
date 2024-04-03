@@ -51,7 +51,66 @@
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Agents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Agents</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#chat-agent">Chat Agent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent"><code class="docutils literal notranslate"><span class="pre">ChatAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent.__init__"><code class="docutils literal notranslate"><span class="pre">ChatAgent.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent.pipeline"><code class="docutils literal notranslate"><span class="pre">ChatAgent.pipeline</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent.chat"><code class="docutils literal notranslate"><span class="pre">ChatAgent.chat</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent.model"><code class="docutils literal notranslate"><span class="pre">ChatAgent.model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.chat.ChatAgent.on_interrupt"><code class="docutils literal notranslate"><span class="pre">ChatAgent.on_interrupt()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#voice-chat">Voice Chat</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat"><code class="docutils literal notranslate"><span class="pre">VoiceChat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat.__init__"><code class="docutils literal notranslate"><span class="pre">VoiceChat.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat.prompt"><code class="docutils literal notranslate"><span class="pre">VoiceChat.prompt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat.asr_partial"><code class="docutils literal notranslate"><span class="pre">VoiceChat.asr_partial()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat.asr_final"><code class="docutils literal notranslate"><span class="pre">VoiceChat.asr_final()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat.on_interrupt"><code class="docutils literal notranslate"><span class="pre">VoiceChat.on_interrupt()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#web-chat">Web Chat</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat"><code class="docutils literal notranslate"><span class="pre">WebChat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.__init__"><code class="docutils literal notranslate"><span class="pre">WebChat.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_message"><code class="docutils literal notranslate"><span class="pre">WebChat.on_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.send_chat_history"><code class="docutils literal notranslate"><span class="pre">WebChat.send_chat_history()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.start"><code class="docutils literal notranslate"><span class="pre">WebChat.start()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#video-stream">Video Stream</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.video_stream.VideoStream"><code class="docutils literal notranslate"><span class="pre">VideoStream</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_stream.VideoStream.__init__"><code class="docutils literal notranslate"><span class="pre">VideoStream.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#video-query">Video Query</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery"><code class="docutils literal notranslate"><span class="pre">VideoQuery</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.__init__"><code class="docutils literal notranslate"><span class="pre">VideoQuery.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.llm"><code class="docutils literal notranslate"><span class="pre">VideoQuery.llm</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.video_source"><code class="docutils literal notranslate"><span class="pre">VideoQuery.video_source</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.video_output"><code class="docutils literal notranslate"><span class="pre">VideoQuery.video_output</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.server"><code class="docutils literal notranslate"><span class="pre">VideoQuery.server</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.events"><code class="docutils literal notranslate"><span class="pre">VideoQuery.events</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_video"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_video()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_text"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_text()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_image_embedding"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_image_embedding()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_search"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_search()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_websocket"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_websocket()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.start"><code class="docutils literal notranslate"><span class="pre">VideoQuery.start()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a></li>
@@ -83,8 +142,280 @@
              
   <section id="agents">
 <h1>Agents<a class="headerlink" href="#agents" title="Link to this heading"></a></h1>
-<p>Agents are just plugins that create pipelines of other nested plugins, for implementing higher-level behaviors with more advanced control flow.</p>
-<p>TODO documentation</p>
+<p>Agents are just plugins that create or connect pipelines of other nested plugins, for implementing higher-level behaviors with more advanced control flow.  They are designed to be layered on top of each other, so that you can combine capabilities of different agents together.</p>
+<section id="chat-agent">
+<h2>Chat Agent<a class="headerlink" href="#chat-agent" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ChatAgent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'meta-llama/Llama-2-7b-chat-hf'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/chat.html#ChatAgent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Agent</span></code></p>
+<p>Agent for two-turn multimodal chat.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'meta-llama/Llama-2-7b-chat-hf'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/chat.html#ChatAgent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference internal" href="models.html#nano_llm.NanoLLM" title="nano_llm.NanoLLM"><em>NanoLLM</em></a><em>|</em><em>str</em>) – either the loaded model instance, or model name/path to load.</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>) – should the agent get user input from the terminal or not (default True)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent.pipeline">
+<span class="sig-name descname"><span class="pre">pipeline</span></span><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent.pipeline" title="Link to this definition"></a></dt>
+<dd><p>input() → LLM → print() pipeline.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent.chat">
+<span class="sig-name descname"><span class="pre">chat</span></span><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent.chat" title="Link to this definition"></a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">ChatQuery</span></code> session manager</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent.model" title="Link to this definition"></a></dt>
+<dd><p>The loaded NanoLLM model instance</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.chat.ChatAgent.on_interrupt">
+<span class="sig-name descname"><span class="pre">on_interrupt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/chat.html#ChatAgent.on_interrupt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.chat.ChatAgent.on_interrupt" title="Link to this definition"></a></dt>
+<dd><p>Interrupts the bot output when the user presses <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="voice-chat">
+<h2>Voice Chat<a class="headerlink" href="#voice-chat" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">VoiceChat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">llm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/voice_chat.html#VoiceChat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Agent</span></code></p>
+<p>Agent for ASR → LLM → TTS pipeline.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">llm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/voice_chat.html#VoiceChat.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>asr</strong> (<em>NanoLLM.plugins.AutoASR</em><em>|</em><em>str</em>) – the ASR plugin instance or model name to connect with the LLM.</p></li>
+<li><p><strong>llm</strong> (<em>NanoLLM.Plugin</em><em>|</em><em>str</em>) – The LLM model plugin instance (like ChatQuery) or model name.</p></li>
+<li><p><strong>tts</strong> (<em>NanoLLM.plugins.AutoTTS</em><em>|</em><em>str</em>) – the TTS plugin instance (or model name)- if None, will be loaded from kwargs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat.prompt">
+<span class="sig-name descname"><span class="pre">prompt</span></span><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat.prompt" title="Link to this definition"></a></dt>
+<dd><p>Text prompts from web UI or CLI.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat.asr_partial">
+<span class="sig-name descname"><span class="pre">asr_partial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/voice_chat.html#VoiceChat.asr_partial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat.asr_partial" title="Link to this definition"></a></dt>
+<dd><p>Callback that occurs when the ASR has a partial transcript (while the user is speaking).
+These partial transcripts get revised mid-stream until the user finishes their phrase.
+This is also used for pausing/interrupting the bot output for when the user starts speaking.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat.asr_final">
+<span class="sig-name descname"><span class="pre">asr_final</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/voice_chat.html#VoiceChat.asr_final"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat.asr_final" title="Link to this definition"></a></dt>
+<dd><p>Callback that occurs when the ASR outputs when there is a pause in the user talking,
+like at the end of a sentence or paragraph.  This will interrupt/cancel any ongoing bot output.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.voice_chat.VoiceChat.on_interrupt">
+<span class="sig-name descname"><span class="pre">on_interrupt</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/voice_chat.html#VoiceChat.on_interrupt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.voice_chat.VoiceChat.on_interrupt" title="Link to this definition"></a></dt>
+<dd><p>Interrupt/cancel the bot output when the user submits (or speaks) a full query.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="web-chat">
+<h2>Web Chat<a class="headerlink" href="#web-chat" title="Link to this heading"></a></h2>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/UOjqF3YCGkY" style="margin-bottom: 1em;" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebChat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat" title="nano_llm.agents.voice_chat.VoiceChat"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceChat</span></code></a></p>
+<p>Adds webserver hooks to ASR/TTS voice chat agent and provide web UI.
+When a multimodal model is loaded, the user can drag &amp; drop images
+to chat about into the UI.  Also supports streaming the client’s
+microphone and output speakers using WebAudio.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>upload_dir</strong> (<em>str</em>) – the path to save files uploaded from the client</p>
+</dd>
+</dl>
+<p>See <code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceChat</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">WebServer</span></code> for inherited arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_message">
+<span class="sig-name descname"><span class="pre">on_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_message" title="Link to this definition"></a></dt>
+<dd><p>Websocket message handler from the client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.send_chat_history">
+<span class="sig-name descname"><span class="pre">send_chat_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.send_chat_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.send_chat_history" title="Link to this definition"></a></dt>
+<dd><p>Sanitize the chat history for HTML and send it to the client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.start" title="Link to this definition"></a></dt>
+<dd><p>Start the webserver &amp; websocket listening in other threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="video-stream">
+<h2>Video Stream<a class="headerlink" href="#video-stream" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.video_stream.VideoStream">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">VideoStream</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_stream.html#VideoStream"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_stream.VideoStream" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Agent</span></code></p>
+<p>Relay, view, or test a video stream.  Use the <code class="docutils literal notranslate"><span class="pre">--video-input</span></code> and <code class="docutils literal notranslate"><span class="pre">--video-output</span></code> arguments
+to set the video source and output protocols used from <a class="reference external" href="https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md">jetson_utils</a>
+like V4L2, CSI, RTP/RTSP, WebRTC, or static video files.</p>
+<p>For example, this will capture a V4L2 camera and serve it via WebRTC with H.264 encoding:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>python3 -m local_llm.agents.video_stream \
+   --video-input /dev/video0 \
+   --video-output webrtc://@:8554/output
+</pre></div>
+</div>
+<p>It’s also used as a basic test of video streaming before using more complex agents that rely on it.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_stream.VideoStream.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_stream.html#VideoStream.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_stream.VideoStream.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>video_input</strong> (<a class="reference internal" href="plugins.html#nano_llm.Plugin" title="nano_llm.Plugin"><em>Plugin</em></a><em>|</em><em>str</em>) – the VideoSource plugin instance, or URL of the video stream or camera device.</p></li>
+<li><p><strong>video_output</strong> (<a class="reference internal" href="plugins.html#nano_llm.Plugin" title="nano_llm.Plugin"><em>Plugin</em></a><em>|</em><em>str</em>) – the VideoOutput plugin instance, or output stream URL / device ID.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="video-query">
+<h2>Video Query<a class="headerlink" href="#video-query" title="Link to this heading"></a></h2>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/8Eu6zG0eEGY" style="margin-bottom: 1em;" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">VideoQuery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'liuhaotian/llava-v1.5-13b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nanodb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vision_scaling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'resize'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Agent</span></code></p>
+<p>Closed-loop visual agent that repeatedly applies a set of prompts to a video stream, and is also able to match
+the incoming stream against a vector database, and then use the matching metadata for multimodal RAG.
+Also serves an interactive web UI for the user to change queries, set event filters, and tag images in the database.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'liuhaotian/llava-v1.5-13b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nanodb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vision_scaling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'resize'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference internal" href="models.html#nano_llm.NanoLLM" title="nano_llm.NanoLLM"><em>NanoLLM</em></a><em>|</em><em>str</em>) – the NanoLLM multimodal model instance, or name/path of a multimodal model to load.</p></li>
+<li><p><strong>nanodb</strong> (<em>NanoDB</em><em>|</em><em>str</em>) – optional NanoDB plugin instance (or path to a NanoDB on disk) to match the incoming stream against.</p></li>
+<li><p><strong>vision_scaling</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'resize'</span></code> to ignore aspect ratio when downscaling to the often-square resolution of the vision encoder,
+or <code class="docutils literal notranslate"><span class="pre">crop</span></code> to center-crop the images first to maintain aspect ratio (while discarding pixels).</p></li>
+<li><p><strong>kwargs</strong> – forwarded to the plugin initializers for ChatQuery, VideoSource, and VideoOutput</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.llm">
+<span class="sig-name descname"><span class="pre">llm</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.llm" title="Link to this definition"></a></dt>
+<dd><p>The model plugin (ChatQuery)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.video_source">
+<span class="sig-name descname"><span class="pre">video_source</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.video_source" title="Link to this definition"></a></dt>
+<dd><p>The video source plugin</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.video_output">
+<span class="sig-name descname"><span class="pre">video_output</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.video_output" title="Link to this definition"></a></dt>
+<dd><p>The video output plugin</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.server">
+<span class="sig-name descname"><span class="pre">server</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.server" title="Link to this definition"></a></dt>
+<dd><p>the webserver (by default on <code class="docutils literal notranslate"><span class="pre">https://localhost:8050</span></code>)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.events">
+<span class="sig-name descname"><span class="pre">events</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.events" title="Link to this definition"></a></dt>
+<dd><p>event filters for parsing bot output and triggering actions when conditions are met.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.on_video">
+<span class="sig-name descname"><span class="pre">on_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.on_video"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.on_video" title="Link to this definition"></a></dt>
+<dd><p>When a new frame is recieved from the video source, run the model on it with the set prompt,
+applying RAG using the metadata from the most-similar match from the vector database (if enabled).
+Then render the latest text from the model over the image, and send it to the output video stream.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.on_text">
+<span class="sig-name descname"><span class="pre">on_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.on_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.on_text" title="Link to this definition"></a></dt>
+<dd><p>When new output is recieved from the model, update the text to render,
+and check if it satisfied any of the event filters when the output is complete.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.on_image_embedding">
+<span class="sig-name descname"><span class="pre">on_image_embedding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embedding</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.on_image_embedding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.on_image_embedding" title="Link to this definition"></a></dt>
+<dd><p>Recieve the image embedding from CLIP that was used when the model processed
+the last image, and search it against the database to find the most similar
+images and their metadata for RAG.  Also, if the user requested the last image
+be tagged, add the embedding to the vector database along with the metadata tags.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.on_search">
+<span class="sig-name descname"><span class="pre">on_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.on_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.on_search" title="Link to this definition"></a></dt>
+<dd><p>Recieve the similar matches from the vector database and update RAG with them,
+along with the most recent results shown in the web UI.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.on_websocket">
+<span class="sig-name descname"><span class="pre">on_websocket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.on_websocket"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.on_websocket" title="Link to this definition"></a></dt>
+<dd><p>Websocket message handler from the client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/video_query.html#VideoQuery.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.start" title="Link to this definition"></a></dt>
+<dd><p>Start the webserver &amp; websocket listening in other threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 </section>
 
 

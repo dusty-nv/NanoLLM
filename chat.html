@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Chat</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#code-example">Code Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#templates">Templates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#chat-history">Chat History</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.ChatHistory"><code class="docutils literal notranslate"><span class="pre">ChatHistory</span></code></a><ul>
@@ -110,6 +111,53 @@
 </pre></div>
 </div>
 <p>If you load a multimodal model (like <code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code>), you can enter image filenames or URLs followed by a query to chat about images.  Enter <code class="docutils literal notranslate"><span class="pre">/reset</span></code> to reset the chat history.</p>
+<section id="code-example">
+<h2>Code Example<a class="headerlink" href="#code-example" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
+
+<span class="c1"># load model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+   <span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or path to HF model checkpoint</span>
+   <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                   <span class="c1"># supported APIs are: mlc, awq, hf</span>
+   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;hf_abc123def&#39;</span><span class="p">,</span>    <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
+   <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>      <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
+<span class="p">)</span>
+
+<span class="c1"># create the chat history</span>
+<span class="n">chat_history</span> <span class="o">=</span> <span class="n">ChatHistory</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">system_prompt</span><span class="o">=</span><span class="s2">&quot;You are a helpful and friendly AI assistant.&quot;</span><span class="p">)</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="c1"># enter the user query from terminal</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&gt;&gt; &#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="nb">input</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># add user prompt and generate chat tokens/embedding</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+    <span class="n">embedding</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()</span>
+
+    <span class="c1"># generate bot reply</span>
+    <span class="n">reply</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+        <span class="n">embedding</span><span class="p">,</span> 
+        <span class="n">streaming</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+        <span class="n">kv_cache</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span><span class="p">,</span>
+        <span class="n">stop_tokens</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span>
+        <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+    <span class="p">)</span>
+        
+    <span class="c1"># append the output stream to the chat history</span>
+    <span class="n">bot_reply</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">reply</span><span class="p">:</span>
+        <span class="n">bot_reply</span><span class="o">.</span><span class="n">text</span> <span class="o">+=</span> <span class="n">token</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="c1"># save the inter-request KV cache </span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
+</pre></div>
+</div>
+</section>
 <section id="templates">
 <h2>Templates<a class="headerlink" href="#templates" title="Link to this heading"></a></h2>
 <p>These are the built-in chat templates that are automatically determined from the model type, or settable with the <code class="docutils literal notranslate"><span class="pre">--chat-template</span></code> command-line argument:</p>
