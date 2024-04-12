@@ -27,7 +27,7 @@ class ArgParser(argparse.ArgumentParser):
         if 'model' in extras:
             self.add_argument("--model", type=str, default=None, #required=True, 
                 help="path to the model, or repository on HuggingFace Hub")
-            self.add_argument("--quant", type=str, default=None, 
+            self.add_argument("--quantization", type=str, default=None, 
                 help="for MLC, the type of quantization to apply (default q4f16_ft)  For AWQ, the path to the quantized weights.")
             self.add_argument("--api", type=str, default=None, choices=['auto_gptq', 'awq', 'hf', 'mlc'], 
                 help="specify the API to use (otherwise inferred)")

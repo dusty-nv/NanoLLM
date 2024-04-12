@@ -36,8 +36,8 @@ class ChatQuery(Plugin):
         
           api (str) -- the model backend API to use:  'auto_gptq', 'awq', 'mlc', or 'hf'
                        if left as None, it will attempt to be automatically determined.
-          quant (str) -- for AWQ or MLC, either specify the quantization method,
-                         or the path to the quantized model (AWQ and MLC API's only)
+          quantization (str) -- for AWQ or MLC, either specify the quantization method,
+                                or the path to the quantized model (AWQ and MLC API's only)
           vision_model (str) -- for VLMs, override the vision embedding model (CLIP)
                                 otherwise, it will use the CLIP variant from the config.
                                 

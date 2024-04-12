@@ -27,7 +27,7 @@ class MLCModel(NanoLLM):
     """
     MLC model (https://github.com/mlc-ai/mlc-llm)
     """
-    def __init__(self, model_path, quant='q4f16_ft', max_context_len=None, **kwargs):
+    def __init__(self, model_path, quantization='q4f16_ft', max_context_len=None, **kwargs):
         """
         Parameters:
         
@@ -36,7 +36,7 @@ class MLCModel(NanoLLM):
                               Llama2 model, it will be automatically set if Llama/ect
                               is in the path. Otherwise, this should be set to the name.
                               
-          quant (str) -- either a directory path containing the mlc_llm quantized model,
+          quantization (str) -- either a directory path containing the mlc_llm quantized model,
                          or the quantization method to use (q4f16_1, q4f16_ft, ect)          
                          If a path, there should be a .so in this dir, with params/ 
                          directory under it containing the weights and MLC config.
@@ -53,10 +53,10 @@ class MLCModel(NanoLLM):
             self.patch_config(model_type='stablelm_epoch', norm_eps=1e-05, rope_pct=0.25)
             
         # perform quantization if needed
-        if not quant:
-            quant = 'q4f16_ft'
+        if not quantization:
+            quantization = 'q4f16_ft'
             
-        quant = MLCModel.quantize(model_path, self.config, method=quant, max_context_len=max_context_len, **kwargs)
+        quant = MLCModel.quantize(model_path, self.config, method=quantization, max_context_len=max_context_len, **kwargs)
             
         self.config.quant = quant.split('-')[-1]  # recover the quant method        
         self.quant_path = quant
