@@ -199,7 +199,7 @@ class ChatQuery(Plugin):
                 
             # sync the reply with the entire text, so that multi-token
             # unicode unicode sequences are detokenized and decoded together
-            bot_reply.text = self.stream.output_text
+            bot_reply.text = self.stream.text
             
             # output stream of raw tokens
             self.output(token, ChatQuery.OutputToken)
@@ -218,7 +218,7 @@ class ChatQuery(Plugin):
         if len(words) > 0:
             self.output(words, ChatQuery.OutputWords)
             
-        bot_reply.text = self.stream.output_text
+        bot_reply.text = self.stream.text
         self.history.kv_cache = self.stream.kv_cache
         self.stream = None
         
