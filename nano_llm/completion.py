@@ -22,8 +22,8 @@ interrupt = KeyboardInterrupt()
 # load model
 model = NanoLLM.from_pretrained(
     args.model, 
-    quant=args.quant, 
-    api=args.api
+    api=args.api,
+    quantization=args.quantization, 
 )
 
 while True: 

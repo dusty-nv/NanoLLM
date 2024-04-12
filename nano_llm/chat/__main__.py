@@ -28,8 +28,8 @@ interrupt = KeyboardInterrupt()
 # load model
 model = NanoLLM.from_pretrained(
     args.model, 
-    quant=args.quant, 
     api=args.api,
+    quantization=args.quantization, 
     max_context_len=args.max_context_len,
     vision_model=args.vision_model,
     vision_scaling=args.vision_scaling, 
@@ -115,4 +115,4 @@ while True:
         print('')
     
     chat_history.kv_cache = reply.kv_cache   # save the kv_cache 
-    bot_reply.text = reply.output_text  # sync the text once more
+    bot_reply.text = reply.text  # sync the text once more
