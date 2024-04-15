@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-from nano_llm import NanoLLM, ChatHistory, ChatTemplates
-from termcolor import cprint
+import argparse
+import termcolor
+
+from nano_llm import NanoLLM, ChatHistory
+
+# parse arguments
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf', help="path to the model, or HuggingFace model repo")
+parser.add_argument('--max-new-tokens', type=int, default=256, help="the maximum response length for each bot reply")
+args = parser.parse_args()
 
 # load model
 model = NanoLLM.from_pretrained(
-    model='meta-llama/Llama-2-7b-chat-hf', 
-    quant='q4f16_ft', 
+    model=args.model, 
+    quantization='q4f16_ft', 
     api='mlc'
 )
 
@@ -27,17 +35,13 @@ while True:
         streaming=True, 
         kv_cache=chat_history.kv_cache,
         stop_tokens=chat_history.template.stop,
-        max_new_tokens=256,
+        max_new_tokens=args.max_new_tokens,
     )
         
-    # append the output stream to the chat history
-    bot_reply = chat_history.append(role='bot', text='')
-    
+    # stream the output
     for token in reply:
-        bot_reply.text += token
-        cprint(token, color='blue', end='', flush=True)
-            
-    print('\n')
+        termcolor.cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
-    # save the inter-request KV cache 
+    # save the final output
+    chat_history.append(role='bot', text=reply.text)
     chat_history.kv_cache = reply.kv_cache

@@ -94,14 +94,11 @@ while True:
         top_p=args.top_p,
     )
         
-    bot_reply = chat_history.append(role='bot', text='') # placeholder
-    
+    # stream the output
     if args.disable_streaming:
-        bot_reply.text = reply
         cprint(reply, args.reply_color)
     else:
         for token in reply:
-            bot_reply.text += token
             cprint(token, args.reply_color, end='', flush=True)
             if interrupt:
                 reply.stop()
@@ -114,5 +111,5 @@ while True:
         print_table(model.stats)
         print('')
     
-    chat_history.kv_cache = reply.kv_cache   # save the kv_cache 
-    bot_reply.text = reply.text  # sync the text once more
+    chat_history.append(role='bot', text=reply.text) # save the output
+    chat_history.kv_cache = reply.kv_cache           # save the KV cache 
