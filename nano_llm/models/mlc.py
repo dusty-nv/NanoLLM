@@ -236,15 +236,19 @@ class MLCModel(NanoLLM):
         Quantize a model with the given method.  It will be saved under the output directory,
         in a subdirectory based on the model name and quant method (Llama-2-7b-chat-hf-q4f16_ft)
         """
+        if not max_context_len:
+            max_context_len = config.max_position_embeddings
+            
         model_name = kwargs.get('name', os.path.basename(model))
         model_path = os.path.join(output, 'models', model_name)
-        quant_path = os.path.join(output, model_name + '-' + method)
-        
+        quant_path = os.path.join(output, model_name + f"-{method}-ctx{max_context_len}")
+
         config_paths = [
             os.path.join(quant_path, 'mlc-chat-config.json'),
             os.path.join(quant_path, 'params/mlc-chat-config.json')
         ]
         
+        '''
         for config_path in config_paths:
             if os.path.isfile(config_path):
                 if not max_context_len:
@@ -260,24 +264,25 @@ class MLCModel(NanoLLM):
                 except Exception as err:
                     logging.warning(f"Rebuilding {model_name} after exception occurred trying to load {config_path}\n{err}")
                     pass
-                    
+        '''
+        
         if not os.path.isdir(model_path):
             os.symlink(model, model_path, target_is_directory=True)
                 
         if config.model_type == 'phi' or config.model_type == 'gemma':
             cmd = f"mlc_chat convert_weight {model} --quantization {method} --output {quant_path} && "
-            cmd += f"mlc_chat gen_config {model} --quantization {method} --conv-template LM --max-batch-size 1 --output {quant_path} "
-            if max_context_len:
-                cmd += "--context-window-size {max_context_len} "
+            cmd += f"mlc_chat gen_config {model} --quantization {method} --conv-template LM "
+            cmd += f"--max-batch-size 1 --context-window-size {max_context_len} --output {quant_path} "
             cmd += f"&& mlc_chat compile {quant_path} --device cuda --opt O3 --output {quant_path}/{model_name + '-' + method}-cuda.so"
         else:
             cmd = f"python3 -m mlc_llm.build --model {model_path} --quantization {method} "
             cmd += f"--target cuda --use-cuda-graph --use-flash-attn-mqa --sep-embed "
-            cmd += f"--max-seq-len {max_context_len if max_context_len else config.max_position_embeddings} "
-            cmd += f"--artifact-path {output} "
+            cmd += f"--max-seq-len {max_context_len} --artifact-path {quant_path} "
 
             if len(glob.glob(os.path.join(model_path, '*.safetensors'))) > 0:
                 cmd += "--use-safetensors "
+                
+            quant_path = os.path.join(quant_path, model_name + '-' + method)
                 
         logging.info(f"running MLC quantization:\n\n{cmd}\n\n")
         subprocess.run(cmd, executable='/bin/bash', shell=True, check=True)  
