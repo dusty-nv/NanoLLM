@@ -39,7 +39,7 @@ class AutoTTS(Plugin):
         try:
             from nano_llm.plugins import XTTS
             has_xtts = True
-        except ImportException as error:
+        except ImportError as error:
             has_xtts = False
             
         if not tts or tts.lower() == 'none' or tts.lower().startswith('disable'):

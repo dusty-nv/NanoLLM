@@ -11,6 +11,6 @@ from .fastpitch_tts import FastPitchTTS
 
 try:
     from .xtts import XTTS
-except ImportException as error:
+except ImportError as error:
     import logging
     logging.warning(f"failed to import XTTS plugin, disabling... ({error})")
