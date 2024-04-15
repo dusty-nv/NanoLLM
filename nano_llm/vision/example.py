@@ -61,7 +61,7 @@ while True:
     
     if img is None:
         continue
-        
+
     chat_history.append(role='user', image=img)
     
     for prompt in prompts:
@@ -88,3 +88,6 @@ while True:
         chat_history.kv_cache = reply.kv_cache
         
     chat_history.reset()
+    
+    if video_source.eos:
+        break

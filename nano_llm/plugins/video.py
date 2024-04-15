@@ -117,9 +117,21 @@ class VideoSource(Plugin):
             if img is None:
                 logging.error(f"Re-initializing video source \"{self.resource}\"")
                 self.reconnect()
-                
-                    
-                    
+
+    @property
+    def streaming(self):
+        """
+        Returns true if the stream is currently open, false if closed or EOS.
+        """
+        return self.stream.IsStreaming()
+     
+    @property
+    def eos(self):
+        """
+        Returns true if the stream is currently closed (EOS has been reached)
+        """
+        return not self.streaming
+        
 class VideoOutput(Plugin):
     """
     Saves images to a compressed video or directory of individual images, the display, or a network stream.
