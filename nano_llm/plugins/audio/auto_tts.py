@@ -34,19 +34,25 @@ class AutoTTS(Plugin):
         The `tts` param should either be 'riva' or 'xtts' (or name/path of XTTS model)
         The kwargs are forwarded to the TTS plugin implementing the model.
         """
-        from nano_llm.plugins import RivaTTS, FastPitchTTS, XTTS
+        from nano_llm.plugins import RivaTTS, FastPitchTTS
         
+        try:
+            from nano_llm.plugins import XTTS
+            has_xtts = True
+        except ImportException as error:
+            has_xtts = False
+            
         if not tts or tts.lower() == 'none' or tts.lower().startswith('disable'):
             return None
             
         if FastPitchTTS.is_model(tts):
             return FastPitchTTS(**{**kwargs, 'model': tts})
-        elif XTTS.is_model(tts):
+        elif has_xtts and XTTS.is_model(tts):
             return XTTS(**{**kwargs, 'model': tts})
         elif tts.lower() == 'riva':
             return RivaTTS(**kwargs)
         else:
-            raise ValueError(f"TTS model type should be either Riva or XTTS ({tts})")
+            raise ValueError(f"TTS model type should be Riva {'or XTTS' if has_xtts else ''} ({tts})")
         
     @property
     def buffering(self):

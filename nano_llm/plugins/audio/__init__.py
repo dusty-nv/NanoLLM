@@ -7,6 +7,10 @@ from .auto_tts import AutoTTS
 from .riva_asr import RivaASR
 from .riva_tts import RivaTTS
 
-from .xtts import XTTS
-
 from .fastpitch_tts import FastPitchTTS
+
+try:
+    from .xtts import XTTS
+except ImportException as error:
+    import logging
+    logging.warning(f"failed to import XTTS plugin, disabling... ({error})")
