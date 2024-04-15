@@ -241,30 +241,22 @@ class MLCModel(NanoLLM):
             
         model_name = kwargs.get('name', os.path.basename(model))
         model_path = os.path.join(output, 'models', model_name)
-        quant_path = os.path.join(output, model_name + f"-{method}-ctx{max_context_len}")
+        quant_path = os.path.join(output, f"{model_name}-ctx{max_context_len}", f"{model_name}-{method}")
 
         config_paths = [
             os.path.join(quant_path, 'mlc-chat-config.json'),
             os.path.join(quant_path, 'params/mlc-chat-config.json')
         ]
         
-        '''
         for config_path in config_paths:
             if os.path.isfile(config_path):
-                if not max_context_len:
-                    return quant_path
                 try:
                     with open(config_path) as config_file:
                         config_json = json.load(config_file)
-                    default_context_len = config_json.get('max_window_size', config_json.get('context_window_size'))
-                    if default_context_len and default_context_len == max_context_len:
                         return quant_path
-                    logging.warning(f"Rebuilding {model_name} with context length {max_context_len} (was {default_context_len})")
-                    shutil.rmtree(quant_path) # the tools will skip quantization if files already there
                 except Exception as err:
                     logging.warning(f"Rebuilding {model_name} after exception occurred trying to load {config_path}\n{err}")
                     pass
-        '''
         
         if not os.path.isdir(model_path):
             os.symlink(model, model_path, target_is_directory=True)
@@ -277,13 +269,11 @@ class MLCModel(NanoLLM):
         else:
             cmd = f"python3 -m mlc_llm.build --model {model_path} --quantization {method} "
             cmd += f"--target cuda --use-cuda-graph --use-flash-attn-mqa --sep-embed "
-            cmd += f"--max-seq-len {max_context_len} --artifact-path {quant_path} "
+            cmd += f"--max-seq-len {max_context_len} --artifact-path {os.path.join(output,f'{model_name}-ctx{max_context_len}')} "
 
             if len(glob.glob(os.path.join(model_path, '*.safetensors'))) > 0:
                 cmd += "--use-safetensors "
-                
-            quant_path = os.path.join(quant_path, model_name + '-' + method)
-                
+
         logging.info(f"running MLC quantization:\n\n{cmd}\n\n")
         subprocess.run(cmd, executable='/bin/bash', shell=True, check=True)  
         
