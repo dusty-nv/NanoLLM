@@ -9,7 +9,7 @@
 #      --model Efficient-Large-Model/VILA-2.7b \
 #      --video-input "/data/images/*.jpg" \
 #      --prompt "Describe the image." \
-#      --prompt "Are there any people in the image?"
+#      --prompt "Are there people in the image?"
 #
 # You can specify multiple prompts (or a text file) to be applied to each image,
 # and the video inputs can be sequences of files, camera devices, or network streams.
@@ -27,7 +27,7 @@ args = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input']).parse_ar
 prompts = load_prompts(args.prompt)
 
 if not prompts:
-    prompts = ["Describe the image.", "Are there any people in the image?"]
+    prompts = ["Describe the image.", "Are there people in the image?"]
     
 if not args.model:
     args.model = "Efficient-Large-Model/VILA-2.7b"
