@@ -2,13 +2,10 @@ torch
 torchvision
 torchaudio
 transformers
-tvm
-faiss
-mlc-llm
-mlc-chat
 websockets
 termcolor
 tabulate
+inflect
 flask
 tqdm
 getch
