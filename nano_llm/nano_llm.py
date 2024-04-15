@@ -32,8 +32,8 @@ class NanoLLM():
           api (str): the model backend API to use:  'auto_gptq', 'awq', 'mlc', or 'hf'
                        if left as None, it will attempt to be automatically determined.
 
-          quant (str): for AWQ or MLC, either specify the quantization method,
-                         or the path to the quantized model (AWQ and MLC API's only)
+          quantization (str): for AWQ or MLC, either specify the quantization method,
+                              or the path to the quantized model (AWQ and MLC API's only)
 
           vision_model (str): for VLMs, override the vision embedding model 
                               (typically `openai/clip-vit-large-patch14-336 <https://huggingface.co/openai/clip-vit-large-patch14-336>`_).
@@ -50,7 +50,7 @@ class NanoLLM():
             model_name = os.path.basename(model)
             
         if not api:
-            api = default_model_api(model_path, kwargs.get('quant'))
+            api = default_model_api(model_path, kwargs.get('quantization'))
         
         kwargs['name'] = model_name
         kwargs['api'] = api
