@@ -54,32 +54,36 @@ class VideoSource(Plugin):
         self.resource = video_input  # self.stream.GetOptions().resource['string']
         self.return_tensors = return_tensors
         
-    def capture(self):
+    def capture(self, timeout=2500, retries=8, return_tensors=None):
         """
         Capture images from the video source as long as it's streaming
         """
-        retries = 0
+        if not return_tensors:
+            return_tensors = self.return_tensors
+            
+        retry = 0
         
-        while retries < 8:
-            image = self.stream.Capture(format='rgb8', timeout=2500)
+        while retry < retries:
+            image = self.stream.Capture(format='rgb8', timeout=timeout)
 
             if image is None:
                 logging.warning(f"video source {self.resource} timed out during capture, re-trying...")
-                retries = retries + 1
+                retry = retry + 1
                 continue
-            else:
-                retries = 0
-
-            if self.return_tensors == 'pt':
+   
+            if return_tensors == 'pt':
                 image = torch.as_tensor(image, device='cuda')
-            elif self.return_tensors == 'np':
+            elif return_tensors == 'np':
                 image = cudaToNumpy(image)
                 cudaDeviceSynchronize()
-            elif self.return_tensors != 'cuda':
-                raise ValueError(f"return_tensors should be 'np', 'pt', or 'cuda' (was '{self.return_tensors}')")
+            elif return_tensors != 'cuda':
+                raise ValueError(f"return_tensors should be 'np', 'pt', or 'cuda' (was '{return_tensors}')")
                 
-            self.output(image)             
+            self.output(image)
+            return image
     
+        return None
+        
     def reconnect(self):
         """
         Attempt to re-open the stream if the connection fails
@@ -106,12 +110,13 @@ class VideoSource(Plugin):
         """
         while True:
             try:
-                self.capture()
+                img = self.capture()
             except Exception as error:
                 logging.error(f"Exception occurred during video source capture of \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
-                
-            logging.error(f"Re-initializing video source \"{self.resource}\"")
-            self.reconnect()
+            
+            if img is None:
+                logging.error(f"Re-initializing video source \"{self.resource}\"")
+                self.reconnect()
                 
                     
                     
