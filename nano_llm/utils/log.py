@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import tqdm
+import numpy
 import logging
 import termcolor
 import contextlib
@@ -55,10 +56,10 @@ class LogFormatter(logging.Formatter):
             level = getattr(logging, level.upper(), logging.INFO)
 
         log_handler = logging.StreamHandler()
-        log_handler.setFormatter(LogFormatter())
+        log_handler.setFormatter(LogFormatter(colors=colors))
         #log_handler.setLevel(level)
         
-        logging.basicConfig(handlers=[log_handler], level=level, **kwargs)
+        logging.basicConfig(handlers=[log_handler], level=level, force=True, **kwargs)
     
     def __init__(self, format=DefaultFormat, datefmt=DefaultDateFormat, colors=DefaultColors):
         """
