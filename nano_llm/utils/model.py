@@ -78,7 +78,7 @@ def default_model_api(model_path, quant_path=None):
     elif 'mlc' in model_path:
         return 'mlc'
     else:
-        return 'hf'
+        return 'mlc' #'hf'
         
         
 class ONNXRuntimeModel:
