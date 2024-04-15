@@ -63,6 +63,13 @@ class StreamingResponse():
         self.event.clear()
 
         return self.get_message_delta()
+     
+    @property
+    def eos(self):
+        """
+        Returns true if End of Sequence (EOS) and generation has stopped.
+        """
+        return self.stopped
         
     def stop(self):
         """
