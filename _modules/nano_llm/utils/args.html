@@ -42,13 +42,14 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
 </ul>
@@ -111,7 +112,7 @@
         <span class="k">if</span> <span class="s1">&#39;model&#39;</span> <span class="ow">in</span> <span class="n">extras</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--model&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1">#required=True, </span>
                 <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to the model, or repository on HuggingFace Hub&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--quant&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--quantization&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
                 <span class="n">help</span><span class="o">=</span><span class="s2">&quot;for MLC, the type of quantization to apply (default q4f16_ft)  For AWQ, the path to the quantized weights.&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--api&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;auto_gptq&#39;</span><span class="p">,</span> <span class="s1">&#39;awq&#39;</span><span class="p">,</span> <span class="s1">&#39;hf&#39;</span><span class="p">,</span> <span class="s1">&#39;mlc&#39;</span><span class="p">],</span> 
                 <span class="n">help</span><span class="o">=</span><span class="s2">&quot;specify the API to use (otherwise inferred)&quot;</span><span class="p">)</span>
@@ -258,13 +259,13 @@
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">parse_prompt_args</span><span class="p">(</span><span class="n">prompts</span><span class="p">,</span> <span class="n">chat</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Parse prompt command-line argument and return list of prompts</span>
-<span class="sd">        It&#39;s assumed that the argparse argument was created like this:</span>
+<span class="sd">        Parse prompt command-line argument and return list of prompts.</span>
+<span class="sd">        It&#39;s assumed that the argparse argument was created like this::</span>
 <span class="sd">        </span>
-<span class="sd">          `parser.add_argument(&#39;--prompt&#39;, action=&#39;append&#39;, nargs=&#39;*&#39;)`</span>
+<span class="sd">          parser.add_argument(&#39;--prompt&#39;, action=&#39;append&#39;, nargs=&#39;*&#39;)</span>
 <span class="sd">          </span>
 <span class="sd">        If the prompt text is &#39;default&#39;, then default chat prompts will</span>
-<span class="sd">        be assigned if chat=True (otherwise default completion prompts)</span>
+<span class="sd">        be assigned if ``chat=True`` (otherwise default completion prompts)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">prompts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>

@@ -79,6 +79,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stopping"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stopping</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stopped"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stopped</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.__next__"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.__next__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.eos"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.eos</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stop"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stop()</span></code></a></li>
 </ul>
 </li>
@@ -178,7 +179,7 @@ It also supports multimodal vision models like Llava and generating image embedd
 <li><p><strong>model</strong> (<em>str</em>) – either the path to the model, or HuggingFace model repo/name.</p></li>
 <li><p><strong>api</strong> (<em>str</em>) – the model backend API to use:  ‘auto_gptq’, ‘awq’, ‘mlc’, or ‘hf’
 if left as None, it will attempt to be automatically determined.</p></li>
-<li><p><strong>quant</strong> (<em>str</em>) – for AWQ or MLC, either specify the quantization method,
+<li><p><strong>quantization</strong> (<em>str</em>) – for AWQ or MLC, either specify the quantization method,
 or the path to the quantized model (AWQ and MLC API’s only)</p></li>
 <li><p><strong>vision_model</strong> (<em>str</em>) – for VLMs, override the vision embedding model
 (typically <a class="reference external" href="https://huggingface.co/openai/clip-vit-large-patch14-336">openai/clip-vit-large-patch14-336</a>).
@@ -430,6 +431,12 @@ which will signal the model to stop from generating additional output tokens.</p
 <dt class="sig sig-object py" id="nano_llm.StreamingResponse.__next__">
 <span class="sig-name descname"><span class="pre">__next__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.__next__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.__next__" title="Link to this definition"></a></dt>
 <dd><p>Wait until the model generates more output, and return the new text (only the delta)</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.StreamingResponse.eos">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">eos</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.eos" title="Link to this definition"></a></dt>
+<dd><p>Returns true if End of Sequence (EOS) and generation has stopped.</p>
 </dd></dl>
 
 <dl class="py method">

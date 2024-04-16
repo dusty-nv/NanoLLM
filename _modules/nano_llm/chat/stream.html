@@ -42,13 +42,14 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
 </ul>
@@ -148,6 +149,13 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_message_delta</span><span class="p">()</span></div>
 
+     
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">eos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns true if End of Sequence (EOS) and generation has stopped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span>
         
 <div class="viewcode-block" id="StreamingResponse.stop">
 <a class="viewcode-back" href="../../../models.html#nano_llm.StreamingResponse.stop">[docs]</a>

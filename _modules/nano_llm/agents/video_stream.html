@@ -98,12 +98,12 @@
 
 <span class="sd">    For example, this will capture a V4L2 camera and serve it via WebRTC with H.264 encoding:</span>
 <span class="sd">    </span>
-<span class="sd">    .. code-block:: console</span>
+<span class="sd">    .. code-block:: text</span>
 <span class="sd">    </span>
-<span class="sd">        python3 -m local_llm.agents.video_stream \</span>
-<span class="sd">           --video-input /dev/video0 \</span>
+<span class="sd">        python3 -m local_llm.agents.video_stream \ </span>
+<span class="sd">           --video-input /dev/video0 \ </span>
 <span class="sd">           --video-output webrtc://@:8554/output</span>
-<span class="sd">      </span>
+<span class="sd">    </span>
 <span class="sd">    It&#39;s also used as a basic test of video streaming before using more complex agents that rely on it.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="VideoStream.__init__">

@@ -42,13 +42,14 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../releases.html">Release Notes</a></li>
 </ul>
@@ -116,8 +117,8 @@
 <span class="sd">          api (str): the model backend API to use:  &#39;auto_gptq&#39;, &#39;awq&#39;, &#39;mlc&#39;, or &#39;hf&#39;</span>
 <span class="sd">                       if left as None, it will attempt to be automatically determined.</span>
 
-<span class="sd">          quant (str): for AWQ or MLC, either specify the quantization method,</span>
-<span class="sd">                         or the path to the quantized model (AWQ and MLC API&#39;s only)</span>
+<span class="sd">          quantization (str): for AWQ or MLC, either specify the quantization method,</span>
+<span class="sd">                              or the path to the quantized model (AWQ and MLC API&#39;s only)</span>
 
 <span class="sd">          vision_model (str): for VLMs, override the vision embedding model </span>
 <span class="sd">                              (typically `openai/clip-vit-large-patch14-336 &lt;https://huggingface.co/openai/clip-vit-large-patch14-336&gt;`_).</span>
@@ -134,7 +135,7 @@
             <span class="n">model_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
             
         <span class="k">if</span> <span class="ow">not</span> <span class="n">api</span><span class="p">:</span>
-            <span class="n">api</span> <span class="o">=</span> <span class="n">default_model_api</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;quant&#39;</span><span class="p">))</span>
+            <span class="n">api</span> <span class="o">=</span> <span class="n">default_model_api</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;quantization&#39;</span><span class="p">))</span>
         
         <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_name</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;api&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">api</span>
