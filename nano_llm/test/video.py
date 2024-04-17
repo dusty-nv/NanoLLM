@@ -7,7 +7,7 @@
 #      
 # For example, this will capture a V4L2 camera and serve it via WebRTC with H.264 encoding:
 #    
-#      python3 -m local_llm.test.video \
+#      python3 -m nano_llm.test.video \
 #        --video-input /dev/video0 \
 #        --video-output webrtc://@:8554/output
 #      

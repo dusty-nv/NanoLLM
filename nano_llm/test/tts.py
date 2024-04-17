@@ -4,7 +4,7 @@
 # See the print_help() function below for a description of the commands you can enter this program.
 # Here is an example of starting it with XTTS model and sound output:
 #
-#    python3 -m local_llm.test.tts --verbose \
+#    python3 -m nano_llm.test.tts --verbose \
 #	    --tts xtts \
 #	    --voice 'Damien Black' \
 #	    --sample-rate-hz 44100 \
@@ -14,7 +14,7 @@
 # The sample rate should be set to one that the audio output device supports (like 16000, 44100,
 # 48000, ect).  This command will list the connected audio devices available:
 #
-#    python3 -m local_llm.test.tts --list-audio-devices
+#    python3 -m nano_llm.test.tts --list-audio-devices
 #
 # The TTS output is automatically resampled to match the sampling rate of the audio device.
 #

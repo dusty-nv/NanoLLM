@@ -2,7 +2,7 @@
 #
 # Feed ASR transcript into streaming TTS, your words are played back to you in another voice.
 #
-#    python3 -m local_llm.test.asr_tts_loopback
+#    python3 -m nano_llm.test.asr_tts_loopback
 #        --asr riva \
 #        --tts xtts \
 #        --sample-rate-hz 44100 \
@@ -11,7 +11,7 @@
 # The sample rate should be set to one that the audio output device supports (like 16000, 44100,
 # 48000, ect).  This command will list the connected audio devices available:
 #
-#    python3 -m local_llm.test.asr_tts_loopback --list-audio-devices
+#    python3 -m nano_llm.test.asr_tts_loopback --list-audio-devices
 #
 import time
 

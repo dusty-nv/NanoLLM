@@ -2,7 +2,7 @@
 #
 # Test of streaming ASR transcription on a live microphone:
 #
-#    python3 -m local_llm.test.asr --verbose \
+#    python3 -m nano_llm.test.asr --verbose \
 #        --asr riva \
 #        --sample-rate-hz 44100 \
 #        --audio-input-device 25
@@ -10,7 +10,7 @@
 # The sample rate should be set to one that the audio output device supports (like 16000, 44100,
 # 48000, ect).  This command will list the connected audio devices available:
 #
-#    python3 -m local_llm.test.asr --list-audio-devices
+#    python3 -m nano_llm.test.asr --list-audio-devices
 #
 from nano_llm.plugins import AutoASR, PrintStream
 from nano_llm.utils import ArgParser

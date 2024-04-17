@@ -17,7 +17,7 @@ class VideoStream(Agent):
     
     .. code-block:: text
     
-        python3 -m local_llm.agents.video_stream \ 
+        python3 -m nano_llm.agents.video_stream \ 
            --video-input /dev/video0 \ 
            --video-output webrtc://@:8554/output
     
