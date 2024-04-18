@@ -14,6 +14,13 @@ ChatTemplates = {
         'bot': ' ${MESSAGE}'  # llama-2 output already ends in </s>
     },
     
+    'llama-3': {
+        'system': '<|begin_of_text|>',
+        'user': '<|start_header_id|>user<|end_header_id|>\n\n${MESSAGE}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
+        'bot': '${MESSAGE}<|eot_id|>',
+        'stop': ['<|end_of_text|>', '<|eot_id|>'],
+    },
+    
     # https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0
     'tiny-llama': {
         'system_prompt': "You are a friendly chatbot who always gives helpful answers to the user's questions.",
@@ -112,7 +119,7 @@ ChatTemplates['llava-llama-2'].update({
     'system_prompt': "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
 })
 
-StopTokens = ['</s>', '<|endoftext|>', '<|im_end|>', '<eos>']
+StopTokens = ['</s>', '<|endoftext|>', '<|im_end|>', '<eos>', '<|end_of_text|>', '<|eot_id|>']
 
 for key in ChatTemplates:
     ChatTemplates[key] = AttributeDict(name=key, **ChatTemplates[key])
@@ -147,6 +154,8 @@ def ChatTemplate(model):
             chat_template = 'llava-llama-2'
         else:
             chat_template = 'llama-2'
+    elif 'llama-3' in model:
+        chat_template = 'llama-3'
     elif 'vicuna' in model:
         if 'v1' in model:
             chat_template = 'vicuna-v1'

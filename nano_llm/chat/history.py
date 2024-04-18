@@ -185,7 +185,7 @@ class ChatHistory():
         self.image_embedding = None
         
         if add_system_prompt and 'system' in self.template:
-            self.append(role='system', text=self.template['system_prompt'])
+            self.append(role='system', text=self.system_prompt)
      
     def to_list(self):
         """
