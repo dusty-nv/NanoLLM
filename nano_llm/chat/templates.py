@@ -15,7 +15,8 @@ ChatTemplates = {
     },
     
     'llama-3': {
-        'system': '<|begin_of_text|>',
+        'system_prompt': "You are a helpful and friendly AI assistant.",
+        'system': '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${MESSAGE}<|eot_id|>',
         'user': '<|start_header_id|>user<|end_header_id|>\n\n${MESSAGE}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
         'bot': '${MESSAGE}<|eot_id|>',
         'stop': ['<|end_of_text|>', '<|eot_id|>'],
