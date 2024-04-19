@@ -72,6 +72,8 @@ class XTTS(AutoTTS):
 
         self.voices = list(self.speaker_manager.speakers.keys())
         self.languages = self.model.language_manager.language_names
+        self.speakers = []
+        self.speaker = ''
         
         logging.info(f"XTTS voices for {self.model_name}:\n{self.voices}")
         logging.info(f"XTTS languages for {self.model_name}:\n{self.languages}")

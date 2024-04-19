@@ -26,7 +26,7 @@ class AutoTTS(Plugin):
         
         self.number_regex = None
         self.number_inflect = None
-    
+        
     @staticmethod
     def from_pretrained(tts=None, **kwargs):
         """
@@ -34,13 +34,16 @@ class AutoTTS(Plugin):
         The `tts` param should either be 'riva' or 'xtts' (or name/path of XTTS model)
         The kwargs are forwarded to the TTS plugin implementing the model.
         """
-        from nano_llm.plugins import RivaTTS, FastPitchTTS
+        from nano_llm.plugins.audio.riva_tts import RivaTTS
+        from nano_llm.plugins.audio.piper_tts import PiperTTS
+        from nano_llm.plugins.audio.fastpitch_tts import FastPitchTTS
         
         try:
             from nano_llm.plugins import XTTS
             has_xtts = True
         except ImportError as error:
             has_xtts = False
+            #logging.warning(f"failed to import XTTS plugin, disabling... ({error})")
             
         if not tts or tts.lower() == 'none' or tts.lower().startswith('disable'):
             return None
@@ -49,10 +52,12 @@ class AutoTTS(Plugin):
             return FastPitchTTS(**{**kwargs, 'model': tts})
         elif has_xtts and XTTS.is_model(tts):
             return XTTS(**{**kwargs, 'model': tts})
-        elif tts.lower() == 'riva':
+        elif tts.lower().startswith('riva'):
             return RivaTTS(**kwargs)
+        elif tts.lower().startswith('piper'):
+            return PiperTTS(**kwargs)
         else:
-            raise ValueError(f"TTS model type should be Riva {'or XTTS' if has_xtts else ''} ({tts})")
+            raise ValueError(f"TTS model type should be Riva, Piper, {'or XTTS' if has_xtts else ''} ({tts})")
         
     @property
     def buffering(self):

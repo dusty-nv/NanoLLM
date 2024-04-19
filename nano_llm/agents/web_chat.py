@@ -4,9 +4,10 @@ import logging
 import threading
 import numpy as np
 
+from nano_llm import StopTokens
 from nano_llm.web import WebServer
 from nano_llm.utils import ArgParser, KeyboardInterrupt
-from nano_llm.plugins import RivaASR
+from nano_llm.plugins import AutoASR
 
 from .voice_chat import VoiceChat
 
@@ -29,8 +30,8 @@ class WebChat(VoiceChat):
         super().__init__(**kwargs)
 
         if self.asr:
-            self.asr.add(self.on_asr_partial, RivaASR.OutputPartial, threaded=True)
-            #self.asr.add(self.on_asr_final, RivaASR.OutputFinal)
+            self.asr.add(self.on_asr_partial, AutoASR.OutputPartial, threaded=True)
+            #self.asr.add(self.on_asr_final, AutoASR.OutputFinal)
         
         self.llm.add(self.on_llm_reply, threaded=True)
         
@@ -53,11 +54,16 @@ class WebChat(VoiceChat):
                         self.server.send_message({
                             'tts_voice': self.tts.voice, 
                             'tts_voices': self.tts.voices, 
+                            'tts_speaker': self.tts.speaker, 
+                            'tts_speakers': self.tts.speakers, 
                             'tts_rate': self.tts.rate
                         })
                     threading.Timer(1.0, lambda: self.send_chat_history()).start()
             if 'tts_voice' in msg and self.tts:
                 self.tts.voice = msg['tts_voice']
+                self.server.send_message({'tts_speaker': self.tts.speaker, 'tts_speakers': self.tts.speakers})
+            if 'tts_speaker' in msg and self.tts:
+                self.tts.speaker = msg['tts_speaker']
             if 'tts_rate' in msg and self.tts:
                 self.tts.rate = float(msg['tts_rate'])
         elif msg_type == WebServer.MESSAGE_TEXT:  # chat input
@@ -103,7 +109,8 @@ class WebChat(VoiceChat):
             text = text.strip('\n')
             text = text.replace('\n', '<br/>')
             text = text.replace('<s>', '')
-            text = text.replace('</s>', '')
+            for stop_token in StopTokens:
+                text = text.replace(stop_token, '')
             return text
           
         def web_image(image):

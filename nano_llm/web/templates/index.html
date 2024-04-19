@@ -63,6 +63,12 @@
         sendWebsocket({'tts_voice': voice});
       }
       
+      function onSpeakerSelect() {
+        const speaker = document.getElementById('speaker-select').value;
+        console.log(`select speaker: ${speaker}`);
+        sendWebsocket({'tts_speaker': speaker});
+      }
+      
       function onVoiceRate(rate) {
         console.log(`set voice rate: ${rate}`);
         onVoiceRateLabel(rate);
@@ -135,9 +141,30 @@
             const voiceList = payload['tts_voices'];
             const voiceSelect = document.getElementById('voice-select');
             
+            $('#voice-select').empty();
+            
             for( let n=0; n < voiceList.length; n++ ) {
               voiceSelect.add(new Option(voiceList[n], voiceList[n]));
             }
+          }
+          
+          if( 'tts_voice' in payload ) {
+            document.getElementById('voice-select').value = payload['tts_voice'];
+          }
+          
+          if( 'tts_speakers' in payload ) {
+            const speakerList = payload['tts_speakers'];
+            const speakerSelect = document.getElementById('speaker-select');
+            
+            $('#speaker-select').empty();
+            
+            for( let n=0; n < speakerList.length; n++ ) {
+              speakerSelect.add(new Option(speakerList[n], speakerList[n]));
+            }
+          }
+          
+          if( 'tts_speaker' in payload ) {
+            document.getElementById('speaker-select').value = payload['tts_speaker'];
           }
           
           if( 'tegrastats' in payload ) {
@@ -240,19 +267,12 @@
             </div>
             <div class="mb-3">
               <label for="voice-select" class="form-label">TTS Voice</label>
-              <select id="voice-select" name="voice-select" class="form-select" onclick="onVoiceSelect()">
-                <!--<option value="English-US.Female-1" selected>English-US.Female-1</option>
-                <option value="English-US.Male-1">English-US.Male-1</option>
-                <option value="English-US.Female-Calm">English-US.Female-Calm</option>
-                <option value="English-US.Female-Neutral">English-US.Female-Neutral</option>
-                <option value="English-US.Female-Happy">English-US.Female-Happy</option>
-                <option value="English-US.Female-Angry">English-US.Female-Angry</option>
-                <option value="English-US.Female-Fearful">English-US.Female-Fearful</option>
-                <option value="English-US.Female-Sad">English-US.Female-Sad</option>
-                <option value="English-US.Male-Calm">English-US.Male-Calm</option>
-                <option value="English-US.Male-Neutral">English-US.Male-Neutral</option>
-                <option value="English-US.Male-Happy">English-US.Male-Happy</option>
-                <option value="English-US.Male-Angry">English-US.Male-Angry</option>-->
+              <select id="voice-select" name="voice-select" class="form-select" onchange="onVoiceSelect()">
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="speaker-select" class="form-label">TTS Speaker</label>
+              <select id="speaker-select" name="speaker-select" class="form-select" onchange="onSpeakerSelect()">
               </select>
             </div>
             <div class="mb-3">

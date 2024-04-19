@@ -46,6 +46,9 @@ class FastPitchTTS(AutoTTS):
         
         self.voices = ['female']
         self.languages = ['en']
+        self.speakers = []
+        self.speaker = ''
+        
         self.symbol_to_id = {s: i for i, s in enumerate(self.get_symbols())}
         
         self.rate = 1.0

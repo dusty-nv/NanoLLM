@@ -25,7 +25,7 @@ class AutoASR(Plugin):
         The `tts` param should either be 'riva' or 'xtts' (or name/path of XTTS model)
         The kwargs are forwarded to the TTS plugin implementing the model.
         """
-        from nano_llm.plugins import RivaASR
+        from nano_llm.plugins.audio.riva_asr import RivaASR
         
         if not asr:
             return None

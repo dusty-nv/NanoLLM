@@ -104,7 +104,7 @@ class ArgParser(argparse.ArgumentParser):
         if 'tts' in extras:
             self.add_argument("--tts", type=str, default=None, help="name of path of the TTS model to use (e.g. 'riva', 'xtts', 'none', 'disabled')")
             self.add_argument("--tts-buffering", type=str, default="punctuation", help="buffering method for TTS ('none', 'punctuation', 'time', 'punctuation,time')")
-            self.add_argument("--voice", type=str, default="English-US.Female-1", help="Voice model name to use for TTS")
+            self.add_argument("--voice", type=str, default=None, help="Voice model name to use for TTS")
             self.add_argument("--voice-rate", type=float, default=1.0, help="TTS SSML voice speaker rate (between 25-250%%)")
             self.add_argument("--voice-pitch", type=str, default="default", help="TTS SSML voice pitch shift")
             self.add_argument("--voice-volume", type=str, default="default", help="TTS SSML voice volume attribute")

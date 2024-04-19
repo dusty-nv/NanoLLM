@@ -40,6 +40,8 @@ def print_help():
     print(f"\nSpeak into the mic, or enter these commands:\n")
     print(f"  /voices            List the voice names")
     print(f"  /voice Voice Name  Change the voice (current='{tts.voice}')")
+    print(f"  /speakers          List the speaker names")
+    print(f"  /speaker Speaker   Change the speaker (current='{tts.speaker}')")
     print(f"  /languages         List the languages")
     print(f"  /language en-US    Set the language code (current='{tts.language}')")
     print(f"  /rate 1.0          Set the speaker rate (current={tts.rate:.2f})")
@@ -59,6 +61,10 @@ while True:
             print(tts.voices)
         elif cmd.startswith('/voice'):
             tts.voice = text[6:].strip()
+        elif cmd.startswith('/speakers'):
+            print(tts.speakers)
+        elif cmd.startswith('/speaker'):
+            tts.speaker = text[8:].strip()
         elif cmd.startswith('/languages'):
             print(tts.languages)
         elif cmd.startswith('/language'):

@@ -19,10 +19,18 @@ def convert_audio(samples, dtype=np.int16):
     if samples.dtype == dtype:
         return samples
 
-    #sample_width = np.dtype(str(dtype).split('.')[-1]).itemsize
-    sample_width = np.dtype(convert_dtype(dtype, to='np')).itemsize
-    max_value = float(int((2 ** (sample_width * 8)) / 2) - 1)  # 32767 for 16-bit
+    def is_float(dtype):
+        return (dtype == torch.float32 or dtype == torch.float64 or dtype == np.float32 or dtype == np.float64)
         
+    if is_float(samples.dtype):
+        rescale_dtype = dtype
+    else:
+        rescale_dtype = samples.dtype
+        
+    #sample_width = np.dtype(str(dtype).split('.')[-1]).itemsize
+    sample_width = np.dtype(convert_dtype(rescale_dtype, to='np')).itemsize
+    max_value = float(int((2 ** (sample_width * 8)) / 2) - 1)  # 32767 for 16-bit
+
     if isinstance(samples, np.ndarray):
         if samples.dtype == np.float32 or samples.dtype == np.float64:  # float-to-int
             samples = samples * max_value
@@ -37,7 +45,7 @@ def convert_audio(samples, dtype=np.int16):
         if samples.dtype == torch.float32 or samples.dtype == torch.float64:
             samples = samples * max_value
             samples = samples.clip(-max_value, max_value).to(dtype=dtype)
-        elif dtype == np.float32 or dtype == np.float64:
+        elif dtype == torch.float32 or dtype == torch.float64 or dtype == np.float32 or dtype == np.float64:
             samples = samples.to(dtype=dtype) / max_value
         else:
             raise TypeError(f"unsupported audio sample dtype={samples.dtype}")

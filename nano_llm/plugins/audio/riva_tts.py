@@ -53,7 +53,12 @@ class RivaTTS(AutoTTS):
         ]
         
         self.languages = ["en-US"]
+        self.speakers = []
+        self.speaker = ''
         
+        if not self.voice:
+            self.voice = "English-US.Female-1"
+            
         self.process("This is a test of Riva text to speech.", flush=True)
     
     def process(self, text, **kwargs):
