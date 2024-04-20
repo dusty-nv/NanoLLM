@@ -17,6 +17,7 @@ parser = ArgParser()
 parser.add_argument("--prompt-color", type=str, default='blue', help="color to print user prompts (see https://github.com/termcolor/termcolor)")
 parser.add_argument("--reply-color", type=str, default='green', help="color to print user prompts (see https://github.com/termcolor/termcolor)")
 
+parser.add_argument("--disable-automatic-generation", action="store_false", dest="automatic_generation", help="wait for 'generate' command before bot output")
 parser.add_argument("--disable-streaming", action="store_true", help="wait to output entire reply instead of token by token")
 parser.add_argument("--disable-stats", action="store_true", help="suppress the printing of generation performance stats")
 
@@ -63,11 +64,15 @@ while True:
         continue
 
     # add the latest user prompt to the chat history
-    entry = chat_history.append(role='user', msg=user_prompt)
+    if args.automatic_generation or user_prompt.lower() != 'generate':
+        entry = chat_history.append(role='user', msg=user_prompt)
 
     # images should be followed by text prompts
-    if 'image' in entry and 'text' not in entry:
-        logging.debug("image message, waiting for user prompt")
+    if args.automatic_generation:
+        if 'image' in entry and 'text' not in entry:
+            logging.debug("image message, waiting for user prompt")
+            continue
+    elif user_prompt.lower() != 'generate':
         continue
         
     # get the latest embeddings (or tokens) from the chat
