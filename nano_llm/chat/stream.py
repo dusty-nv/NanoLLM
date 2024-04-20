@@ -27,6 +27,9 @@ class StreamingResponse():
         #: detokenized output text generated so far (for the whole reply)
         self.text = ''    
         
+        #: the new text added from the latest output token
+        self.delta = ''
+        
         #: the original input query from the user
         self.input = input
         
@@ -55,14 +58,13 @@ class StreamingResponse():
         if self.stopped:
             stop_tokens = self.kwargs.get('stop_tokens', [self.model.tokenizer.eos_token_id])
             if not ends_with_token(self.tokens, stop_tokens, self.model.tokenizer):
-                self.tokens.append(self.model.tokenizer.eos_token_id) # add EOS if necessary
-                return self.get_message_delta()
+                self.add_tokens(self.model.tokenizer.eos_token_id) # add EOS if necessary
             raise StopIteration
             
         self.event.wait()
         self.event.clear()
 
-        return self.get_message_delta()
+        return self.delta
      
     @property
     def eos(self):
@@ -77,8 +79,23 @@ class StreamingResponse():
         """
         self.stopping = True
 
-    def get_message_delta(self):
+    def add_tokens(self, tokens, detokenize=True):
+        """
+        Add an output token, detokenize the reply, and return the delta message.
+        """
+        if isinstance(tokens, list):
+            self.tokens.extend(tokens)
+        elif tokens is not None:
+            self.tokens.append(tokens)
+            
+        if not detokenize:
+            return ''
+            
+        # detokenize the entire reply on each new output token, because multiple tokens can
+        # combine with each other, changing the previous text (like with long words and unicode)
         message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False) #, clean_up_tokenization_spaces=None
-        delta = message[len(self.text):]
+        
+        self.delta = message[len(self.text):]
         self.text = message
-        return delta
+        
+        return self.delta

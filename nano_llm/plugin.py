@@ -99,12 +99,31 @@ class Plugin(threading.Thread):
         Callable () operator alias for the :func:`input()` function.
         This is provided for a more intuitive way of processing data 
         like ``plugin(data)`` instead of ``plugin.input(data)``
+        
+        Args:
+        
+          input: input data sent to the plugin's :func:`process()` function.
+          kwargs: additional arguments forwarded to the plugin's :func:`process()` function.
+          
+        Returns:
+        
+          None if the plugin is threaded, otherwise returns any outputs.
         """
-        self.input(input, **kwargs)
+        return self.input(input, **kwargs)
         
     def input(self, input=None, **kwargs):
         """
-        Add data to the plugin's processing queue (or process it now if ``threaded=False``)
+        Add data to the plugin's processing queue and return immediately,
+        or process it now and return the results if ``threaded=False``.
+        
+        Args:
+        
+          input: input data sent to the plugin's :func:`process()` function.
+          kwargs: additional arguments forwarded to the plugin's :func:`process()` function.
+          
+        Returns:
+        
+          None if the plugin is threaded, otherwise returns any outputs.
         """
         if self.threaded:
             #self.start() # thread may not be started if plugin only called from a callback
@@ -201,6 +220,8 @@ class Plugin(threading.Thread):
         
         if self.relay:
             self.output(input)
+            
+        return outputs
    
     def interrupt(self, clear_inputs=True, recursive=True, block=None):
         """
