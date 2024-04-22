@@ -27,7 +27,7 @@ class StreamingResponse():
         #: detokenized output text generated so far (for the whole reply)
         self.text = ''    
         
-        #: the new text added from the latest output token
+        #: the new text added since the iterator was last read
         self.delta = ''
         
         #: the original input query from the user
@@ -59,12 +59,13 @@ class StreamingResponse():
             stop_tokens = self.kwargs.get('stop_tokens', [self.model.tokenizer.eos_token_id])
             if not ends_with_token(self.tokens, stop_tokens, self.model.tokenizer):
                 self.add_tokens(self.model.tokenizer.eos_token_id) # add EOS if necessary
+                return self._pop_delta()
             raise StopIteration
             
         self.event.wait()
         self.event.clear()
 
-        return self.delta
+        return self._pop_delta()
      
     @property
     def eos(self):
@@ -81,7 +82,8 @@ class StreamingResponse():
 
     def add_tokens(self, tokens, detokenize=True):
         """
-        Add an output token, detokenize the reply, and return the delta message.
+        Add an output token, detokenize the reply, and accumulate the delta message.
+        This function is only used by the model APIs when they generate a new token.
         """
         if isinstance(tokens, list):
             self.tokens.extend(tokens)
@@ -94,8 +96,16 @@ class StreamingResponse():
         # detokenize the entire reply on each new output token, because multiple tokens can
         # combine with each other, changing the previous text (like with long words and unicode)
         message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False) #, clean_up_tokenization_spaces=None
-        
-        self.delta = message[len(self.text):]
+        self.delta = self.delta + message[len(self.text):]
         self.text = message
+
+    def _pop_delta(self, reset=True):
+        """
+        Get the tokens that have accumulated since the iterator was last read, and reset it.
+        """
+        delta = self.delta
         
-        return self.delta
+        if reset:
+            self.delta = ''
+            
+        return delta
