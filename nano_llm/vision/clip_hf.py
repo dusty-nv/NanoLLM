@@ -98,6 +98,11 @@ class CLIPImageEmbedding():
             time_begin_enc = time.perf_counter()
             model_output = self.model(image, output_hidden_states=hidden_state is not None)   #.pooler_output  .last_hidden_state
 
+            if self.model_type == 'clip':
+               output_embeds = model_output.image_embeds
+            elif self.model_type == 'siglip':
+                output_embeds = model_output.pooler_output
+                
             if hidden_state is not None:
                 hidden_tensor = convert_tensor(model_output.hidden_states[hidden_state], return_tensors=return_tensors, device=self.device, dtype=self.dtype)
                 if return_dict:
@@ -106,13 +111,14 @@ class CLIPImageEmbedding():
                     output = hidden_tensor
                 self.config.output_shape = hidden_tensor.shape
             else:
-                self.config.output_shape = model_output.image_embeds.shape
+                print(model_output)
+                self.config.output_shape = output_embeds.shape
                 
             if return_dict:
                 #output.pooler_output = convert_tensor(model_output.pooler_output, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
-                output.image_embeds = convert_tensor(model_output.image_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
+                output.image_embeds = convert_tensor(output_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
             elif hidden_state is None:
-                output = convert_tensor(model_output.image_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
+                output = convert_tensor(output_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
 
         time_end_enc = time.perf_counter()
         
