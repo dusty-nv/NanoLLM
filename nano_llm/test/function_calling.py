@@ -1,180 +1,13 @@
 #!/usr/bin/env python3
-import re
-import json
-import requests
+import os
 import logging
 import traceback
+import pprint
 
-from nano_llm import NanoLLM, ChatHistory, Plugin
+from nano_llm import NanoLLM, ChatHistory, Plugin, BotFunctions, bot_function
 from nano_llm.utils import ArgParser, load_prompts, print_table
 
 from termcolor import cprint
-
-from functools import wraps  
-from datetime import datetime
-from decorator_args import decorator_args
-
-def TIME(text):
-    if text.endswith('`TIME()`'):
-        return datetime.now().strftime("%-I:%M %p")
-
-
-@decorator_args(optional=True)        
-def bot_function(func, name=None, docs='pydoc', code='python', enabled=True):
-    """
-    Decorator for exposing a function to be callable by the LLM.
-    This will create wrapper functions that do the parsing to
-    determine if this function was called in the output text,
-    and then interpret it to invoke the function call.
-    
-    Args:
-    
-      func (Callable):  The function to be called by the model.
-      
-      name (str):  The function name that the model should refer to.
-                   By default, it will be the actual Python function name.
-                   
-      docs (str):  Description of the function that is added to the model's
-                   system prompt.  By default, the Python docstring is used
-                   from the function's code comment block (`''' docs here '''`)
-                   
-      code (str):  Language that the model is expected to write code in.
-                   By default this is Python, but JSON will be added also.
-         
-      enabled (bool):  Boolean that toggles whether this function is added
-                       to the system prompt and able to be called or not.
-    """                   
-    return BotFunctions.register(func, name=name, docs=docs, code=code, enabled=enabled)
-
-
-class BotFunctions:
-    """
-    Manager of functions able to be called by the LLM that have been registered
-    with the :func:`bot_function` decorator or :meth:`BotFunction.register`
-    """
-    functions = []
-        
-    def __new__(cls, all=False):
-        """
-        Return the list of enabled functions whenever `BotFunctions()` is called,
-        making it seem like you are just calling a function that returns a list::
-        
-           for func in BotFunctions():
-              func("SQRT(64)")
-              
-        If `all=True`, then even the disabled functions will be included.
-        """
-        return cls.functions if all else [x for x in cls.functions if x.enabled]
-        
-    def __class_getitem__(cls, index):
-        """
-        Return the N-th registered function, like `BotFunctions[N]`
-        """
-        return cls.functions[index]
-    
-    @classmethod
-    def len(cls):
-        """
-        Returns the number of all registered bot functions.
-        """
-        return len(cls.functions)
-       
-    @classmethod
-    def list(cls):
-        """
-        Return the list of all registered functions available.
-        """
-        return cls.functions
-        
-    @classmethod
-    def generate_docs(cls):
-        """
-        Collate the documentation strings from all the enabled functions
-        """
-        docs = "You are able to call the Python functions defined below, "
-        docs = docs + "and the returned values will be added to the chat.\n"
-        docs = docs + '\n'.join([x.docs for x in cls.functions if x.enabled])
-        
-        return docs
-
-    @classmethod
-    def register(cls, func, name=None, docs='pydoc', code='python', enabled=True):
-        """
-        See the docs for :func:`bot_function`
-        """
-        name = name if name else func.__name__
-        regex = re.compile(f"`{name}\(.*?\)`")
-        
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # this gets called from NanoLLM.generate() with `text` as the only arg,
-            # which represents the entire response of the bot so far
-            text = args[0]
-            found_match = False
-            for match in regex.finditer(text):
-                if match.end() == len(text): # only evaluate what was just called
-                    found_match=True
-                    break
-                    
-            if not found_match:
-                return None
-            
-            code_str = args[0][match.start():match.end()].strip('`')
-
-            try:
-                logging.debug(f"Running generated code `{code_str}`")
-                return eval(code_str, {name : func})
-            except Exception as error:
-                logging.error(f"Exception occurred executing generated code {code_str}\n\n{''.join(traceback.format_exception(error))}")
-                return None
-
-        wrapper.name = name if name else wrapper.__name__
-        wrapper.docs = ''
-        wrapper.enabled = enabled
-        wrapper.function = func
-        wrapper.regex = re.compile(f"`{wrapper.name}\(.*?\)`")
-        
-        if docs == 'pydoc':
-            wrapper.docs = name + '() - ' + wrapper.__doc__
-        elif docs == 'pydoc_nosig':
-            wrapper.docs = wrapper.__doc__
-            
-        cls.functions.append(wrapper)
-        func._bot_function = wrapper
-        
-        return func
-        
-
-@bot_function(docs="returns the current date in MM/DD/YYYY format")
-def DATE():
-    return datetime.now().strftime("%-m/%d/%Y")
-
-@bot_function
-def LOCATION():
-    """ Returns the current location, like the name of the city. """
-    x = requests.get(f'http://ip-api.com/json').json()  # zip, lat/long, timezone, query (IP)
-    #return json.dumps(x, indent=2)
-    #return x.get('city', x.get('regionName', x.get('country')))
-    return f"{x.get('city')}, {x.get('regionName')}"
-    
-print('LOCATION', LOCATION())
-    
-def inspect_func(func):
-    print('Function __name__', func.__name__)
-    print('Function __docs__', func.__doc__)
-    print('Function name:', func.name)
-    print('Function docs:', func.docs)
-    print('Function enabled:', func.enabled)
-    print('Function inner:', func.function)
-
-print('num BotFunctions', len(BotFunctions()))#len(BotFunctions))
-
-for func in BotFunctions():
-    inspect_func(func)
-    
-print('\n\n' + BotFunctions.generate_docs())
-
-print([TIME] + BotFunctions())
 
 
 # parse args and set some defaults
@@ -184,13 +17,46 @@ args = parser.parse_args()
 
 prompts = load_prompts(args.prompt)
 
+
+
+'''
+def TIME(text):
+    if text.endswith('`TIME()`'):
+        return datetime.now().strftime("%-I:%M %p")
+'''
+
+user_profile=[]
+
+@bot_function(docs='nosig')
+def SAVE(text=None):
+    """
+    `SAVE("text")` - save text to the database that can be retrieved later, for example `SAVE("the user's name is John")`
+    """
+    global user_profile
+    if text:
+        user_profile.append(text)
+    
+    
+    
+print('num BotFunctions', len(BotFunctions()))
+print('\n\n' + BotFunctions.generate_docs())
+print(BotFunctions())
+
+
+
+
 if not prompts:
     prompts = [
-        "You have some functions available to you like `TIME()`, `DATE()`, and `LOCATION()` which will add those to the chat - please call them when required.  `LOCATION()` will return the closest city and state.  \nHi, how are you today?", 
+        'You have some functions available to you like `TIME()`, `DATE()`, `SAVE("text"), `CURRENT_WEATHER()`, `WEATHER_FORECAST(day=1)`, and `LOCATION()` which will add those to the chat - please call them when required.  `LOCATION()` will return the closest city and state.  `WEATHER_FORECAST()` has an optional `day` keyword argument that specifies the number of days ahead for the forecast (by default, tomorrow).  If the user tells you personal details about themselves such as their name, save it with the `SAVE("text")` function - for example, `SAVE("The user\'s name is John")` - you need to actually call this in order for it to be saved, and it will return nothing.  Always surround the code you write by backticks, for example `DATE()`, so that it can be parsed and executed.\nHi I\'m Dusty! how are you today?', 
+        #"Hi, how are you today?",
+        "Yes, please save my name so you remember it in the future!",
+        "I have brown hair and green eyes.",
         "What month is it?",
         "What time is it?",
         #"Where are we?",
         "What city are we in?",
+        "What is the temperature?",
+        "How warm will it be in 2 days?",
     ]
     
 if not args.model:
@@ -247,7 +113,7 @@ while True:
     # generate bot reply
     reply = model.generate(
         embedding, 
-        plugins=[TIME] + BotFunctions() if not args.disable_plugins else None, 
+        plugins=BotFunctions() if not args.disable_plugins else None, 
         kv_cache=chat_history.kv_cache,
         stop_tokens=chat_history.template.stop,
         max_new_tokens=args.max_new_tokens,
@@ -264,10 +130,10 @@ while True:
         #cprint(f"NEW TOKEN '{token}'", "yellow")
         
     print('\n')
-    cprint(reply.text, 'green')
+    #cprint(reply.text, 'green')
     
-    print_table(model.stats)
-    print('')
+    #print_table(model.stats)
+    #print('')
     
     chat_history.append(role='bot', text=reply.text) # save the output
     chat_history.kv_cache = reply.kv_cache           # save the KV cache 

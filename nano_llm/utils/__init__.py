@@ -6,6 +6,7 @@ from .keyboard import *
 from .log import *
 from .model import *
 from .prompts import *
+from .request import WebRequest
 from .table import *
 from .tensor import *
 

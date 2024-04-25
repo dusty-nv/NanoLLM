@@ -7,6 +7,8 @@ from .chat.history import ChatHistory, ChatEntry
 from .chat.templates import ChatTemplate, ChatTemplates, StopTokens
 
 from .agent import Agent, Pipeline
+
 from .plugin import Plugin
+from .plugins.bot_functions import bot_function, BotFunctions
 
 from .version import __version__

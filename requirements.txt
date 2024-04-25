@@ -10,3 +10,4 @@ flask
 tqdm
 getch
 decorator-args
+cachetools
