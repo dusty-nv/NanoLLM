@@ -5,7 +5,7 @@ import argparse
 import logging
 
 from .log import LogFormatter
-from .prompts import DefaultChatPrompts, DefaultCompletionPrompts
+from .prompts import DefaultChatPrompts, DefaultCompletionPrompts, load_prompts
 
 
 class ArgParser(argparse.ArgumentParser):
@@ -152,6 +152,9 @@ class ArgParser(argparse.ArgumentParser):
         if hasattr(args, 'prompt'):
             args.prompt = ArgParser.parse_prompt_args(args.prompt)
         
+        if hasattr(args, 'system_prompt'):
+            args.system_prompt = load_prompts(args.system_prompt, concat=True)
+
         if hasattr(args, 'log_level'):
             if args.debug:
                 args.log_level = "debug"

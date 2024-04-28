@@ -300,8 +300,8 @@ class VideoQuery(Agent):
                     self.db.db.save()
             elif 'tag_image' in msg:
                 self.tag_image = msg['tag_image']
-            elif 'vision_scaling' in msg:
-                self.llm(vision_scaling=msg['vision_scaling'])
+            #elif 'vision_scaling' in msg:
+            #    self.llm(vision_scaling=msg['vision_scaling'])
             elif 'max_new_tokens' in msg:
                 self.llm(max_new_tokens=int(msg['max_new_tokens']))
             elif 'rag_threshold' in msg:

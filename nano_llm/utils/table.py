@@ -14,8 +14,17 @@ def print_table(rows, header=None, footer=None, color='green', attrs=None):
     color names and style attributes are from termcolor library:
       https://github.com/termcolor/termcolor#text-properties
     """
+    def limit_str(text, max_len):
+        if not isinstance(text, str):
+            return text
+            
+        if len(text) > max_len:
+            return text[:max_len]
+        else:
+            return text
+            
     if isinstance(rows, dict):
-        rows = [[key,value] for key, value in rows.items()]    
+        rows = [[limit_str(key,35), limit_str(value, 75)] for key, value in rows.items() if not isinstance(value, dict)]    
 
     if header:
         if not isinstance(header[0], list):

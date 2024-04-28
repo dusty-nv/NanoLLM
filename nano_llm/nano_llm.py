@@ -182,14 +182,13 @@ class NanoLLM():
         """
         raise NotImplementedError("embed_tokens() not implemented for this model")
        
-    def embed_image(self, image, crop=None, return_tensors='pt', return_dict=False, **kwargs):
+    def embed_image(self, image, return_tensors='pt', return_dict=False, **kwargs):
         """
         Compute the embedding of an image (for multimodel models with a vision encoder like CLIP),
         and apply any additional projection layers as specified by the model.
         
         Args:
           image (pil.Image, np.ndarray, torch.Tensor, jetson.utils.cudaImage, __cuda_array_interface__): the image
-          crop (bool): center-crop the image to square resolution instead of resizing the aspect ratio
           return_tensors (str): ``'np'`` to return a `np.ndarray` or ``'pt'`` to return a `torch.Tensor` (on the GPU)
           return_dict (bool): if true, return a dict including the vision encoder's `hidden_state` and `embedding`
           kwargs: additional arguments forwarded to the vision encoder (`nano_llm.vision.CLIPImageEmbedding`)
@@ -200,14 +199,12 @@ class NanoLLM():
           if ``return_dict=True``.
         """  
         assert(self.has_vision)
-        
-        if crop is None:
-            crop = (self.vision_scaling == 'crop')
 
-        output = self.vision(image, crop=crop, hidden_state=self.config.mm_vision_select_layer, return_dict=return_dict)
+        output = self.vision(image, hidden_state=self.config.mm_vision_select_layer, return_dict=return_dict)
         
         embedding = output.hidden_state if return_dict else output
-        embedding = self.mm_projector(embedding[:, 1:])
+        embedding = embedding.to(dtype=torch.float16)
+        embedding = self.mm_projector(embedding if 'mm_projector_cfg' in self.config else embedding[:, 1:])
 
         logging.debug(f"image_embedding  shape={embedding.shape}  dtype={embedding.dtype}  device={embedding.device}")
         
@@ -243,36 +240,12 @@ class NanoLLM():
         self.config.name = kwargs.get('name')
         self.config.api = kwargs.get('api')
         
-        model_type = self.config.model_type.lower()
-        
         #: Dict containing the latest generation performance statistics.
         self.stats = AttributeDict()
         
         #: True if this is a multimodal vision/language model.
-        self.has_vision = 'llava' in model_type
+        self.has_vision = self.config_vision()
         
-        # patch the config to change llava to llama so the quant tools handle it
-        if self.has_vision:
-            if 'stablelm' in model_type:
-                self.patch_config(model_type='stablelm_epoch')
-            elif 'phi' in model_type:
-                self.patch_config(model_type='phi')
-            else:
-                self.patch_config(model_type='llama')
-        else:
-            name_or_path = self.config.get('_name_or_path')
-            if name_or_path:
-                self.has_vision = 'llava' in name_or_path.lower()
-
-        for arch in self.config.get('architectures', []):
-            if 'llava' in arch.lower() or 'bunny' in arch.lower():
-                self.has_vision = True
-
-        if self.config.model_type == 'bunny-stablelm':
-            self.patch_config(model_type='stablelm_epoch')
-        elif self.config.model_type == 'bunny-phi':
-            self.patch_config(model_type='phi')
-     
     def patch_config(self, **kwargs):
         # Update the original HF model's config.json with different settings from the provided kwargs.
         # The original will be saved under the same directory to 'config.json.backup'
@@ -289,26 +262,76 @@ class NanoLLM():
 
         with open(self.config_path, 'w') as config_file:
             json.dump(patched_config, config_file, indent=2)
-                
+     
+    def config_vision(self, **kwargs):
+        # Check the model config for multimodal support (can be in a variety of formats)
+        model_type = self.config.model_type.lower()
+        has_vision = 'llava' in model_type
+        
+        # patch the config to change llava to llama so the quant tools handle it
+        if has_vision:
+            if 'stablelm' in model_type:
+                self.patch_config(model_type='stablelm_epoch')
+            elif 'phi' in model_type:
+                self.patch_config(model_type='phi')
+            else:
+                self.patch_config(model_type='llama')
+        else:
+            name_or_path = self.config.get('_name_or_path')
+            if name_or_path:
+                has_vision = 'llava' in name_or_path.lower()
+
+        for arch in self.config.get('architectures', []):
+            if 'llava' in arch.lower() or 'bunny' in arch.lower():
+                has_vision = True
+
+        if self.config.model_type == 'bunny-stablelm':
+            self.patch_config(model_type='stablelm_epoch')
+        elif self.config.model_type == 'bunny-phi':
+            self.patch_config(model_type='phi')
+            
+        # support checkpoints with LLM and vision encoder under separate subdirectories
+        if 'vision_tower_cfg' in self.config:
+            vision_path = os.path.join(self.model_path, os.path.basename(self.config['vision_tower_cfg']['_name_or_path']))
+            if not os.path.isdir(vision_path):
+                raise IOError(f"multimodal config was for separate models, but could not find {vision_path}")
+            if 'mm_vision_tower' not in self.config:
+                self.config['mm_vision_tower'] = vision_path
+        
+        if 'mm_projector_cfg' in self.config:
+            self.config.mm_projector_path = os.path.join(self.model_path, os.path.basename(self.config['mm_projector_cfg']['_name_or_path']))
+            if not os.path.isdir(self.config.mm_projector_path):
+                raise IOError(f"multimodal config was for separate models, but could not find {self.config.mm_projector_path}")
+            if 'mm_projector_type' not in self.config:
+                self.config['mm_projector_type'] = self.config['mm_projector_cfg']['mm_projector_type']
+
+        if 'mm_projector_path' not in self.config:
+            self.config.mm_projector_path = self.model_path
+                          
+        if 'llm_cfg' in self.config:
+            llm_path = os.path.join(self.model_path, os.path.basename(self.config['llm_cfg']['_name_or_path']))
+            if not os.path.isdir(llm_path):
+                raise IOError(f"multimodal config was for separate models, but could not find {llm_path}")
+            with open(os.path.join(llm_path, 'config.json')) as config_file:
+                self.config.update(json.load(config_file))
+            self.model_path = llm_path  # redirect downstream LLM APIs to the LLM model
+          
+        return has_vision
+               
     def init_vision(self, **kwargs):
-        # Init vision embedding/projection models for VLMs like llava, MiniGPT-4, ect.
+        # Load the vision encoder (CLIP/SigLIP) and mm_projector for multimodal models
         if not self.has_vision:
             return
-           
+
         # load the image embedding model
         self.vision = CLIPImageEmbedding.from_pretrained(
             kwargs.get('vision_model') if kwargs.get('vision_model')
             else self.config.mm_vision_tower,
+            crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
             dtype=torch.float16,
+            use_tensorrt=True, 
         ) 
         
         # create image embedding projection model
-        self.mm_projector = MMProjector.from_pretrained(self, self.vision.dtype)
-        
-        # default to cropping enabled
-        self.vision_scaling = kwargs.get('vision_scaling')
-        
-        if self.vision_scaling is None:
-            self.vision_scaling = 'crop'
-            
-        
+        self.mm_projector = MMProjector.from_pretrained(self, dtype=torch.float16)
+

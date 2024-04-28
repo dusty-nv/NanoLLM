@@ -56,7 +56,7 @@ class MLCModel(NanoLLM):
         if not quantization:
             quantization = 'q4f16_ft'
             
-        quant = MLCModel.quantize(model_path, self.config, method=quantization, max_context_len=max_context_len, **kwargs)
+        quant = MLCModel.quantize(self.model_path, self.config, method=quantization, max_context_len=max_context_len, **kwargs)
             
         self.config.quant = quant.split('-')[-1]  # recover the quant method        
         self.quant_path = quant
@@ -238,7 +238,7 @@ class MLCModel(NanoLLM):
         """
         if not max_context_len:
             max_context_len = config.max_position_embeddings
-            
+
         model_name = kwargs.get('name', os.path.basename(model))
         model_path = os.path.join(output, 'models', model_name)
         quant_path = os.path.join(output, f"{model_name}-ctx{max_context_len}", f"{model_name}-{method}")
@@ -279,15 +279,14 @@ class MLCModel(NanoLLM):
         
         return quant_path
         
-    @staticmethod
-    def get_kv_cache_size(kv_cache, length=None):
+    def get_kv_cache_size(self, kv_cache, length=None):
         """
         Calculate the size (in bytes) that the KV cache consumes for the given token length
         (or by default for the maximum window size if length is None)
         """
         size = 0
         for n in range(len(kv_cache)):
-            view = view_kv_cache(kv_cache[n])
+            view = self._kv_cache_view(kv_cache[n])
             if length is None:
                 length = view.shape[0]
             size += length * view.shape[1] * view.shape[2] * np.dtype(view.dtype).itemsize

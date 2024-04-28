@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 
-from .clip_hf import CLIPImageEmbedding
+from .clip import CLIPImageEmbedding
 from .mm_projector import MMProjector

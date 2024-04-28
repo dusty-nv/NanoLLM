@@ -6,9 +6,7 @@ import torch
 import logging
 import safetensors
 
-from transformers import AutoConfig
-
-from nano_llm.utils import download_model
+from nano_llm.utils import AttributeDict, download_model
 
 
 class MMProjector():
@@ -34,7 +32,7 @@ class MMProjector():
         from nano_llm import NanoLLM
         
         if isinstance(model, NanoLLM):
-            return MMProjector(model.model_path, model.config, dtype)
+            return MMProjector(model.config.mm_projector_path, model.config, dtype)
         elif isinstance(model, str):
             if not os.path.isdir(model):
                 model = download_model(model)
@@ -49,8 +47,14 @@ class MMProjector():
         if config:
             self.config = config
         else:
-            self.config = AutoConfig.from_pretrained(model_path)
+            config_path = os.path.join(model_path, 'config.json')
             
+            if not os.path.isfile(config_path):
+                raise IOError("couldn't find mm_projector config file {config_path}")
+                
+            with open(config_path) as config_file:
+                self.config = AttributeDict(json.load(config_file))
+
         self.model_path = model_path
         self.type = 'linear'
         self.dtype = dtype
@@ -58,7 +62,7 @@ class MMProjector():
         if hasattr(self.config, 'mm_projector_type'):
             self.type = self.config.mm_projector_type
 
-        # either a variable-depth MLP, or single linear layer
+        # create different types of projector models
         mlp_gelu_match = re.match(r'^mlp(\d+)x_gelu$', self.type)
         
         if mlp_gelu_match:
@@ -68,60 +72,127 @@ class MMProjector():
                 modules.append(torch.nn.GELU())
                 modules.append(torch.nn.Linear(self.config.hidden_size, self.config.hidden_size))
             self.model = torch.nn.Sequential(*modules)
+        elif self.type == 'mlp_downsample':
+            self.model = torch.nn.Sequential(
+                DownSampleBlock(),
+                torch.nn.LayerNorm(self.config.mm_hidden_size * 4),
+                torch.nn.Linear(self.config.mm_hidden_size * 4, self.config.hidden_size),
+                torch.nn.GELU(),
+                torch.nn.Linear(self.config.hidden_size, self.config.hidden_size)
+            )
         elif self.type == 'linear':
             self.model = torch.nn.Linear(self.config.mm_hidden_size, self.config.hidden_size)
         else:
             raise RuntimeError(f"Unknown vision mm_projector type: {self.type}")
-            
+           
         # load projector weights, extracting from the original model if needed
-        self.weights_path = os.path.join(self.model_path, 'mm_projector.bin')
+        weights = self.load_torch(os.path.join(self.model_path, 'mm_projector.bin'))
         
-        if not os.path.isfile(self.weights_path):
-            weight_indexes = [
-                os.path.join(self.model_path, 'pytorch_model.bin.index.json'),
-                os.path.join(self.model_path, 'model.safetensors.index.json'),
-            ]
+        if not weights:
+            weights = self.load_safetensors(os.path.join(self.model_path, 'model.safetensors'))
+        
+        if not weights:
+            weights = self.load_sharded(self.model_path)
             
-            for weight_index in weight_indexes:
-                if os.path.isfile(weight_index):
-                    break
+        if not weights:
+            raise IOError(f"could not mm_projector weights under {self.model_path}")
 
-            if not os.path.isfile(weight_index):
-                raise ValueError(f"could not find model weight map at any of these locations:  {weight_indexes}")
-                
-            with open(weight_index, 'r') as file:
-                weight_map = json.load(file)['weight_map']
-                
-            for key, value in weight_map.items():
-                if 'mm_projector' in key:
-                    weights_path = os.path.join(self.model_path, value)
-                    break
-                    
-            logging.debug(f"extracting mm_projector weights from {weights_path}")
-            
-            if 'safetensors' in weight_index:
-                weights = safetensors.torch.load_file(weights_path, device='cpu')
-            else:
-                weights = torch.load(weights_path, map_location='cpu')
-                
-            weights = {k : v for k, v in weights.items() if 'mm_projector' in k}
-            
-            logging.debug(f"saving mm_projector weights to {self.weights_path}")
-            torch.save(weights, self.weights_path)
-          
-        logging.info(f"loading mm_projector weights from {self.weights_path}")
+        weights = {k.replace('model.mm_projector.', ''):v for k,v in weights.items()}  
+        weights = {k.replace('layers.', ''):v for k,v in weights.items()}  
         
-        mm_projector_weights = torch.load(self.weights_path, map_location='cpu')
-        mm_projector_weights = {k.replace('model.mm_projector.', ''):v for k,v in mm_projector_weights.items()}  
+        print(f"mm_projector ({self.type})", self.model)
+        print("mm_projector weights", weights.keys())
         
-        self.model.load_state_dict(mm_projector_weights)
+        self.model.load_state_dict(weights)
         self.model.to(dtype=self.dtype, device='cuda:0').eval()
-        
-        print("mm_projector", self.model)
-    
+
     def __call__(self, *args, **kwargs):
         """
         Forward-pass call to the model
         """
         with torch.inference_mode():
             return self.model(*args, **kwargs)
+            
+    @staticmethod
+    def load_torch(filename):
+        if not os.path.isfile(filename):
+            return None
+
+        return torch.load(filename, map_location='cpu')
+    
+    @staticmethod
+    def load_safetensors(filename):
+        if not os.path.isfile(filename):
+            return None
+            
+        return safetensors.torch.load_file(filename, device='cpu')
+
+    @staticmethod
+    def load_sharded(model_path, save='mm_projector.bin'):
+        weight_indexes = [
+            os.path.join(model_path, 'pytorch_model.bin.index.json'),
+            os.path.join(model_path, 'model.safetensors.index.json'),
+        ]
+        
+        for weight_index in weight_indexes:
+            if os.path.isfile(weight_index):
+                break
+
+        if not os.path.isfile(weight_index):
+            logging.error(f"could not find sharded weight index at these locations:  {weight_indexes}")
+            return False
+            
+        with open(weight_index, 'r') as file:
+            weight_map = json.load(file)['weight_map']
+            
+        weights_path = None
+        
+        for key, value in weight_map.items():
+            if 'mm_projector' in key:
+                weights_path = os.path.join(model_path, value)
+                break
+         
+        if not weights_path:
+            logging.error(f"could not find mm_projector weights in sharded weight index {weight_index}")
+            return False
+             
+        logging.debug(f"extracting mm_projector weights from {weights_path}")
+        
+        if 'safetensors' in weight_index:
+            weights = safetensors.torch.load_file(weights_path, device='cpu')
+        else:
+            weights = torch.load(weights_path, map_location='cpu')
+            
+        weights = {k : v for k, v in weights.items() if 'mm_projector' in k}
+        
+        if save:
+            save_path = os.path.join(model_path, save)
+            logging.debug(f"saving mm_projector weights to {save_path}")
+            torch.save(weights, save_path)
+            
+        return weights
+
+            
+            
+class DownSampleBlock(torch.nn.Module):
+    def forward(self, x):
+        vit_embeds = x
+        h = w = int(vit_embeds.shape[1] ** 0.5)
+        vit_embeds = vit_embeds.reshape(vit_embeds.shape[0], h, w, -1)
+        vit_embeds = self.flat_square(vit_embeds)
+        vit_embeds = vit_embeds.reshape(vit_embeds.shape[0], -1, vit_embeds.shape[-1])
+        return vit_embeds
+
+    def flat_square(self, x):
+        n, w, h, c = x.size()
+        if w % 2 == 1:
+            x = torch.concat([x, torch.zeros((n, 1, h, c), dtype=x.dtype).to(x.device)], dim=1).contiguous()
+            n, w, h, c = x.size()
+        if h % 2 == 1:
+            x = torch.concat([x, torch.zeros((n, w, 1, c), dtype=x.dtype).to(x.device)], dim=2).contiguous()
+            n, w, h, c = x.size()
+        x = x.view(n, w, int(h / 2), int(c * 2))
+        x = x.permute(0, 2, 1, 3).contiguous()
+        x = x.view(n, int(h / 2), int(w / 2), int(c * 4))
+        return x
+

@@ -50,10 +50,11 @@ class VideoSource(Plugin):
             options['save'] = video_input_save
         
         self.stream = videoSource(video_input, options=options)
+        self.file = (self.stream.GetOptions()['resource']['protocol'] == 'file')
         self.options = options
         self.resource = video_input  # self.stream.GetOptions().resource['string']
         self.return_tensors = return_tensors
-        
+
     def capture(self, timeout=2500, retries=8, return_tensors=None):
         """
         Capture images from the video source as long as it's streaming
@@ -67,6 +68,8 @@ class VideoSource(Plugin):
             image = self.stream.Capture(format='rgb8', timeout=timeout)
 
             if image is None:
+                if self.file:
+                    break
                 logging.warning(f"video source {self.resource} timed out during capture, re-trying...")
                 retry = retry + 1
                 continue
@@ -92,7 +95,7 @@ class VideoSource(Plugin):
             try:
                 if self.stream is not None:
                     self.stream.Close()
-                    self.stream = None
+                    self.stream = None        
             except Exception as error:
                 logging.error(f"Exception occurred closing video source \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
 
@@ -115,6 +118,8 @@ class VideoSource(Plugin):
                 logging.error(f"Exception occurred during video source capture of \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
             
             if img is None:
+                if self.file:
+                    return
                 logging.error(f"Re-initializing video source \"{self.resource}\"")
                 self.reconnect()
 

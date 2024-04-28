@@ -125,7 +125,7 @@ class BotFunctions:
             for match in regex.finditer(text):
                 # only evaluate what was just called (i.e. it is at the end of the reply)
                 # also sometimes there are commas after the call inside the same token
-                if match.end() == len(text) or match.end() == len(text)-1:
+                if match.end() >= len(text)-2:
                     found_match=True
                     break
                     

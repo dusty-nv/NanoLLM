@@ -3,7 +3,7 @@
 <html>
 	<head>
     <meta charset="utf-8">
-		<title>llamaspeak</title>
+    <title>llamaspeak</title>
 
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
@@ -11,33 +11,13 @@
     <link rel="stylesheet" href="/static/bootstrap.css">
     <link rel="stylesheet" href="/static/chat.css">
     
-		<script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
+    <script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
     <script type='text/javascript' src='/static/bootstrap.bundle.min.js'></script>
     <script type='text/javascript' src='/static/websocket.js'></script>
     <script type='text/javascript' src='/static/audio.js'></script>
     
-		<script type="text/javascript">
+    <script type="text/javascript">
 
-      /*let sampleCount = 0;
-      
-      function generateAudio() {
-        
-        samples = new Int16Array(4800);
-        const hz = 440.0;
-        let time = Date.now() / 1000.0;
-        
-        for (i = 0; i < samples.length; i++) {
-          samples[i] = Math.sin(sampleCount * (Math.sin(sampleCount/24000.0)+hz) * Math.PI * 2.0 / 48000.0) * 32767;
-          sampleCount++;
-        }
-        onAudioOutput(samples);
-      }
-      
-      function testWebsocketSend() {
-        sendWebsocket({'abc': 123, 'def': 'xyz', 'test_array': [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]});
-        sendWebsocket("Hello my name is ABC123", type=1);
-      }*/
-      
       function onChatMessageKey(event) {  // https://stackoverflow.com/a/49389811
         if( event.which === 13 && !event.shiftKey ) {
           if( !event.repeat )

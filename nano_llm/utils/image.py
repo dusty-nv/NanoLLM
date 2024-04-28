@@ -3,6 +3,8 @@ import io
 import PIL
 import logging
 import torch
+import torchvision.transforms.functional as F
+
 import numpy as np
 
 from jetson_utils import cudaImage, cudaFromNumpy
@@ -82,15 +84,19 @@ def cuda_image(image):
         )
         
  
-def torch_image(image):
+def torch_image(image, dtype=None, device=None):
     """
     Convert the image to a type that is compatible with PyTorch ``(torch.Tensor, ndarray, PIL.Image)``
     """
+    if not isinstance(image, ImageTypes):
+        raise TypeError(f"expected an image of type {ImageTypes} (was {type(image)})")
+        
     if isinstance(image, cudaImage):
-        return torch.as_tensor(image, device='cuda')
-    elif is_image(image):
-        return image 
-    raise TypeError(f"expected an image of type {ImageTypes} (was {type(image)})")
+        return torch.as_tensor(image, dtype=dtype, device=device)
+    elif isinstance(image, (PIL.Image.Image, np.ndarray)):
+        image = F.to_tensor(image)
+
+    return image.to(dtype=dtype, device=device)
         
         
 def torch_image_format(tensor):

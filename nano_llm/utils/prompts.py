@@ -31,7 +31,7 @@ DefaultCompletionPrompts = [
 ]
 
 
-def load_prompts(prompts):
+def load_prompts(prompts, concat=False):
     """
     Load prompts from a list of txt or json files
     (or if these are strings, just return the strings)
@@ -60,9 +60,14 @@ def load_prompts(prompts):
                     raise TypeError(f"{type(json_prompt)}")
         elif ext == '.txt':
             with open(prompt) as file:
-                prompt_list.append(file.read())
+                prompt_list.append(file.read().strip())
         else:
             prompt_list.append(prompt)
-            
+     
+    if concat:
+        if concat == True:
+            concat = ' '
+        prompt_list = concat.join(prompt_list)
+               
     return prompt_list
     
