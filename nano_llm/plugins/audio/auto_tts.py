@@ -23,10 +23,15 @@ class AutoTTS(Plugin):
         self.needs_text_by = 0.0
         self.text_buffer = ''
         self.buffering = tts_buffering
-        
+
         self.number_regex = None
         self.number_inflect = None
         
+        self.filter_regex = [
+            (re.compile(r'`(.*?)`'), r''),   # filter out code blocks
+            (re.compile(r'\*(.*?)\*'), r''), # filter out emotives between asterisks
+        ]
+
     @staticmethod
     def from_pretrained(tts=None, **kwargs):
         """
@@ -177,7 +182,11 @@ class AutoTTS(Plugin):
             
         #text = text.replace('</s>', '')
         text = text.replace('\n', ' ')
-        text = text.replace('...', ' ')        
+        text = text.replace('...', ' ')    
+
+        for regex, replace in self.filter_regex:
+            text = regex.sub(replace, text)
+                
         text = self.filter_chars(text)
 
         if numbers_to_words:

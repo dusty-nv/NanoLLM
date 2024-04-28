@@ -23,8 +23,8 @@ class PiperTTS(AutoTTS):
     You can get the list of voices with tts.voices, and list of languages with tts.languages
     The speed can be set with tts.rate (1.0 = normal). The default voice is '...' with rate 1.0
     """
-    def __init__(self, voice='en_US-libritts-high', language_code='en_US', 
-                 sample_rate_hz=22050, voice_rate=1.0, 
+    def __init__(self, voice='en_US-libritts-high', voice_speaker=None,
+                 language_code='en_US', sample_rate_hz=22050, voice_rate=1.0, 
                  model_cache=os.environ.get('PIPER_CACHE'), **kwargs):
         """
         Load Piper TTS model and set default options (many of which can be changed at runtime)
@@ -49,7 +49,13 @@ class PiperTTS(AutoTTS):
         
         self.language = language_code
         self.voice = voice
+        
+        if voice_speaker:
+            self.speaker = voice_speaker
 
+        logging.debug(f"running Piper TTS model warm-up for {self.voice}")
+        self.process("This is a test of the text to speech.")
+        
     @property
     def voice(self):
         return self._voice
@@ -129,7 +135,7 @@ class PiperTTS(AutoTTS):
         
         synthesize_args = {
             "speaker_id": self._speaker_id,
-            "length_scale": self.rate,
+            "length_scale": 1.0 / self.rate,
             "noise_scale": 0.667,     # noise added to the generator
             "noise_w": 0.8,           # phoneme width variation
             "sentence_silence": 0.2,  # seconds of silence after each sentence

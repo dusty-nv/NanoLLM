@@ -27,7 +27,7 @@ class VoiceChat(Agent):
             kwargs['model'] = llm
             
         if not llm or isinstance(llm, str):
-            self.llm = ProcessProxy('ChatQuery', **kwargs)  
+            self.llm = ChatQuery(**kwargs) #ProcessProxy('ChatQuery', **kwargs)  
         else:
             self.llm = llm
             

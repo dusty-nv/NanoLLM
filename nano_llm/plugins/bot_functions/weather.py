@@ -16,7 +16,7 @@ WEATHER_TTL=1800 # number of seconds that cached requests expire after
 
 
 @bot_function(enabled=True if WEATHER_API else False)
-def CURRENT_WEATHER(location=None, api=WEATHER_API, api_key=WEATHER_KEY, return_type='str'):
+def WEATHER(location=None, api=WEATHER_API, api_key=WEATHER_KEY, return_type='str'):
     """
     Returns the current weather and temperature.
     """
@@ -42,7 +42,8 @@ def CURRENT_WEATHER(location=None, api=WEATHER_API, api_key=WEATHER_KEY, return_
         
     return response
  
-@bot_function(enabled=True if WEATHER_API else False, docs='pydoc_nosig')
+#@bot_function(enabled=True if WEATHER_API else False, docs='pydoc_nosig')
+@bot_function(enabled=False, docs='pydoc_nosig')
 def WEATHER_FORECAST(location=None, day=1, api=WEATHER_API, api_key=WEATHER_KEY, return_type='str'):
     """
     `WEATHER_FORECAST(day=1)` - Returns the weather forecast.  Has an optional keyword argument that specifies the number of days ahead for the forecast (by default, tomorrow).

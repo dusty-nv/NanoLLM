@@ -98,14 +98,30 @@ class BotFunctions:
         return cls.list()
         
     @classmethod
-    def generate_docs(cls):
+    def generate_docs(cls, prologue=True, epilogue=True):
         """
         Collate the documentation strings from all the enabled functions
         """
-        docs = "You are able to call the Python functions defined below, "
-        docs = docs + "and the returned values will be added to the chat.\n"
-        docs = docs + '\n'.join([x.docs for x in cls.functions if x.enabled])
+        if not isinstance(prologue, str):
+            if prologue is None or prologue == False:
+                prologue = ''
+            elif prologue == True:
+                prologue = "You are able to call the Python functions defined below, and the returned values will be added to the chat:\n\n"
         
+        if not isinstance(epilogue, str):
+            if epilogue is None or epilogue == False:
+                epilogue = ''
+            elif epilogue == True:
+                epilogue = "For example, if the user asks for the temperature, call the WEATHER() function."
+
+        docs = '\n'.join(['* ' + x.docs for x in cls.functions if x.enabled])
+        
+        if prologue:
+            docs = prologue + docs
+            
+        if epilogue:
+            docs = docs + '\n\n' + epilogue
+            
         return docs
 
     @classmethod
@@ -114,7 +130,7 @@ class BotFunctions:
         See the docs for :func:`bot_function`
         """
         name = name if name else func.__name__
-        regex = re.compile(f"`{name}\(.*?\)`")
+        regex = re.compile(f"{name}\(.*?\)")
         
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -141,11 +157,11 @@ class BotFunctions:
                 logging.error(f"Exception occurred executing generated code {code_str}\n\n{''.join(traceback.format_exception(error))}")
                 return None
 
-        wrapper.name = name if name else wrapper.__name__
+        wrapper.name = name
         wrapper.docs = ''
         wrapper.enabled = enabled
         wrapper.function = func
-        wrapper.regex = re.compile(f"`{wrapper.name}\(.*?\)`")
+        wrapper.regex = regex
         
         if docs == 'nosig':
             docs = 'pydoc_nosig'
@@ -153,7 +169,7 @@ class BotFunctions:
         if docs.startswith('pydoc'):
             if wrapper.__doc__:
                 if docs == 'pydoc':
-                    wrapper.docs = f"`{name}`() - " + wrapper.__doc__.strip()
+                    wrapper.docs = f"`{name}()` - " + wrapper.__doc__.strip()
                 elif docs == 'pydoc_nosig':
                     wrapper.docs = wrapper.__doc__.strip()
             else:
@@ -181,7 +197,11 @@ class BotFunctions:
         
         assert(cls.functions)
         cls.builtins = True
-        return cls.test()
+        
+        if test:
+            cls.test()
+            
+        return cls.functions
        
     @classmethod
     def test(cls, disable_on_error=True):

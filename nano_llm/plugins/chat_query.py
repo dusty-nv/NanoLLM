@@ -26,7 +26,7 @@ class ChatQuery(Plugin):
     OutputStream = 3
     OutputImageEmbedding = 4
     
-    def __init__(self, model="meta-llama/Llama-2-7b-chat-hf", **kwargs):
+    def __init__(self, model="meta-llama/Llama-2-7b-chat-hf", functions=None, **kwargs):
         """
         Parameters:
         
@@ -70,10 +70,11 @@ class ChatQuery(Plugin):
             self.model = NanoLLM.from_pretrained(model, **kwargs)
         else:
             self.model = model
-         
-        self.stream = None
-        self.history = ChatHistory(self.model, **kwargs)
 
+        self.history = ChatHistory(self.model, **kwargs)
+        self.functions = functions
+        self.stream = None
+        
         self.max_context_len = self.model.config.max_length
         self.max_new_tokens = kwargs.get('max_new_tokens', 128)
         self.min_new_tokens = kwargs.get('min_new_tokens', -1)
@@ -174,6 +175,7 @@ class ChatQuery(Plugin):
         self.stream = self.model.generate(
             embedding, 
             streaming=True, 
+            functions=self.functions,
             kv_cache=chat_history.kv_cache,
             stop_tokens=chat_history.template.stop,
             max_new_tokens=self.max_new_tokens,

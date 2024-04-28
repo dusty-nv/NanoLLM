@@ -3,7 +3,7 @@
 <html>
 	<head>
     <meta charset="utf-8">
-    <title>llamaspeak</title>
+    <title>{{ title }}</title>
 
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
@@ -35,6 +35,21 @@
       
       function onChatHistoryReset() {
         sendWebsocket({'chat_history_reset': true});
+      }
+      
+      function onAgentSettings() {
+        sendWebsocket({
+            'system_prompt': document.getElementById('system-prompt').value,
+            'function_calling': document.getElementById('function-calling').checked,
+            'function_autodoc': document.getElementById('function-autodoc').checked
+        });
+      }
+      
+      function onProfileSettings() {
+        sendWebsocket({
+            'user_profile': document.getElementById('user-profile').value,
+            'enable_profile': document.getElementById('enable-profile').checked
+        });
       }
       
       function onVoiceSelect() {
@@ -85,8 +100,8 @@
             for( let n=0; n < chat_history.length; n++ ) {
               const role = chat_history[n]['role'];
               
-              if( role == 'system' )
-                continue;
+              /*if( role == 'system' )
+                continue;*/
                 
               let contents = '';
               var hasImage = 'image' in chat_history[n];
@@ -115,6 +130,18 @@
             let num_tokens=payload['chat_stats']['num_tokens'];
             let max_context_len=payload['chat_stats']['max_context_len'];
             document.getElementById('chat_length').innerHTML=`${num_tokens} / ${max_context_len} tokens`;
+          }
+          
+          if( 'system_prompt' in payload ) {
+            document.getElementById('system-prompt').value = payload['system_prompt'];
+          }
+          
+          if( 'bot_functions' in payload ) {
+            document.getElementById('bot-functions').value = payload['bot_functions'];
+          }
+          
+          if( 'user_profile' in payload ) {
+            document.getElementById('user-profile').value = payload['user_profile'];
           }
           
           if( 'tts_voices' in payload ) {
@@ -147,6 +174,10 @@
             document.getElementById('speaker-select').value = payload['tts_speaker'];
           }
           
+          if( 'alert' in payload ) {
+            addAlert(payload['alert']);
+          }
+          
           if( 'tegrastats' in payload ) {
             console.log(payload['tegrastats']);
           }
@@ -170,7 +201,18 @@
         //window.setInterval(generateAudio, 100);
         //window.setInterval(testWebsocketSend, 500);
       }
-		</script>
+      </script>
+      <style>
+          #alert_container {
+            z-index: 10;
+            position: fixed;
+            max-width: fit-content;
+            height:50px;
+            left:100%;
+            transform:translateX(-100%);
+            top:60px;
+          }
+      </style>
 	</head>
 	
 	<body class="bg-dark-gray" data-bs-theme="dark">
@@ -182,7 +224,7 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
               <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand ms-2" href="#"><span class="mb-0 h4" style="font-family: monospace, monospace;">llamaspeak</span></a>
+            <a class="navbar-brand ms-2" href="#"><span class="mb-0 h4" style="font-family: monospace, monospace;">{{ title }}</span></a>
             <span class="w-100 d-lg-none d-block">
               <!-- hidden spacer to center brand on mobile --></span>
           </div>
@@ -192,6 +234,9 @@
                 <a class="nav-link" href="#">Agent</a>
               </li>-->
               <li class="nav-item">
+                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#agentDialog">Agent</a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#audioDialog">Audio</a>
               </li>
               <li class="nav-item dropdown">
@@ -200,11 +245,8 @@
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="navbarChatHistory">
                   <li><a class="dropdown-item" href="#" id="chat_length">0 / 4096 tokens</a></li>
-                  <li><a class="dropdown-item" href="#" onclick="onChatHistoryReset()">Reset</a></li>
-                  <!--<li><a class="dropdown-item" href="#">Save</a></li>
-                  <li><a class="dropdown-item" href="#">Load</a></li>-->
-                  <!--<li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#">Something else here</a></li>-->
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileDialog">User Profile</a>
+                  <li><a class="dropdown-item" href="#" onclick="onChatHistoryReset()">Reset Chat</a></li>
                 </ul>
               </li>
             </ul>
@@ -228,6 +270,41 @@
       </div>
     </div>
     
+    <!-- Agent settings dialog -->
+    <div class="modal fade" id="agentDialog" tabindex="-1" aria-labelledby="agentDialogLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="agentDialogLabel">Agent Settings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted mb-3">
+                ⚠️ Modifying these settings will reset the chat history.
+            </p>
+            <div class="mb-3">
+              <label for="system-prompt" class="form-label">System Prompt</label>
+              <textarea id="system-prompt" class="form-control" rows="10"></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="bot-functions" class="form-label">Bot Functions</label>
+              <textarea id="bot-functions" class="form-control" rows="10"></textarea>
+            </div>
+            <div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+              <input type="checkbox" class="btn-check" id="function-calling" autocomplete="off" checked>
+              <label class="btn btn-outline-primary" for="function-calling" title="Enable or disable the bot to invoke the functions listed above.">Function Calling</label>
+              <input type="checkbox" class="btn-check" id="function-autodoc" autocomplete="off" checked>
+              <label class="btn btn-outline-primary" for="function-autodoc" title="Append the auto-generated function documentation to the system prompt.">Function Autodoc</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="onAgentSettings()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Audio settings dialog -->
     <div class="modal fade" id="audioDialog" tabindex="-1" aria-labelledby="audioDialogLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -268,5 +345,89 @@
       </div>
     </div>
 
+    <!-- User profile dialog -->
+    <div class="modal fade" id="profileDialog" tabindex="-1" aria-labelledby="profileDialogLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="profileDialogLabel">User Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted mb-3">
+                ⚠️ Modifying these settings will reset the chat history.
+            </p>
+            <div class="btn-group mb-3" role="group" aria-label="Basic checkbox toggle button group">
+              <input type="checkbox" class="btn-check" id="enable-profile" autocomplete="off" checked>
+              <label class="btn btn-outline-primary" for="enable-profile" title="Enable or disable the bot's access to the user profile.">Enable Profile</label>
+            </div>
+            <div class="mb-3">
+              <!--<label for="user-profile" class="form-label">Profile Entries</label>-->
+              <textarea id="user-profile" class="form-control" placeholder="Profile Entries" rows="15"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button> 
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="onProfileSettings()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Alert Messages -->
+    <div id="alert_container" class="container"> <!--class="fixed-top"-->
+      <div id="alert_window" class="alert mb-0" style="background-color: rgba(48,48,48,1.0); display: none">
+        <div id="alert_messages" class="d-inline-block"></div>
+        <button type="button" class="btn-close float-end align-middle d-inline-block" onclick="onHideAlerts()"></button>
+      </div>
+      
+      <script type='text/javascript'>
+        function alertColor(level) {
+          if( level == 'success' ) return 'limegreen';
+          else if( level == 'error' ) return 'orange';
+          else if( level == 'warning' ) return 'orange';
+          else return 'rgb(200,200,200)';
+        
+        }
+        function toTimeString(timestamp) {
+          return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', hour12: true, minute: '2-digit', second: '2-digit' }).slice(0,-3); // remove AM/PM
+        }
+          
+        function onHideAlerts() {
+          $('#alert_window').fadeOut('slow', function() {
+            $(`#alert_messages pre`).remove();
+          });
+        }
+        
+        function removeAlert(id) {
+          $(`#alert_messages #alert-${id}`).remove();
+        }
+        
+        function addAlert(alert) {
+          // supress other messages from the same category that may still be showing
+          if( alert['category'].length > 0 )
+            $(`#alert_messages .alert-category-${alert['category']}`).remove();
+            
+          // add a new element containing the alert message, and show the window if needed
+          $('#alert_messages').append(`<pre id="alert-${alert['id']}" class="align-middle m-0 alert-category-${alert['category']}" style="color: ${alertColor(alert['level'])}">[${alert['time']}] ${alert['message']}\n</pre>`);
+          $('#alert_window:hidden').fadeIn('fast');
+
+          // automatically remove the messages (if this is the last message, hide the window too)
+          if( alert['timeout'] > 0 ) {
+            setTimeout(function() {
+              if( $('#alert_messages pre').length > 1 ) {
+                $(`#alert_messages #alert-${alert['id']}`).remove();
+                console.log('removing alerts due to timeout');
+                console.log(`#alert_messages #alert-${alert['id']}`);
+              }
+              else {
+                onHideAlerts();
+              }
+            }, alert['timeout']);
+          }
+        }
+      </script>
+    </div>
+    
 	</body>
 </html>

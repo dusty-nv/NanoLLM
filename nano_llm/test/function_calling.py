@@ -125,7 +125,7 @@ while True:
     # generate bot reply
     reply = model.generate(
         embedding, 
-        plugins=BotFunctions() if not args.disable_plugins else None, 
+        functions=BotFunctions() if not args.disable_plugins else None, 
         kv_cache=chat_history.kv_cache,
         stop_tokens=chat_history.template.stop,
         max_new_tokens=args.max_new_tokens,
