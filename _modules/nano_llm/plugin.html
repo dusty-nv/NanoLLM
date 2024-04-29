@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.plugin &mdash; NanoLLM 24.4 documentation</title>
+  <title>nano_llm.plugin &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=b097aa5a" />
@@ -15,8 +15,8 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=5151258b"></script>
-        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -145,7 +145,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">        </span>
 <span class="sd">          Plugins should return their output data to be sent to downstream plugins.</span>
-<span class="sd">          You can also call ``output()`` as opposed to returning it.</span>
+<span class="sd">          You can also call :func:`output()` as opposed to returning it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;plugin </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2"> has not implemented process()&quot;</span><span class="p">)</span></div>
 
@@ -187,18 +187,37 @@
 <a class="viewcode-back" href="../../plugins.html#nano_llm.Plugin.__call__">[docs]</a>
     <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Callable () operator alias for the ``input()`` function.</span>
+<span class="sd">        Callable () operator alias for the :func:`input()` function.</span>
 <span class="sd">        This is provided for a more intuitive way of processing data </span>
 <span class="sd">        like ``plugin(data)`` instead of ``plugin.input(data)``</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">        </span>
+<span class="sd">          input: input data sent to the plugin&#39;s :func:`process()` function.</span>
+<span class="sd">          kwargs: additional arguments forwarded to the plugin&#39;s :func:`process()` function.</span>
+<span class="sd">          </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        </span>
+<span class="sd">          None if the plugin is threaded, otherwise returns any outputs.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
         
 <div class="viewcode-block" id="Plugin.input">
 <a class="viewcode-back" href="../../plugins.html#nano_llm.Plugin.input">[docs]</a>
     <span class="k">def</span> <span class="nf">input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add data to the plugin&#39;s processing queue (or process it now if ``threaded=False``)</span>
+<span class="sd">        Add data to the plugin&#39;s processing queue and return immediately,</span>
+<span class="sd">        or process it now and return the results if ``threaded=False``.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">        </span>
+<span class="sd">          input: input data sent to the plugin&#39;s :func:`process()` function.</span>
+<span class="sd">          kwargs: additional arguments forwarded to the plugin&#39;s :func:`process()` function.</span>
+<span class="sd">          </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        </span>
+<span class="sd">          None if the plugin is threaded, otherwise returns any outputs.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">threaded</span><span class="p">:</span>
             <span class="c1">#self.start() # thread may not be started if plugin only called from a callback</span>
@@ -306,7 +325,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relay</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">outputs</span></div>
 
    
 <div class="viewcode-block" id="Plugin.interrupt">

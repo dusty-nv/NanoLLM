@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.chat.history &mdash; NanoLLM 24.4 documentation</title>
+  <title>nano_llm.chat.history &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,8 +15,8 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
-        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -42,13 +42,14 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Websockets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utilities.html">Utilities</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Release Notes</a></li>
 </ul>
@@ -93,12 +94,12 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a chat entry consisting of a text message, image, ect as input.  </span>
 <span class="sd">    </span>
-<span class="sd">    Parameters:</span>
+<span class="sd">    Args:</span>
 <span class="sd">    </span>
-<span class="sd">      role (str) -- The chat&#39;s turn template to apply, typically &#39;user&#39; or &#39;bot&#39;.</span>
+<span class="sd">      role (str): The chat&#39;s turn template to apply, typically &#39;user&#39; or &#39;bot&#39;.</span>
 <span class="sd">                    The role should have a corresponding entry in the active ChatTemplate.</span>
 <span class="sd">                    </span>
-<span class="sd">      msg (str|image) -- If a string, it should either contain text or a path</span>
+<span class="sd">      msg (str|image): If a string, it should either contain text or a path</span>
 <span class="sd">                         to a txt, json, or image file that will be loaded.</span>
 
 <span class="sd">                         If an image, can be a np.ndarray, torch.Tensor, or PIL.Image.</span>
@@ -109,12 +110,10 @@
 <span class="sd">                         determined as text/image/ect, but if not possible, you should</span>
 <span class="sd">                         explicitly set its type by passing it in via kwargs instead.</span>
 <span class="sd">     </span>
-<span class="sd">    kwargs:</span>
-<span class="sd">    </span>
-<span class="sd">       For messages whose embedding type is unable to be determined automatically, or to create</span>
-<span class="sd">       a chat entry containing multiple message types, pass them in via kwargs like this:</span>
+<span class="sd">      kwargs: For messages whose embedding type is unable to be determined automatically, or to create</span>
+<span class="sd">              a chat entry containing multiple message types, pass them in via kwargs like this::</span>
 <span class="sd">       </span>
-<span class="sd">         `entry = ChatEntry(role=&#39;user&#39;, text=&#39;abc&#39;, image=&#39;xyz.jpg&#39;)`</span>
+<span class="sd">                 entry = ChatEntry(role=&#39;user&#39;, text=&#39;abc&#39;, image=&#39;xyz.jpg&#39;)</span>
 <span class="sd">         </span>
 <span class="sd">    Returns:</span>
 <span class="sd">    </span>
@@ -136,9 +135,9 @@
 <span class="sd">    Multimodal chat history that can contain a mix of media including text/images.</span>
 <span class="sd">    </span>
 <span class="sd">    ChatHistory objects can be indexed like a list of chat entry dicts,</span>
-<span class="sd">    where each entry dict may have keys for &#39;text&#39;, &#39;image&#39;, &#39;role&#39;, ect.</span>
+<span class="sd">    where each entry dict may have keys for ``&#39;text&#39;, &#39;image&#39;, &#39;role&#39;``, ect::</span>
 <span class="sd">    </span>
-<span class="sd">       `chat_history[n]` will return the n-th chat entry</span>
+<span class="sd">       chat_history[n]  # will return the n-th chat entry</span>
 
 <span class="sd">    Each type of media has a different embedding function (e.g. LLM&#39;s typically </span>
 <span class="sd">    do text token embedding internally, and images use CLIP + projection layers). </span>
@@ -148,8 +147,6 @@
 <span class="sd">    model architectures.  In normal 2-turn chat, there are &#39;user&#39; and &#39;bot&#39; roles</span>
 <span class="sd">    defined, but arbitrary roles can be added, each with their own template.</span>
 <span class="sd">    The system prompt can also be configured through the chat template.</span>
-<span class="sd">    </span>
-<span class="sd">    TODO:  better caching of system prompt embeddings/ect</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">chat_template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">system_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -276,7 +273,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">image_embedding</span> <span class="o">=</span> <span class="kc">None</span>
         
         <span class="k">if</span> <span class="n">add_system_prompt</span> <span class="ow">and</span> <span class="s1">&#39;system&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;system&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">])</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;system&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">)</span></div>
 
      
 <div class="viewcode-block" id="ChatHistory.to_list">
@@ -313,6 +310,9 @@
 <span class="sd">        Set the system prompt instruction string and reset the chat history.</span>
 <span class="sd">        TODO make it so this doesn&#39;t reset the chat history, but uncaches it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">instruction</span><span class="p">:</span>
+            <span class="k">return</span>
+            
         <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">instruction</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
         

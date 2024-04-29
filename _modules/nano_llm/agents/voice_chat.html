@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.agents.voice_chat &mdash; NanoLLM 24.4 documentation</title>
+  <title>nano_llm.agents.voice_chat &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,8 +15,8 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
-        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -98,24 +98,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="VoiceChat.__init__">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.voice_chat.VoiceChat.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">llm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">asr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tts</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">llm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tts</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
-<span class="sd">          llm (NanoLLM.Plugin): LLM model plugin (like ChatQuery) - if None, will be loaded from kwargs.</span>
-<span class="sd">          asr (NanoLLM.plugins.AutoASR): ASR plugin - if None, will be loaded from kwargs.</span>
-<span class="sd">          tts (NanoLLM.plugins.AutoTTS): TTS plugin - if None, will be loaded from kwargs.</span>
+<span class="sd">          asr (NanoLLM.plugins.AutoASR|str): the ASR plugin instance or model name to connect with the LLM.</span>
+<span class="sd">          llm (NanoLLM.Plugin|str): The LLM model plugin instance (like ChatQuery) or model name.</span>
+<span class="sd">          tts (NanoLLM.plugins.AutoTTS|str): the TTS plugin instance (or model name)- if None, will be loaded from kwargs.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">llm</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">ProcessProxy</span><span class="p">(</span><span class="s1">&#39;ChatQuery&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1">#: The LLM model plugin (like ChatQuery)</span>
+        <span class="c1">#: The LLM model plugin (like ChatQuery)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">llm</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">llm</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">llm</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">llm</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">ChatQuery</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1">#ProcessProxy(&#39;ChatQuery&#39;, **kwargs)  </span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">llm</span>
             
         <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">PrintStream</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">))</span>
         
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">asr</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">asr</span> <span class="o">=</span> <span class="n">AutoASR</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1">#: The ASR plugin whose output is connected to the LLM</span>
+        <span class="c1">#: The ASR plugin whose output is connected to the LLM.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">asr</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">asr</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asr</span> <span class="o">=</span> <span class="n">AutoASR</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">asr</span><span class="o">=</span><span class="n">asr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> 
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">asr</span> <span class="o">=</span> <span class="n">asr</span>
             
@@ -129,8 +134,9 @@
             
             <span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># store the partial ASR transcript</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">tts</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tts</span> <span class="o">=</span> <span class="n">AutoTTS</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1">#: The TTS plugin that speaks the LLM output</span>
+        <span class="c1">#: The TTS plugin that speaks the LLM output.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tts</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tts</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tts</span> <span class="o">=</span> <span class="n">AutoTTS</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">tts</span><span class="o">=</span><span class="n">tts</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> 
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">tts</span> <span class="o">=</span> <span class="n">tts</span>
             
@@ -150,7 +156,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">audio_output_file</span> <span class="o">=</span> <span class="n">AudioOutputFile</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tts_output</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">audio_output_file</span><span class="p">)</span>
         
-        <span class="c1">#: Text prompts from web UI or CLI</span>
+        <span class="c1">#: Text prompts from web UI or CLI.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prompt</span> <span class="o">=</span> <span class="n">UserPrompt</span><span class="p">(</span><span class="n">interactive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prompt</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">)</span>
         

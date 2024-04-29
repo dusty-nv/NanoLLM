@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat &mdash; NanoLLM 24.4 documentation</title>
+  <title>Chat &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,8 +16,8 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=5151258b"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -69,6 +69,21 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#function-calling">Function Calling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.bot_function"><code class="docutils literal notranslate"><span class="pre">bot_function()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.BotFunctions"><code class="docutils literal notranslate"><span class="pre">BotFunctions</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.__new__"><code class="docutils literal notranslate"><span class="pre">BotFunctions.__new__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.len"><code class="docutils literal notranslate"><span class="pre">BotFunctions.len()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.list"><code class="docutils literal notranslate"><span class="pre">BotFunctions.list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.filter"><code class="docutils literal notranslate"><span class="pre">BotFunctions.filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.generate_docs"><code class="docutils literal notranslate"><span class="pre">BotFunctions.generate_docs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.register"><code class="docutils literal notranslate"><span class="pre">BotFunctions.register()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.load"><code class="docutils literal notranslate"><span class="pre">BotFunctions.load()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.test"><code class="docutils literal notranslate"><span class="pre">BotFunctions.test()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
@@ -106,21 +121,21 @@
 <h1>Chat<a class="headerlink" href="#chat" title="Link to this heading"></a></h1>
 <p>This page includes information about managing multi-turn chat sessions, templating, and maintaining the embedding history.  Here’s how to run it interactively from the terminal:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--api<span class="w"> </span>mlc<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model<span class="w"> </span>meta-llama/Llama-2-7b-chat-hf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>meta-llama/Meta-Llama-3-8B-Instruct<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--quantization<span class="w"> </span>q4f16_ft
 </pre></div>
 </div>
-<p>If you load a multimodal model (like <code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code>), you can enter image filenames or URLs followed by a query to chat about images.  Enter <code class="docutils literal notranslate"><span class="pre">/reset</span></code> to reset the chat history.</p>
+<p>If you load a multimodal model (like <code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code>), you can enter image filenames or URLs and a query to chat about images.  Enter <code class="docutils literal notranslate"><span class="pre">/reset</span></code> to reset the chat history.</p>
 <section id="code-example">
 <h2>Code Example<a class="headerlink" href="#code-example" title="Link to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
 
 <span class="c1"># load model</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-   <span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or path to HF model checkpoint</span>
-   <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                   <span class="c1"># supported APIs are: mlc, awq, hf</span>
-   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;hf_abc123def&#39;</span><span class="p">,</span>    <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
-   <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>      <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
+   <span class="s2">&quot;meta-llama/Meta-Llama-3-8B-Instruct &quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or local path</span>
+   <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                <span class="c1"># supported APIs are: mlc, awq, hf</span>
+   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;hf_abc123def&#39;</span><span class="p">,</span> <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
+   <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>   <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
 <span class="p">)</span>
 
 <span class="c1"># create the chat history</span>
@@ -161,7 +176,7 @@
 <section id="templates">
 <h2>Templates<a class="headerlink" href="#templates" title="Link to this heading"></a></h2>
 <p>These are the built-in chat templates that are automatically determined from the model type, or settable with the <code class="docutils literal notranslate"><span class="pre">--chat-template</span></code> command-line argument:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">llama</span><span class="o">-</span><span class="mi">2</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">llama</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="n">llama</span><span class="o">-</span><span class="mi">3</span>
 <span class="o">*</span> <span class="n">vicuna</span><span class="o">-</span><span class="n">v0</span><span class="p">,</span> <span class="n">vicuna</span><span class="o">-</span><span class="n">v1</span>
 <span class="o">*</span> <span class="n">stablelm</span><span class="o">-</span><span class="n">zephyr</span>
 <span class="o">*</span> <span class="n">chat</span><span class="o">-</span><span class="n">ml</span>
@@ -284,6 +299,179 @@ If <cite>max_tokens</cite> is provided but <cite>wrap_tokens</cite> is not, then
 <dd><p>Find the oldest entry from which the chat doesn’t exceed the number of wrap_tokens,
 and that the entry should be a user query.  This is used to keep those more recent
 chat entries when the history overflows past the max context window of the model.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="function-calling">
+<h2>Function Calling<a class="headerlink" href="#function-calling" title="Link to this heading"></a></h2>
+<p>You can expose Python functions that the model is able to invoke using its code generation abilities, should you so instruct it to.  A list of functions can be provided to <a class="reference internal" href="#model-api"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></span></a> that will be called inline with the generation, and recieve the output produced so far by the model.</p>
+<p>These functions can then parse the text from the bot to determine if it was called, and execute it accordingly.  Any text returned by these functions will be added to the chat before resuming generation, so the bot is able to utilize them the rest of its reply.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">bot_function()</span></code> decorator automatically wraps Python functions, performs regex matching on the model output, runs them if they were called using Python <code class="docutils literal notranslate"><span class="pre">eval()</span></code>, and returns any results:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span><span class="p">,</span> <span class="n">BotFunctions</span><span class="p">,</span> <span class="n">bot_function</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="nd">@bot_function</span>
+<span class="k">def</span> <span class="nf">DATE</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Returns the current date. &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%A, %B %-m %Y&quot;</span><span class="p">)</span>
+   
+<span class="nd">@bot_function</span>
+<span class="k">def</span> <span class="nf">TIME</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Returns the current time. &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%-I:%M %p&quot;</span><span class="p">)</span>
+          
+<span class="c1"># load the model   </span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;meta-llama/Meta-Llama-3-8B-Instruct&quot;</span><span class="p">,</span> 
+    <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span><span class="p">,</span> 
+    <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span>
+<span class="p">)</span>
+
+<span class="c1"># create the chat history</span>
+<span class="n">system_prompt</span> <span class="o">=</span> <span class="s2">&quot;You are a helpful and friendly AI assistant.&quot;</span> <span class="o">+</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">()</span>
+<span class="n">chat_history</span> <span class="o">=</span> <span class="n">ChatHistory</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">system_prompt</span><span class="o">=</span><span class="n">system_prompt</span><span class="p">)</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="c1"># enter the user query from terminal</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&gt;&gt; &#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="nb">input</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># add user prompt and generate chat tokens/embeddings</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+    <span class="n">embedding</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()</span>
+
+    <span class="c1"># generate bot reply (give it function access)</span>
+    <span class="n">reply</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+        <span class="n">embedding</span><span class="p">,</span> 
+        <span class="n">streaming</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+        <span class="n">functions</span><span class="o">=</span><span class="n">BotFunctions</span><span class="p">(),</span>
+        <span class="n">kv_cache</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span><span class="p">,</span>
+        <span class="n">stop_tokens</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span>
+    <span class="p">)</span>
+        
+    <span class="c1"># stream the output</span>
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">reply</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># save the final output</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
+</pre></div>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="nano_llm.bot_function">
+<span class="sig-name descname"><span class="pre">bot_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pydoc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#bot_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.bot_function" title="Link to this definition"></a></dt>
+<dd><p>Decorator for exposing a function to be callable by the LLM.
+This will create wrapper functions that do the parsing to
+determine if this function was called in the output text,
+and then interpret it to invoke the function call.
+Text returned from these functions will be added to the chat.</p>
+<p>For example, this definition will expose the <code class="docutils literal notranslate"><span class="pre">TIME()</span></code> function to the bot:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@bot_function</span>
+<span class="k">def</span> <span class="nf">TIME</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39; Returns the current time. &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%-I:%M %p&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You should then add instructions for calling it to the system prompt so that
+the bot knows it’s available. <a class="reference internal" href="#nano_llm.BotFunctions.generate_docs" title="nano_llm.BotFunctions.generate_docs"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.generate_docs()</span></code></a> can automatically
+generate the function descriptions for you from their Python docstrings, which
+you can then add to the chat history.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>Callable</em>) – The function to be called by the model.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – The function name that the model should refer to.
+By default, it will be the actual Python function name.</p></li>
+<li><p><strong>docs</strong> (<em>str</em>) – Description of the function that is added to the model’s
+system prompt.  By default, the Python docstring is used
+from the function’s code comment block (<cite>‘’’ docs here ‘’’</cite>)</p></li>
+<li><p><strong>code</strong> (<em>str</em>) – Language that the model is expected to write code in.
+By default this is Python, but JSON will be added also.</p></li>
+<li><p><strong>enabled</strong> (<em>bool</em>) – Boolean that toggles whether this function is added
+to the system prompt and able to be called or not.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BotFunctions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Manager of functions able to be called by the LLM that have been registered
+with the <a class="reference internal" href="#nano_llm.bot_function" title="nano_llm.bot_function"><code class="xref py py-func docutils literal notranslate"><span class="pre">bot_function()</span></code></a> decorator or <a class="reference internal" href="#nano_llm.BotFunctions.register" title="nano_llm.BotFunctions.register"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.register()</span></code></a>.
+This is a singleton that is mostly intended to be used like a list,
+where <code class="docutils literal notranslate"><span class="pre">BotFunction()</span></code> returns the currently enabled functions.</p>
+<p>You can pass these to <a class="reference internal" href="models.html#nano_llm.NanoLLM.generate" title="nano_llm.NanoLLM.generate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></a>, and they will be called inline
+with the generation:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">BotFunctions</span><span class="p">()</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;What is the date?&quot;</span><span class="p">,</span>
+    <span class="n">functions</span><span class="o">=</span><span class="n">BotFunctions</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="#nano_llm.BotFunctions.generate_docs" title="nano_llm.BotFunctions.generate_docs"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.generate_docs()</span></code></a> will automatically generate function descriptions
+from their Python docstrings.  You can filter and disable functions with <a class="reference internal" href="#nano_llm.BotFunctions.filter" title="nano_llm.BotFunctions.filter"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.filter()</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.__new__">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.__new__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.__new__" title="Link to this definition"></a></dt>
+<dd><p>Return the list of enabled functions whenever <cite>BotFunctions()</cite> is called,
+making it seem like you are just calling a function that returns a list:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">BotFunctions</span><span class="p">():</span>
+   <span class="n">func</span><span class="p">(</span><span class="s2">&quot;SQRT(64)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If <cite>all=True</cite>, then even the disabled functions will be included.
+If <cite>load=True</cite>, then the built-in functions will be loaded (if they haven’t yet been).
+If <cite>test=True</cite>, then the built-in functions will be tested (if they haven’t yet been).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.len">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">len</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.len"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.len" title="Link to this definition"></a></dt>
+<dd><p>Returns the number of all registered bot functions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.list">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.list" title="Link to this definition"></a></dt>
+<dd><p>Return the list of all enabled functions available to the bot.
+If <cite>all=True</cite>, then even the disabled functions will be included.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.filter">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'enable'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.filter" title="Link to this definition"></a></dt>
+<dd><p>Apply filters to the registered functions, either enabling or disabling them
+if their names are matched against the filter list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.generate_docs">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">generate_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prologue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epilogue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.generate_docs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.generate_docs" title="Link to this definition"></a></dt>
+<dd><p>Collate the documentation strings from all the enabled functions</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.register">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pydoc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.register"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.register" title="Link to this definition"></a></dt>
+<dd><p>See the docs for <a class="reference internal" href="#nano_llm.bot_function" title="nano_llm.bot_function"><code class="xref py py-func docutils literal notranslate"><span class="pre">bot_function()</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.load" title="Link to this definition"></a></dt>
+<dd><p>Load the built-in functions by importing their modules.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.test">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">test</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">disable_on_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.test"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.test" title="Link to this definition"></a></dt>
+<dd><p>Test that the functions are able to be run, and disable them if not.
+Returns true if all tests passed, otherwise false.</p>
 </dd></dl>
 
 </dd></dl>

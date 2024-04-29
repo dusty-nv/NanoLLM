@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.agents.video_query &mdash; NanoLLM 24.4 documentation</title>
+  <title>nano_llm.agents.video_query &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,8 +15,8 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
-        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -104,9 +104,9 @@
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.video_query.VideoQuery">[docs]</a>
 <span class="k">class</span> <span class="nc">VideoQuery</span><span class="p">(</span><span class="n">Agent</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Closed-loop visual agent that repeatedly applies prompts to a video stream, and is also able to match</span>
+<span class="sd">    Closed-loop visual agent that repeatedly applies a set of prompts to a video stream, and is also able to match</span>
 <span class="sd">    the incoming stream against a vector database, and then use the matching metadata for multimodal RAG.</span>
-<span class="sd">    Also serves an interactive web UI for changing queries, setting events, and tagging images in the database.</span>
+<span class="sd">    Also serves an interactive web UI for the user to change queries, set event filters, and tag images in the database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="VideoQuery.__init__">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.video_query.VideoQuery.__init__">[docs]</a>
@@ -238,7 +238,7 @@
             <span class="o">**</span><span class="n">kwargs</span>
         <span class="p">)</span>
         
-        <span class="c1">#: event filters for parsing bot output and triggering actions when the desired conditions are met.</span>
+        <span class="c1">#: event filters for parsing bot output and triggering actions when conditions are met.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">EventFilter</span><span class="p">(</span><span class="n">server</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="p">)</span></div>
 
    
@@ -400,8 +400,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
             <span class="k">elif</span> <span class="s1">&#39;tag_image&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tag_image</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;tag_image&#39;</span><span class="p">]</span>
-            <span class="k">elif</span> <span class="s1">&#39;vision_scaling&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">(</span><span class="n">vision_scaling</span><span class="o">=</span><span class="n">msg</span><span class="p">[</span><span class="s1">&#39;vision_scaling&#39;</span><span class="p">])</span>
+            <span class="c1">#elif &#39;vision_scaling&#39; in msg:</span>
+            <span class="c1">#    self.llm(vision_scaling=msg[&#39;vision_scaling&#39;])</span>
             <span class="k">elif</span> <span class="s1">&#39;max_new_tokens&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">(</span><span class="n">max_new_tokens</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s1">&#39;max_new_tokens&#39;</span><span class="p">]))</span>
             <span class="k">elif</span> <span class="s1">&#39;rag_threshold&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
