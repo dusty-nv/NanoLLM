@@ -15,7 +15,20 @@ def bot_function(func, name=None, docs='pydoc', code='python', enabled=True):
     This will create wrapper functions that do the parsing to
     determine if this function was called in the output text,
     and then interpret it to invoke the function call.
+    Text returned from these functions will be added to the chat.
     
+    For example, this definition will expose the ``TIME()`` function to the bot::
+    
+        @bot_function
+        def TIME():
+            ''' Returns the current time. '''
+            return datetime.now().strftime("%-I:%M %p")
+    
+    You should then add instructions for calling it to the system prompt so that
+    the bot knows it's available. :meth:`BotFunctions.generate_docs` can automatically
+    generate the function descriptions for you from their Python docstrings, which
+    you can then add to the chat history.
+            
     Args:
     
       func (Callable):  The function to be called by the model.
@@ -39,10 +52,20 @@ def bot_function(func, name=None, docs='pydoc', code='python', enabled=True):
 class BotFunctions:
     """
     Manager of functions able to be called by the LLM that have been registered
-    with the :func:`bot_function` decorator or :meth:`BotFunction.register`.
+    with the :func:`bot_function` decorator or :meth:`BotFunctions.register`.
+    This is a singleton that is mostly intended to be used like a list,
+    where ``BotFunction()`` returns the currently enabled functions.
     
-    This is a singleton class that is mostly supposed to be used like a function,
-    where `BotFunction()` returns the list of currently active/enabled functions.
+    You can pass these to :meth:`NanoLLM.generate`, and they will be called inline 
+    with the generation::
+    
+        model.generate(
+            BotFunctions().generate_docs() + "What is the date?", 
+            functions=BotFunctions()
+        )
+        
+    :meth:`BotFunctions.generate_docs` will automatically generate function descriptions
+    from their Python docstrings.  You can filter and disable functions with :meth:`BotFunctions.filter`
     """
     functions = []
     builtins = []

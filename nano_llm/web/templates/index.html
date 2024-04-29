@@ -217,14 +217,16 @@
 	
 	<body class="bg-dark-gray" data-bs-theme="dark">
     <!-- Navbar + main body -->
-		<div class="d-flex flex-column h-100">
+    <div class="d-flex flex-column h-100">
       <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green"> <!-- fixed-top will let rest of body scroll -->
         <div class="container-fluid">
           <div class="d-flex flex-grow-1">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
               <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand ms-2" href="#"><span class="mb-0 h4" style="font-family: monospace, monospace;">{{ title }}</span></a>
+            <a class="navbar-brand ms-2 mb-0 mt-0" href="#">
+                <div class="mb-0 h4" style="font-family: monospace, monospace;">{{ title }}</div>
+            </a>
             <span class="w-100 d-lg-none d-block">
               <!-- hidden spacer to center brand on mobile --></span>
           </div>
@@ -241,24 +243,25 @@
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarChatHistory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  History
+                  Chat
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="navbarChatHistory">
                   <li><a class="dropdown-item" href="#" id="chat_length">0 / 4096 tokens</a></li>
-                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileDialog">User Profile</a>
                   <li><a class="dropdown-item" href="#" onclick="onChatHistoryReset()">Reset Chat</a></li>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileDialog">User Profile</a>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#displayDialog">Display Options</a>
                 </ul>
               </li>
             </ul>
           </div>
           <span class="navbar-nav ms-auto flex-row">
-            <button id="audio-input-mute" class="btn btn-primary btn-circle btn-md bi bi-mic-mute-fill ms-1 me-1" type="button" onclick="muteAudioInput()"></button>
-            <button id="audio-output-mute" class="btn btn-primary btn-circle btn-md bi bi-volume-up-fill" type="button" onclick="muteAudioOutput()"></button>
+            <button id="audio-input-mute" class="btn btn-primary btn-circle btn-md bi bi-mic-mute-fill ms-1 me-1" type="button" title="Mute/unmute the microphone" onclick="muteAudioInput()"></button>
+            <button id="audio-output-mute" class="btn btn-primary btn-circle btn-md bi bi-volume-up-fill" type="button" title="Mute/unmute the speakers" onclick="muteAudioOutput()"></button>
           </span>
         </div>
       </nav>
       
-      <div id="chat-history-container" class="flex-grow-1 bg-medium-gray p-2 m-3" style="overflow-y: scroll;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)">
+      <div id="chat-history-container" class="flex-grow-1 bg-medium-gray p-2 m-3" style="font-size: 120%; overflow-y: scroll;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)">
         <!--<h3>Conversation</h3>-->
       </div>
 
@@ -275,7 +278,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="agentDialogLabel">Agent Settings</h5>
+            <h5 class="modal-title" id="agentDialogLabel">{{ model_name }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
           </div>
           <div class="modal-body">
@@ -290,12 +293,14 @@
               <label for="bot-functions" class="form-label">Bot Functions</label>
               <textarea id="bot-functions" class="form-control" rows="10"></textarea>
             </div>
-            <div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+            <!--<div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">-->
               <input type="checkbox" class="btn-check" id="function-calling" autocomplete="off" checked>
               <label class="btn btn-outline-primary" for="function-calling" title="Enable or disable the bot to invoke the functions listed above.">Function Calling</label>
               <input type="checkbox" class="btn-check" id="function-autodoc" autocomplete="off" checked>
               <label class="btn btn-outline-primary" for="function-autodoc" title="Append the auto-generated function documentation to the system prompt.">Function Autodoc</label>
-            </div>
+              <input type="checkbox" class="btn-check" id="show-system-prompt" autocomplete="off" checked>
+              <label class="btn btn-outline-primary" for="show-system-prompt" title="Show the assembled system prompt in the chat.">Show in Chat</label>
+            <!--</div>-->
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -338,7 +343,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Done</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             <!--<button type="button" class="btn btn-primary">Save changes</button>-->
           </div>
         </div>
@@ -355,7 +360,7 @@
           </div>
           <div class="modal-body">
             <p class="text-muted mb-3">
-                ⚠️ Modifying these settings will reset the chat history.
+                ⚠️ Modifying these contents will reset the chat history.
             </p>
             <div class="btn-group mb-3" role="group" aria-label="Basic checkbox toggle button group">
               <input type="checkbox" class="btn-check" id="enable-profile" autocomplete="off" checked>
@@ -369,6 +374,34 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button> 
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="onProfileSettings()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chat display options dialog -->
+    <div class="modal fade" id="displayDialog" tabindex="-1" aria-labelledby="displayDialogLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="displayDialogLabel">Display Options</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
+          </div>
+          <div class="modal-body">
+              <div class="form-group row">
+                <label for="displayFontSize" class="col-sm-3 col-form-label">Font Size</label>
+                <div class="col-sm-9">
+                  <input type="text" class="form-control" id="fontSize" value="100%" onchange="onFontSize(this.value)">
+                </div>
+              </div>
+              <script type='text/javascript'>
+                function onFontSize(value) {
+                    document.getElementById('chat-history-container').style.fontSize = value;
+                }
+              </script>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> 
           </div>
         </div>
       </div>

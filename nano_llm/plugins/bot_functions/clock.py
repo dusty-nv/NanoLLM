@@ -11,9 +11,9 @@ def TIME():
     return datetime.now().strftime("%-I:%M %p")
 
 
-@bot_function()
+@bot_function
 def DATE():
     """
     Returns the current date.
     """
-    return datetime.now().strftime("%-m/%d/%Y")
+    return datetime.now().strftime("%A, %B %-m %Y")

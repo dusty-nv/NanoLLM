@@ -2,6 +2,7 @@
 import os
 import re
 import logging
+import natsort
 import threading
 import numpy as np
 
@@ -73,6 +74,7 @@ class WebChat(VoiceChat):
         
         self.server = WebServer(
             msg_callback=self.on_message, 
+            model_name=os.path.basename(self.llm.model.config.name),
             title=web_title,
             **kwargs
         )
@@ -95,11 +97,21 @@ class WebChat(VoiceChat):
                     }
                     
                     if self.tts:
+                        voices = self.tts.voices
+                        
+                        if len(voices) > 20:
+                            voices = natsort.natsorted(voices)
+                  
+                        speakers = self.tts.speakers
+                        
+                        if len(speakers) > 20:
+                            speakers = natsort.natsorted(speakers)
+                            
                         client_init_msg.update({
                             'tts_voice': self.tts.voice, 
-                            'tts_voices': self.tts.voices, 
+                            'tts_voices': voices, 
                             'tts_speaker': self.tts.speaker, 
-                            'tts_speakers': self.tts.speakers, 
+                            'tts_speakers': speakers, 
                             'tts_rate': self.tts.rate
                         })
 
@@ -143,7 +155,7 @@ class WebChat(VoiceChat):
     @bot_function(docs='nosig')
     def SAVE(text=None):
         """
-        `SAVE("<insert info here>")` - save information to the database that can be retrieved later, for example `SAVE("the user's name is Phoebe")`
+        SAVE("<insert info here>") - save information about the user, for example SAVE("Mary likes to garden")
         """
         self = WebChat.Instance
         

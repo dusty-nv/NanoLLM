@@ -11,3 +11,4 @@ tqdm
 getch
 decorator-args
 cachetools
+natsort
