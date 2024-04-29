@@ -6,7 +6,7 @@ The [`NanoLLM`](#model-api) interface provides model loading, quantization, embe
 from nano_llm import NanoLLM
 
 model = NanoLLM.from_pretrained(
-   "meta-llama/Llama-2-7b-hf",  # HuggingFace repo/model name, or path to HF model checkpoint
+   "meta-llama/Llama-3-8b-hf",  # HuggingFace repo/model name, or path to HF model checkpoint
    api='mlc',                   # supported APIs are: mlc, awq, hf
    api_token='hf_abc123def',    # HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)
    quantization='q4f16_ft'      # q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights
@@ -22,12 +22,12 @@ You can run text completion from the command-line like this:
 
 ```bash
 python3 -m nano_llm.completion --api=mlc \
-  --model meta-llama/Llama-2-7b-chat-hf \
+  --model meta-llama/Llama-3-8b-chat-hf \
   --quantization q4f16_ft \
   --prompt 'Once upon a time,'
 ```
 
-See the [Chat](chat.md) section for examples of running multi-turn chat.
+See the [Chat](chat.md) section for examples of running multi-turn chat and [function calling](chat.md#function-calling).
 
 ## Supported Architectures
 
@@ -55,3 +55,4 @@ These include fine-tuned derivatives that share the same network architecture as
    :members:
    :special-members: __next__
 ```
+

@@ -23,4 +23,4 @@ clean:
 	rm -rf "$(BUILDDIR)"
 
 livehtml:
-	sphinx-autobuild -a -E --host 0.0.0.0 --watch ../ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	sphinx-autobuild -a -E --host 0.0.0.0 --port 8888 --watch ../ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
