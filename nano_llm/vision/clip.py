@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import json
 import time
 import logging
 import traceback
@@ -42,9 +43,8 @@ class CLIPImageEmbedding():
     
     def __init__(self, model, dtype=torch.float16, crop=False, use_tensorrt=False, **kwargs):
         self.stats = AttributeDict()
-        self.config = AttributeDict()
+        self.config = AttributeDict(name=model)
         
-        self.config.name = model
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.stream = None
         self.dtype = torch.float32 if use_tensorrt else dtype # TRT handles FP16 internally
@@ -54,17 +54,31 @@ class CLIPImageEmbedding():
             'siglip': dict(preprocessor=SiglipImageProcessor, model=SiglipVisionModel, mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5)),
         }
         
-        for key, model_type in self.model_types.items():
-            if key in model.lower():
-                self.model_type = key
-                break
-                
-        if not hasattr(self, 'model_type'):
-            raise ValueError(f"tried loading vision model {model} - supported model types are CLIP and SigLIP")
+        def check_model_type(model_name):
+            for key in self.model_types.keys():
+                if key in model_name.lower():
+                    return key 
+            return None
+            
+        self.model_type = check_model_type(model)  # for model names, or paths containing the name
+       
+        if not self.model_type and os.path.isdir(model):  # for paths without, check the config.json
+            try:
+                config_path = os.path.join(model, 'config.json')
+                with open(config_path) as config_file:
+                    model_type = json.load(config_file)['model_type']
+                    self.model_type = check_model_type(model_type)
+            except Exception as error:
+                logging.error(f"failed to get vision encoder type from local model config under {model} ({error})")
+ 
+        if not self.model_type:
+            raise ValueError(f"tried loading unrecognized vision encoder from {model} - supported model types are CLIP and SigLIP")
             
         logging.info(f'loading {self.model_type} vision model {model}')
 
-        self.model = model_type['model'].from_pretrained(model, torch_dtype=self.dtype)#.to(self.device).eval()
+        factory = self.model_types[self.model_type]
+        
+        self.model = factory['model'].from_pretrained(model, torch_dtype=self.dtype)#.to(self.device).eval()
         self.config.input_shape = (self.model.config.image_size, self.model.config.image_size)
         
         #self.preprocessor = model_type['preprocessor'].from_pretrained(model, torch_dtype=self.dtype)#.to(self.device)
@@ -83,7 +97,7 @@ class CLIPImageEmbedding():
         if crop:
             self.preprocessor.append(T.CenterCrop(self.config.input_shape[0]))
    
-        self.preprocessor.append(T.Normalize(model_type['mean'], model_type['std']))
+        self.preprocessor.append(T.Normalize(factory['mean'], factory['std']))
         self.preprocessor.append(T.ConvertImageDtype(self.dtype))
 
         class VisionEncoder(torch.nn.Module):
@@ -113,7 +127,7 @@ class CLIPImageEmbedding():
             try:
                 self.init_trt()
             except Exception as error:
-                logging.error(f"Exception occurred trying to use TensorRT for {self.model_type} model ({self.config.name})\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred trying to use TensorRT for {self.model_type} model ({self.config.name})\n\n{traceback.format_exc()}")
 
     def init_trt(self, trt_cache="/data/models/clip"):  
         trt_path = os.path.join(trt_cache, self.config.name.replace('/','-').replace('@','-') + '-trt.pt')
