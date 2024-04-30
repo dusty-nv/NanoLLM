@@ -28,7 +28,7 @@ class WebRequest:
                     else:
                         logging.error(f"Web request {url} failed  (code {response.status_code})")
                 except Exception as error:
-                    logging.error(f"Exception occurred during web request {url}\n\n{''.join(traceback.format_exception(error))}")
+                    logging.error(f"Exception occurred during web request {url}\n\n{traceback.format_exc()}")
                     
             return None
      

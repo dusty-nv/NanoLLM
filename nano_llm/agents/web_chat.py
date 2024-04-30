@@ -128,6 +128,7 @@ class WebChat(VoiceChat):
                 self.generate_system_prompt()
             if 'user_profile' in msg:
                 self.user_profile = [x.strip() for x in msg['user_profile'].split('\n')]
+                self.user_profile = [x for x in self.user_profile if x]
                 self.generate_system_prompt()
             if 'enable_profile' in msg:
                 self.enable_profile = msg['enable_profile']

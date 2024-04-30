@@ -177,7 +177,7 @@ class BotFunctions:
                 logging.debug(f"Running generated code `{code_str}`")
                 return eval(code_str, {name : func})
             except Exception as error:
-                logging.error(f"Exception occurred executing generated code {code_str}\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred executing generated code {code_str}\n\n{traceback.format_exc()}")
                 return None
 
         wrapper.name = name
@@ -241,7 +241,7 @@ class BotFunctions:
             try:
                 logging.info(f"  * {function.name}() => '{function.function()}'  ({function.docs})")
             except Exception as error:
-                logging.error(f"Exception occurred testing bot function {function.name}()\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred testing bot function {function.name}()\n\n{traceback.format_exc()}")
                 had_error = True
                 if disable_on_error:
                     function.enabled = False

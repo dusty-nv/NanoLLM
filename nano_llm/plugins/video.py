@@ -97,14 +97,13 @@ class VideoSource(Plugin):
                     self.stream.Close()
                     self.stream = None        
             except Exception as error:
-                logging.error(f"Exception occurred closing video source \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred closing video source \"{self.resource}\"\n\n{traceback.format_exc()}")
 
             try:
                 self.stream = videoSource(self.resource, options=self.options)
                 return
             except Exception as error:
-                logging.error(f"Failed to create video source \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
-                traceback.print_exception(error)
+                logging.error(f"Failed to create video source \"{self.resource}\"\n\n{traceback.format_exc()}")
                 time.sleep(2.5)
             
     def run(self):
@@ -115,7 +114,7 @@ class VideoSource(Plugin):
             try:
                 img = self.capture()
             except Exception as error:
-                logging.error(f"Exception occurred during video source capture of \"{self.resource}\"\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred during video source capture of \"{self.resource}\"\n\n{traceback.format_exc()}")
             
             if img is None:
                 if self.file:

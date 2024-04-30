@@ -164,7 +164,7 @@ class ProcessProxy(Plugin):
                 #logging.debug(f"subprocess recieved {str(type(input))} input  (depickle={(time.perf_counter()-time_begin)*1000} ms)")
                 self.plugin(input, **kwargs)
             except Exception as error:
-                logging.error(f"Exception occurred in {type(self.plugin)} subprocess data thread\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred in {type(self.plugin)} subprocess data thread\n\n{traceback.format_exc()}")
                 
     def run_control(self):
         while True:
@@ -181,7 +181,7 @@ class ProcessProxy(Plugin):
                     self.plugin.interrupt(**msg['interrupt'])
                     self.control_child.send('interrupt_ack')
             except Exception as error:
-                logging.error(f"Exception occurred in {type(self.plugin)} subprocess control thread\n\n{''.join(traceback.format_exception(error))}")
+                logging.error(f"Exception occurred in {type(self.plugin)} subprocess control thread\n\n{traceback.format_exc()}")
                 
     def assert_message(self, msg, expected, verbose=True):
         if msg != expected:
