@@ -326,18 +326,17 @@ class NanoLLM():
           
         return has_vision
                
-    def init_vision(self, **kwargs):
+    def init_vision(self, vision_model=None, vision_api='auto', **kwargs):
         # Load the vision encoder (CLIP/SigLIP) and mm_projector for multimodal models
         if not self.has_vision:
             return
 
         # load the image embedding model
         self.vision = CLIPImageEmbedding.from_pretrained(
-            kwargs.get('vision_model') if kwargs.get('vision_model')
-            else self.config.mm_vision_tower,
+            vision_model if vision_model else self.config.mm_vision_tower,
             crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
+            use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
             dtype=torch.float16,
-            use_tensorrt=True, 
         ) 
         
         # create image embedding projection model

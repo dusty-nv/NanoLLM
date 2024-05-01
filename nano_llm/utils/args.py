@@ -31,6 +31,8 @@ class ArgParser(argparse.ArgumentParser):
                 help="for MLC, the type of quantization to apply (default q4f16_ft)  For AWQ, the path to the quantized weights.")
             self.add_argument("--api", type=str, default=None, choices=['auto_gptq', 'awq', 'hf', 'mlc'], 
                 help="specify the API to use (otherwise inferred)")
+            self.add_argument("--vision-api", type=str, default='auto', choices=['auto', 'hf', 'trt'],
+                help="use TensorRT for vision encoder, 'auto' will enable based on the platform")
             self.add_argument("--vision-model", type=str, default=None, 
                 help="for VLMs, manually select the vision embedding model to use (e.g. openai/clip-vit-large-patch14-336 for higher-res)")
             self.add_argument("--vision-scaling", type=str, default=None, choices=['crop', 'resize'],

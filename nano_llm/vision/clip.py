@@ -25,7 +25,7 @@ class CLIPImageEmbedding():
     """
     @staticmethod
     def from_pretrained(model="openai/clip-vit-large-patch14-336", dtype=torch.float16, crop=False, 
-                        use_cache=True, use_tensorrt=False, **kwargs):
+                        use_cache=True, use_tensorrt=True, **kwargs):
         """
         Load a CLIP or SigLIP vision encoder model from HuggingFace Hub or a local checkpoint.
         """                
@@ -41,7 +41,7 @@ class CLIPImageEmbedding():
             
         return inst
     
-    def __init__(self, model, dtype=torch.float16, crop=False, use_tensorrt=False, **kwargs):
+    def __init__(self, model, dtype=torch.float16, crop=False, use_tensorrt=True, **kwargs):
         self.stats = AttributeDict()
         self.config = AttributeDict(name=model)
         
@@ -154,7 +154,7 @@ class CLIPImageEmbedding():
             os.makedirs(trt_cache, exist_ok=True)
             torch.save(trt_model.state_dict(), trt_path)
         
-        def profile_model(model, inputs, runs=10):
+        def profile_model(model, inputs, runs=3):
             for i in range(runs+1):
                 if i == 1:
                     time_begin = time.perf_counter()
