@@ -182,9 +182,19 @@ class CLIPImageEmbedding():
         with torch.cuda.StreamContext(stream), torch.inference_mode():
             time_begin_enc = time.perf_counter()
             
-            image = torch_image(image, dtype=self.dtype, device=self.device).unsqueeze(0)
-            image = self.preprocessor(image)
+            image = torch_image(image, dtype=self.dtype, device=self.device)
+            ndims = len(image.shape)
             
+            if ndims != 3 and ndims != 4:
+                raise ValueError(f"image with dims {image.shape} was not in NCHW or NHWC format")
+            
+            if ndims == 3:
+                image = image.unsqueeze(0)
+                
+            if image.shape[3] <= 4:
+                image = image.permute(0, 3, 1, 2)
+                
+            image = self.preprocessor(image)
             model_output = self.model(image) #, output_hidden_states=hidden_state is not None)   #.pooler_output  .last_hidden_state
 
             if self.model_type == 'clip':
