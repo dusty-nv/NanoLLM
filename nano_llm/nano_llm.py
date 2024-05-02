@@ -5,11 +5,13 @@ import time
 import json
 import shutil
 import logging
+import tensorrt
 
 import torch
 import numpy as np
 
 from transformers import AutoConfig
+from packaging.version import Version
 
 from .vision import CLIPImageEmbedding, MMProjector
 from .utils import AttributeDict, convert_tensor, download_model, default_model_api, print_table
@@ -331,11 +333,17 @@ class NanoLLM():
         if not self.has_vision:
             return
 
+        # CLIP/SigLIP won't build in TensorRT < 8.6 (before JetPack 6.0)
+        use_tensorrt = False
+        
+        if Version(tensorrt.__version__) >= Version('8.6'):
+            use_tensorrt = (vision_api == 'auto' or vision_api == 'trt')
+            
         # load the image embedding model
         self.vision = CLIPImageEmbedding.from_pretrained(
             vision_model if vision_model else self.config.mm_vision_tower,
             crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
-            use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
+            use_tensorrt=use_tensorrt, 
             dtype=torch.float16,
         ) 
         
