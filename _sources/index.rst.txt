@@ -88,6 +88,7 @@ For more background on generative AI applications in edge devices, visit the `Je
    install.md
    models.md
    chat.md
+   multimodal.md
    plugins.md
    agents.md
    webserver.md

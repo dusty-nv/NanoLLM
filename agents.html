@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multimodal.html">Multimodality</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Agents</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#chat-agent">Chat Agent</a><ul>
@@ -74,7 +75,23 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#web-chat">Web Chat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#web-chat">Web Chat</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat"><code class="docutils literal notranslate"><span class="pre">WebChat</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.__init__"><code class="docutils literal notranslate"><span class="pre">WebChat.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_message"><code class="docutils literal notranslate"><span class="pre">WebChat.on_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.SAVE"><code class="docutils literal notranslate"><span class="pre">WebChat.SAVE()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.system_prompt"><code class="docutils literal notranslate"><span class="pre">WebChat.system_prompt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.generate_system_prompt"><code class="docutils literal notranslate"><span class="pre">WebChat.generate_system_prompt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_asr_partial"><code class="docutils literal notranslate"><span class="pre">WebChat.on_asr_partial()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_asr_waiting"><code class="docutils literal notranslate"><span class="pre">WebChat.on_asr_waiting()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_llm_reply"><code class="docutils literal notranslate"><span class="pre">WebChat.on_llm_reply()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.on_tts_samples"><code class="docutils literal notranslate"><span class="pre">WebChat.on_tts_samples()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.send_chat_history"><code class="docutils literal notranslate"><span class="pre">WebChat.send_chat_history()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.web_chat.WebChat.start"><code class="docutils literal notranslate"><span class="pre">WebChat.start()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#video-stream">Video Stream</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.agents.video_stream.VideoStream"><code class="docutils literal notranslate"><span class="pre">VideoStream</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_stream.VideoStream.__init__"><code class="docutils literal notranslate"><span class="pre">VideoStream.__init__()</span></code></a></li>
@@ -234,7 +251,87 @@ like at the end of a sentence or paragraph.  This will interrupt/cancel any ongo
 </section>
 <section id="web-chat">
 <h2>Web Chat<a class="headerlink" href="#web-chat" title="Link to this heading"></a></h2>
-<iframe width="720" height="405" src="https://www.youtube.com/embed/UOjqF3YCGkY" style="margin-bottom: 1em;" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></section>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/UOjqF3YCGkY" style="margin-bottom: 1em;" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebChat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nano_llm.agents.voice_chat.VoiceChat" title="nano_llm.agents.voice_chat.VoiceChat"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceChat</span></code></a></p>
+<p>Adds webserver hooks to ASR/TTS voice chat agent and provide web UI.
+When a multimodal model is loaded, the user can drag &amp; drop images
+to chat about into the UI.  Also supports streaming the client’s
+microphone and output speakers using WebAudio.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>upload_dir</strong> (<em>str</em>) – the path to save files uploaded from the client</p>
+</dd>
+</dl>
+<p>See <code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceChat</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">WebServer</span></code> for inherited arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_message">
+<span class="sig-name descname"><span class="pre">on_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_message" title="Link to this definition"></a></dt>
+<dd><p>Websocket message handler from the client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.SAVE">
+<span class="sig-name descname"><span class="pre">SAVE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">&quot;&lt;insert</span> <span class="pre">info</span> <span class="pre">here&gt;&quot;)</span> <span class="pre">-</span> <span class="pre">save</span> <span class="pre">information</span> <span class="pre">about</span> <span class="pre">the</span> <span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">for</span> <span class="pre">example</span> <span class="pre">SAVE(&quot;Mary</span> <span class="pre">likes</span> <span class="pre">to</span> <span class="pre">garden&quot;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.SAVE"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.SAVE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.system_prompt">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">system_prompt</span></span><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.system_prompt" title="Link to this definition"></a></dt>
+<dd><p>Get the instruction prologue of the system prompt, before functions or RAG are added.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.generate_system_prompt">
+<span class="sig-name descname"><span class="pre">generate_system_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instruct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_autodoc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_reset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.generate_system_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.generate_system_prompt" title="Link to this definition"></a></dt>
+<dd><p>Assemble the system prompt from the instruction prologue, function docs, and user profile.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_asr_partial">
+<span class="sig-name descname"><span class="pre">on_asr_partial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_asr_partial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_asr_partial" title="Link to this definition"></a></dt>
+<dd><p>Update the web chat history when a partial ASR transcript arrives.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_asr_waiting">
+<span class="sig-name descname"><span class="pre">on_asr_waiting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transcript</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_asr_waiting"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_asr_waiting" title="Link to this definition"></a></dt>
+<dd><p>If the ASR partial transcript hasn’t changed, probably a misrecognized sound or echo (cancel it)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_llm_reply">
+<span class="sig-name descname"><span class="pre">on_llm_reply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_llm_reply"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_llm_reply" title="Link to this definition"></a></dt>
+<dd><p>Update the web chat history when the latest LLM response arrives.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.on_tts_samples">
+<span class="sig-name descname"><span class="pre">on_tts_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.on_tts_samples"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.on_tts_samples" title="Link to this definition"></a></dt>
+<dd><p>Send audio samples to the client when they arrive.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.send_chat_history">
+<span class="sig-name descname"><span class="pre">send_chat_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.send_chat_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.send_chat_history" title="Link to this definition"></a></dt>
+<dd><p>Sanitize the chat history for HTML and send it to the client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.agents.web_chat.WebChat.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/agents/web_chat.html#WebChat.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.agents.web_chat.WebChat.start" title="Link to this definition"></a></dt>
+<dd><p>Start the webserver &amp; websocket listening in other threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="video-stream">
 <h2>Video Stream<a class="headerlink" href="#video-stream" title="Link to this heading"></a></h2>
 <dl class="py class">

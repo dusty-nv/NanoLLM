@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multimodal.html">Multimodality</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
@@ -119,6 +120,8 @@
         <li><a href="agents.html#nano_llm.agents.video_stream.VideoStream.__init__">(VideoStream method)</a>
 </li>
         <li><a href="agents.html#nano_llm.agents.voice_chat.VoiceChat.__init__">(VoiceChat method)</a>
+</li>
+        <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.__init__">(WebChat method)</a>
 </li>
         <li><a href="webserver.html#nano_llm.web.WebServer.__init__">(WebServer method)</a>
 </li>
@@ -273,6 +276,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.BotFunctions.generate_docs">generate_docs() (BotFunctions class method)</a>
 </li>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.generate_system_prompt">generate_system_prompt() (WebChat method)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -373,6 +378,10 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.on_asr_partial">on_asr_partial() (WebChat method)</a>
+</li>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.on_asr_waiting">on_asr_waiting() (WebChat method)</a>
+</li>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.on_image_embedding">on_image_embedding() (VideoQuery method)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.chat.ChatAgent.on_interrupt">on_interrupt() (ChatAgent method)</a>
@@ -381,13 +390,21 @@
         <li><a href="agents.html#nano_llm.agents.voice_chat.VoiceChat.on_interrupt">(VoiceChat method)</a>
 </li>
       </ul></li>
-      <li><a href="webserver.html#nano_llm.web.WebServer.on_message">on_message() (WebServer method)</a>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.on_llm_reply">on_llm_reply() (WebChat method)</a>
 </li>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.on_message">on_message() (WebChat method)</a>
+
+      <ul>
+        <li><a href="webserver.html#nano_llm.web.WebServer.on_message">(WebServer method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.on_search">on_search() (VideoQuery method)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.on_text">on_text() (VideoQuery method)</a>
+</li>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.on_tts_samples">on_tts_samples() (WebChat method)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.on_video">on_video() (VideoQuery method)</a>
 </li>
@@ -437,6 +454,10 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.SAVE">SAVE() (WebChat method)</a>
+</li>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.send_chat_history">send_chat_history() (WebChat method)</a>
+</li>
       <li><a href="webserver.html#nano_llm.web.WebServer.send_message">send_message() (WebServer method)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.server">server (VideoQuery attribute)</a>
@@ -445,6 +466,8 @@
 
       <ul>
         <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.start">(VideoQuery method)</a>
+</li>
+        <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.start">(WebChat method)</a>
 </li>
         <li><a href="webserver.html#nano_llm.web.WebServer.start">(WebServer method)</a>
 </li>
@@ -462,7 +485,11 @@
       <li><a href="models.html#nano_llm.StreamingResponse">StreamingResponse (class in nano_llm)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatHistory.system_prompt">system_prompt (ChatHistory property)</a>
+
+      <ul>
+        <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.system_prompt">(WebChat property)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -510,6 +537,10 @@
 
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="agents.html#nano_llm.agents.web_chat.WebChat">WebChat (class in nano_llm.agents.web_chat)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="webserver.html#nano_llm.web.WebServer">WebServer (class in nano_llm.web)</a>
 </li>

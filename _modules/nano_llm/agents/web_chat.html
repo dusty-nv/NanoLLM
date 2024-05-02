@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.agents.web_chat &mdash; NanoLLM 24.4 documentation</title>
+  <title>nano_llm.agents.web_chat &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,8 +15,8 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=5151258b"></script>
-        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -81,13 +81,16 @@
   <h1>Source code for nano_llm.agents.web_chat</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">natsort</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
+<span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">StopTokens</span><span class="p">,</span> <span class="n">BotFunctions</span><span class="p">,</span> <span class="n">bot_function</span>
 <span class="kn">from</span> <span class="nn">nano_llm.web</span> <span class="kn">import</span> <span class="n">WebServer</span>
 <span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span><span class="p">,</span> <span class="ne">KeyboardInterrupt</span>
-<span class="kn">from</span> <span class="nn">nano_llm.plugins</span> <span class="kn">import</span> <span class="n">RivaASR</span>
+<span class="kn">from</span> <span class="nn">nano_llm.plugins</span> <span class="kn">import</span> <span class="n">AutoASR</span>
 
 <span class="kn">from</span> <span class="nn">.voice_chat</span> <span class="kn">import</span> <span class="n">VoiceChat</span>
 
@@ -96,7 +99,10 @@
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat">[docs]</a>
 <span class="k">class</span> <span class="nc">WebChat</span><span class="p">(</span><span class="n">VoiceChat</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Adds webserver hooks to ASR/TTS voice chat agent.</span>
+<span class="sd">    Adds webserver hooks to ASR/TTS voice chat agent and provide web UI.</span>
+<span class="sd">    When a multimodal model is loaded, the user can drag &amp; drop images</span>
+<span class="sd">    to chat about into the UI.  Also supports streaming the client&#39;s</span>
+<span class="sd">    microphone and output speakers using WebAudio.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="WebChat.__init__">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.__init__">[docs]</a>
@@ -106,43 +112,120 @@
 <span class="sd">        </span>
 <span class="sd">          upload_dir (str): the path to save files uploaded from the client</span>
 <span class="sd">          </span>
-<span class="sd">        See VoiceChat and WebServer for inherited arguments.</span>
+<span class="sd">        See :class:`VoiceChat` and :class:`WebServer` for inherited arguments.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
+        
+        <span class="c1"># temp singleton instance until bot_function closures are fixed</span>
+        <span class="n">WebChat</span><span class="o">.</span><span class="n">Instance</span> <span class="o">=</span> <span class="bp">self</span>
+        
+        <span class="c1"># add additional hooks to the voice components</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asr</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">asr</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_asr_partial</span><span class="p">,</span> <span class="n">RivaASR</span><span class="o">.</span><span class="n">OutputPartial</span><span class="p">,</span> <span class="n">threaded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="c1">#self.asr.add(self.on_asr_final, RivaASR.OutputFinal)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asr</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_asr_partial</span><span class="p">,</span> <span class="n">AutoASR</span><span class="o">.</span><span class="n">OutputPartial</span><span class="p">,</span> <span class="n">threaded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1">#self.asr.add(self.on_asr_final, AutoASR.OutputFinal)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_llm_reply</span><span class="p">,</span> <span class="n">threaded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">tts_output</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_tts_samples</span><span class="p">,</span> <span class="n">threaded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">server</span> <span class="o">=</span> <span class="n">WebServer</span><span class="p">(</span><span class="n">msg_callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">on_message</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
-
+        <span class="c1"># configure system prompt and function calling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_system_instruct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">system_prompt</span>
         
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_autodoc</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_profile</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># stores info from SAVE()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">functions</span> <span class="o">=</span> <span class="n">BotFunctions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">()</span>
+        
+        <span class="c1"># filters for sanitizing chat HTML</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">web_regex</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;`(.*?)`&#39;</span><span class="p">),</span> <span class="sa">r</span><span class="s1">&#39;&lt;code&gt;\1&lt;/code&gt;&#39;</span><span class="p">),</span>  <span class="c1"># code blocks</span>
+            <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\*(.*?)\*&#39;</span><span class="p">),</span> <span class="sa">r</span><span class="s1">&#39;*&lt;i&gt;\1&lt;/i&gt;*&#39;</span><span class="p">),</span>    <span class="c1"># emotives inside asterisks</span>
+        <span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">function</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">functions</span><span class="p">:</span>
+            <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">\(.*?\))&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">web_regex</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">regex</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;&lt;code&gt;\1&lt;/code&gt;&#39;</span><span class="p">))</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">filter_regex</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">regex</span><span class="p">,</span> <span class="n">function</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
+            
+        <span class="c1"># create webserver / websocket</span>
+        <span class="n">web_title</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;web_title&#39;</span><span class="p">)</span>
+        <span class="n">web_title</span> <span class="o">=</span> <span class="n">web_title</span> <span class="k">if</span> <span class="n">web_title</span> <span class="k">else</span> <span class="s1">&#39;llamaspeak&#39;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">server</span> <span class="o">=</span> <span class="n">WebServer</span><span class="p">(</span>
+            <span class="n">msg_callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">on_message</span><span class="p">,</span> 
+            <span class="n">model_name</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">web_title</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span></div>
+
+             
 <div class="viewcode-block" id="WebChat.on_message">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_message">[docs]</a>
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Websocket message handler</span>
+<span class="sd">        Websocket message handler from the client.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_JSON</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;chat_history_reset&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">(</span><span class="s1">&#39;/reset&#39;</span><span class="p">)</span>
-                <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                <span class="c1">#self.llm(&#39;/reset&#39;)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">(</span><span class="n">force_reset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                
             <span class="k">if</span> <span class="s1">&#39;client_state&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;client_state&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;connected&#39;</span><span class="p">:</span>
+                    <span class="n">client_init_msg</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;system_prompt&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">,</span>
+                        <span class="s1">&#39;bot_functions&#39;</span><span class="p">:</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">(</span><span class="n">prologue</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                        <span class="s1">&#39;user_profile&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="p">),</span>
+                    <span class="p">}</span>
+                    
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">({</span>
+                        <span class="n">voices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">voices</span>
+                        
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">:</span>
+                            <span class="n">voices</span> <span class="o">=</span> <span class="n">natsort</span><span class="o">.</span><span class="n">natsorted</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>
+                  
+                        <span class="n">speakers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">speakers</span>
+                        
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">speakers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">:</span>
+                            <span class="n">speakers</span> <span class="o">=</span> <span class="n">natsort</span><span class="o">.</span><span class="n">natsorted</span><span class="p">(</span><span class="n">speakers</span><span class="p">)</span>
+                            
+                        <span class="n">client_init_msg</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
                             <span class="s1">&#39;tts_voice&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">voice</span><span class="p">,</span> 
-                            <span class="s1">&#39;tts_voices&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">voices</span><span class="p">,</span> 
+                            <span class="s1">&#39;tts_voices&#39;</span><span class="p">:</span> <span class="n">voices</span><span class="p">,</span> 
+                            <span class="s1">&#39;tts_speaker&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">speaker</span><span class="p">,</span> 
+                            <span class="s1">&#39;tts_speakers&#39;</span><span class="p">:</span> <span class="n">speakers</span><span class="p">,</span> 
                             <span class="s1">&#39;tts_rate&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">rate</span>
                         <span class="p">})</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="n">client_init_msg</span><span class="p">)</span>
                     <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">())</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                    
+            <span class="k">if</span> <span class="s1">&#39;system_prompt&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s1">&#39;system_prompt&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s1">&#39;function_calling&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">functions</span> <span class="o">=</span> <span class="n">BotFunctions</span><span class="p">()</span> <span class="k">if</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;function_calling&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s1">&#39;function_autodoc&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">enable_autodoc</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;function_autodoc&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s1">&#39;user_profile&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;user_profile&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span> <span class="k">if</span> <span class="n">x</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s1">&#39;enable_profile&#39;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">enable_profile</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;enable_profile&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">()</span>
             <span class="k">if</span> <span class="s1">&#39;tts_voice&#39;</span> <span class="ow">in</span> <span class="n">msg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">voice</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;tts_voice&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">({</span><span class="s1">&#39;tts_speaker&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">speaker</span><span class="p">,</span> <span class="s1">&#39;tts_speakers&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">speakers</span><span class="p">})</span>
+            <span class="k">if</span> <span class="s1">&#39;tts_speaker&#39;</span> <span class="ow">in</span> <span class="n">msg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;tts_speaker&#39;</span><span class="p">]</span>
             <span class="k">if</span> <span class="s1">&#39;tts_rate&#39;</span> <span class="ow">in</span> <span class="n">msg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tts</span><span class="o">.</span><span class="n">rate</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s1">&#39;tts_rate&#39;</span><span class="p">])</span>
         <span class="k">elif</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_TEXT</span><span class="p">:</span>  <span class="c1"># chat input</span>
@@ -158,22 +241,119 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WebChat agent ignoring websocket message with unknown type=</span><span class="si">{</span><span class="n">msg_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
-    
-    <span class="k">def</span> <span class="nf">on_asr_partial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span>
-        <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_asr_waiting</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">text</span><span class="p">])</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<div class="viewcode-block" id="WebChat.SAVE">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.SAVE">[docs]</a>
+    <span class="nd">@bot_function</span><span class="p">(</span><span class="n">docs</span><span class="o">=</span><span class="s1">&#39;nosig&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">SAVE</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        SAVE(&quot;&lt;insert info here&gt;&quot;) - save information about the user, for example SAVE(&quot;Mary likes to garden&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="n">WebChat</span><span class="o">.</span><span class="n">Instance</span>
         
+        <span class="k">if</span> <span class="n">text</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            
+        <span class="k">if</span> <span class="n">text</span> <span class="ow">and</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;info&quot;</span><span class="p">:</span>  <span class="c1"># sometimes the bot likes to call it like an example</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">log_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Saved to user profile: &#39;</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">log_msg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">({</span><span class="s1">&#39;user_profile&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="p">)})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_alert</span><span class="p">(</span><span class="n">log_msg</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s1">&#39;user_profile&#39;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">&#39;success&#39;</span><span class="p">)</span></div>
+
+            
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the instruction prologue of the system prompt, before functions or RAG are added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_system_instruct</span>
+        
+    <span class="nd">@system_prompt</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instruction</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the instruction prologue of the system prompt, before functions or RAG are added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generate_system_prompt</span><span class="p">(</span><span class="n">instruction</span><span class="p">)</span>
+     
+<div class="viewcode-block" id="WebChat.generate_system_prompt">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.generate_system_prompt">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instruct</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">enable_autodoc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">enable_profile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">force_reset</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assemble the system prompt from the instruction prologue, function docs, and user profile.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">instruct</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">instruct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_system_instruct</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_system_instruct</span> <span class="o">=</span> <span class="n">instruct</span>
+            
+        <span class="k">if</span> <span class="n">enable_autodoc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">enable_autodoc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_autodoc</span>
+        
+        <span class="k">if</span> <span class="n">enable_profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">enable_profile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_profile</span>
+            
+        <span class="n">system_prompt</span> <span class="o">=</span> <span class="p">[</span><span class="n">instruct</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">enable_autodoc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">functions</span><span class="p">:</span>
+            <span class="n">system_prompt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">())</span>
+            
+        <span class="k">if</span> <span class="n">enable_profile</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="p">:</span>
+            <span class="n">system_prompt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Here are the things you previously saved about the user:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">+</span> \
+                <span class="p">[</span><span class="s2">&quot;* &quot;</span> <span class="o">+</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span> <span class="k">if</span> <span class="n">x</span><span class="p">]</span>
+            <span class="p">))</span>
+        
+        <span class="n">system_prompt</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">system_prompt</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">force_reset</span> <span class="ow">or</span> <span class="n">system_prompt</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">system_prompt</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">):</span> <span class="c1"># server may not be created yet</span>
+                <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                
+        <span class="k">return</span> <span class="n">system_prompt</span></div>
+
+           
+<div class="viewcode-block" id="WebChat.on_asr_partial">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_asr_partial">[docs]</a>
+    <span class="k">def</span> <span class="nf">on_asr_partial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the web chat history when a partial ASR transcript arrives.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span>
+        <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_asr_waiting</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">text</span><span class="p">])</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+        
+<div class="viewcode-block" id="WebChat.on_asr_waiting">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_asr_waiting">[docs]</a>
     <span class="k">def</span> <span class="nf">on_asr_waiting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transcript</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span> <span class="o">==</span> <span class="n">transcript</span><span class="p">:</span>  <span class="c1"># if the partial transcript hasn&#39;t changed, probably a misrecognized sound or echo</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If the ASR partial transcript hasn&#39;t changed, probably a misrecognized sound or echo (cancel it)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span> <span class="o">==</span> <span class="n">transcript</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ASR partial transcript has stagnated, dropping from chat (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span> <span class="c1"># drop the rejected ASR from the client</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span> <span class="c1"># drop the rejected ASR from the client</span></div>
 
+
+<div class="viewcode-block" id="WebChat.on_llm_reply">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_llm_reply">[docs]</a>
     <span class="k">def</span> <span class="nf">on_llm_reply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the web chat history when the latest LLM response arrives.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_chat_history</span><span class="p">()</span></div>
+
         
+<div class="viewcode-block" id="WebChat.on_tts_samples">
+<a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_tts_samples">[docs]</a>
     <span class="k">def</span> <span class="nf">on_tts_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_AUDIO</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send audio samples to the client when they arrive.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_AUDIO</span><span class="p">)</span></div>
+
         
 <div class="viewcode-block" id="WebChat.send_chat_history">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.send_chat_history">[docs]</a>
@@ -191,7 +371,13 @@
             <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;br/&gt;&#39;</span><span class="p">)</span>
             <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;s&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;/s&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">stop_token</span> <span class="ow">in</span> <span class="n">StopTokens</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">stop_token</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                
+            <span class="k">for</span> <span class="n">regex</span><span class="p">,</span> <span class="n">replace</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">web_regex</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">regex</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">replace</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+                
             <span class="k">return</span> <span class="n">text</span>
           
         <span class="k">def</span> <span class="nf">web_image</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
@@ -219,12 +405,17 @@
 <div class="viewcode-block" id="WebChat.start">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.start">[docs]</a>
     <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start the webserver &amp; websocket listening in other threads.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span></div>
-</div>
 
 
+    <span class="n">Instance</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># singleton instance</span></div>
+
+    
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgParser</span><span class="p">(</span><span class="n">extras</span><span class="o">=</span><span class="n">ArgParser</span><span class="o">.</span><span class="n">Defaults</span><span class="o">+</span><span class="p">[</span><span class="s1">&#39;asr&#39;</span><span class="p">,</span> <span class="s1">&#39;tts&#39;</span><span class="p">,</span> <span class="s1">&#39;audio_output&#39;</span><span class="p">,</span> <span class="s1">&#39;web&#39;</span><span class="p">])</span>

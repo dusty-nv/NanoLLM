@@ -90,7 +90,7 @@
 
 
 <div class="viewcode-block" id="bot_function">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.bot_function">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.bot_function">[docs]</a>
 <span class="nd">@decorator_args</span><span class="p">(</span><span class="n">optional</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>        
 <span class="k">def</span> <span class="nf">bot_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;pydoc&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -134,13 +134,13 @@
 
 
 <div class="viewcode-block" id="BotFunctions">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions">[docs]</a>
 <span class="k">class</span> <span class="nc">BotFunctions</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Manager of functions able to be called by the LLM that have been registered</span>
 <span class="sd">    with the :func:`bot_function` decorator or :meth:`BotFunctions.register`.</span>
 <span class="sd">    This is a singleton that is mostly intended to be used like a list,</span>
-<span class="sd">    where ``BotFunction()`` returns the set of currently enabled functions.</span>
+<span class="sd">    where ``BotFunction()`` returns the currently enabled functions.</span>
 <span class="sd">    </span>
 <span class="sd">    You can pass these to :meth:`NanoLLM.generate`, and they will be called inline </span>
 <span class="sd">    with the generation::</span>
@@ -157,7 +157,7 @@
     <span class="n">builtins</span> <span class="o">=</span> <span class="p">[]</span>
         
 <div class="viewcode-block" id="BotFunctions.__new__">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.__new__">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.__new__">[docs]</a>
     <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">load</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the list of enabled functions whenever `BotFunctions()` is called,</span>
@@ -183,7 +183,7 @@
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">functions</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
     
 <div class="viewcode-block" id="BotFunctions.len">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.len">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.len">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">len</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -193,7 +193,7 @@
 
        
 <div class="viewcode-block" id="BotFunctions.list">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.list">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.list">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -204,7 +204,7 @@
 
        
 <div class="viewcode-block" id="BotFunctions.filter">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.filter">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.filter">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">filter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;enable&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -219,7 +219,7 @@
 
         
 <div class="viewcode-block" id="BotFunctions.generate_docs">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.generate_docs">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.generate_docs">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">generate_docs</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prologue</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">epilogue</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -249,7 +249,7 @@
 
 
 <div class="viewcode-block" id="BotFunctions.register">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.register">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.register">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;pydoc&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -310,7 +310,7 @@
 
         
 <div class="viewcode-block" id="BotFunctions.load">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.load">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.load">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -334,7 +334,7 @@
 
        
 <div class="viewcode-block" id="BotFunctions.test">
-<a class="viewcode-back" href="../../../models.html#nano_llm.plugins.bot_functions.BotFunctions.test">[docs]</a>
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.test">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">disable_on_error</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

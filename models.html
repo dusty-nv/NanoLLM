@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Models</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#supported-architectures">Supported Architectures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tested-models">Tested Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#model-api">Model API</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.NanoLLM"><code class="docutils literal notranslate"><span class="pre">NanoLLM</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.from_pretrained"><code class="docutils literal notranslate"><span class="pre">NanoLLM.from_pretrained()</span></code></a></li>
@@ -90,6 +91,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multimodal.html">Multimodality</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
@@ -159,6 +161,41 @@
 <li><p>GPT-Neox</p></li>
 </ul>
 <p>These include fine-tuned derivatives that share the same network architecture as above (for example, <a class="reference external" href="https://huggingface.co/lmsys/vicuna-7b-v1.5"><code class="docutils literal notranslate"><span class="pre">lmsys/vicuna-7b-v1.5</span></code></a> is a Llama model).  Others model types are supported via the various quantization APIs well - check the associated library documentation for details.</p>
+</section>
+<section id="tested-models">
+<h2>Tested Models<a class="headerlink" href="#tested-models" title="Link to this heading"></a></h2>
+<div class="admonition-access-to-gated-models-from-huggingface-hub admonition">
+<p class="admonition-title">Access to Gated Models from HuggingFace Hub</p>
+<p>To download models requiring authentication, generate an <a class="reference external" href="https://huggingface.co/docs/api-inference/en/quicktour#get-your-api-token">API key</a> and <a class="reference external" href="https://huggingface.co/meta-llama">request access</a> (Llama)</p>
+</div>
+<p><strong>Large Language Models</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Meta-Llama-3-8B"><code class="docutils literal notranslate"><span class="pre">meta-llama/Meta-Llama-3-8B</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-7b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-7b-chat-hf</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-13b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-13b-chat-hf</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/meta-llama/Llama-2-70b-chat-hf"><code class="docutils literal notranslate"><span class="pre">meta-llama/Llama-2-70b-chat-hf</span></code></a></p></li>
+</ul>
+<p><strong>Small Language Models</strong> (<a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_slm.html">SLM</a>)</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/stabilityai/stablelm-2-zephyr-1_6b"><code class="docutils literal notranslate"><span class="pre">stabilityai/stablelm-2-zephyr-1_6b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/stabilityai/stablelm-zephyr-3b"><code class="docutils literal notranslate"><span class="pre">stabilityai/stablelm-zephyr-3b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/NousResearch/Nous-Capybara-3B-V1.9"><code class="docutils literal notranslate"><span class="pre">NousResearch/Nous-Capybara-3B-V1.9</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0"><code class="docutils literal notranslate"><span class="pre">TinyLlama/TinyLlama-1.1B-Chat-v1.0</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT"><code class="docutils literal notranslate"><span class="pre">princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/google/gemma-2b-it"><code class="docutils literal notranslate"><span class="pre">google/gemma-2b-it</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/microsoft/phi-2"><code class="docutils literal notranslate"><span class="pre">microsoft/phi-2</span></code></a></p></li>
+</ul>
+<p><strong>Vision Language Models</strong> (<a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_llava.html">VLM</a>)</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.5-7b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.5-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.5-13b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.5-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.6-vicuna-7b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/liuhaotian/llava-v1.6-vicuna-13b"><code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-2.7b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-2.7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-7b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-7b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/Efficient-Large-Model/VILA-13b"><code class="docutils literal notranslate"><span class="pre">Efficient-Large-Model/VILA-13b</span></code></a></p></li>
+<li><p><a class="reference external" href="https://huggingface.co/NousResearch/Obsidian-3B-V0.5"><code class="docutils literal notranslate"><span class="pre">NousResearch/Obsidian-3B-V0.5</span></code></a></p></li>
+</ul>
 </section>
 <section id="model-api">
 <h2>Model API<a class="headerlink" href="#model-api" title="Link to this heading"></a></h2>
