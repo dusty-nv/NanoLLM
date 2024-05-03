@@ -1,5 +1,10 @@
 # Release Notes
 
+## 24.5
+
+* Added [function calling](chat.md#function-calling) with Llama 3
+* Added [VILA-1.5](https://developer.nvidia.com/blog/visual-language-intelligence-and-edge-ai-2-0/) with TensorRT for CLIP/SigLIP
+
 ## 24.4.1
 
 * Added chat templates for Llama 3

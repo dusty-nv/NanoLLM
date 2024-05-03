@@ -85,6 +85,15 @@ See `nano_llm/chat/templates.py` for them.  You can also specify a JSON file con
 
 You can expose Python functions that the model is able to invoke using its code generation abilities, should you so instruct it to.  A list of functions can be provided to [`NanoLLM.generate()`](#model-api) that will be called inline with the generation, and recieve the output produced so far by the model.  
 
+```{eval-rst}
+.. raw:: html
+
+  <iframe width="720" height="405" src="https://www.youtube.com/embed/7lKBJPpasAQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+  
+  <br/>
+  <br/>
+```
+
 These functions can then parse the text from the bot to determine if it was called, and execute it accordingly.  Any text returned by these functions will be added to the chat before resuming generation, so the bot is able to utilize them the rest of its reply.
 
 The `bot_function()` decorator automatically wraps Python functions, performs regex matching on the model output, runs them if they were called using Python `eval()`, and returns any results:

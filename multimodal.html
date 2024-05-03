@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multimodality &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>Multimodal &mdash; NanoLLM 24.4.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -50,7 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Multimodality</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Multimodal</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#code-example">Code Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#multimodal-demos">Multimodal Demos</a></li>
 </ul>
@@ -76,7 +76,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Multimodality</li>
+      <li class="breadcrumb-item active">Multimodal</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/multimodal.md.txt" rel="nofollow"> View page source</a>
       </li>
@@ -86,23 +86,24 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="multimodality">
-<h1>Multimodality<a class="headerlink" href="#multimodality" title="Link to this heading"></a></h1>
+  <section id="multimodal">
+<h1>Multimodal<a class="headerlink" href="#multimodal" title="Link to this heading"></a></h1>
 <div class="admonition-multimodal-agents-on-jetson-ai-lab admonition">
 <p class="admonition-title">Multimodal Agents on Jetson AI Lab</p>
 <p>Refer to these guides and tutorials on Jetson AI Lab: <a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_llamaspeak.html">llamaspeak</a> | <a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_live-llava.html">Live Llava</a> | <a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_nano-vlm.html">NanoVLM</a></p>
 </div>
 <p>NanoLLM provides optimized multimodal pipelines, including vision/language models (VLM), vector databases (<a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_nanodb.html">NanoDB</a>), and speech services that can be integrated into interactive agents.</p>
-<iframe width="637" height="400" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ9lFqOIZSfrdnS_0sa2WahzLbpbAbBCTlS049jpOchMCum1hIk-wE_lcNAmLkrZd0OQrI9IkKBfGp/pubchart?oid=1784494314&amp;format=interactive"></iframe>
+<iframe width="719" height="446" seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ9lFqOIZSfrdnS_0sa2WahzLbpbAbBCTlS049jpOchMCum1hIk-wE_lcNAmLkrZd0OQrI9IkKBfGp/pubchart?oid=88720541&amp;format=interactive"></iframe>
 
 <a href="https://www.jetson-ai-lab.com/tutorial_live-llava.html" target="_blank"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/live_llava.gif"></img></a><p>These are implemented through the <a class="reference internal" href="#model.md"><span class="xref myst">model</span></a> and <a class="reference internal" href="chat.html"><span class="std std-doc">chat interfaces</span></a> covered in the previous sections:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>-m<span class="w"> </span>nano_llm.chat<span class="w"> </span>--api<span class="o">=</span>mlc<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model<span class="w"> </span>Efficient-Large-Model/VILA-2.7b<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>Efficient-Large-Model/VILA1.5-3b<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--prompt<span class="w"> </span><span class="s1">&#39;/data/images/lake.jpg&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--prompt<span class="w"> </span><span class="s1">&#39;please describe the scene.&#39;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--prompt<span class="w"> </span><span class="s1">&#39;are there any hazards to be aware of?&#39;</span>
 </pre></div>
 </div>
+<p>See the <a class="reference internal" href="models.html#tested-models"><span class="std std-ref">Tested Models</span></a> section for the list of multimodal models that are supported in NanoLLM.</p>
 <section id="code-example">
 <h2>Code Example<a class="headerlink" href="#code-example" title="Link to this heading"></a></h2>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
@@ -113,15 +114,16 @@
 <span class="c1"># You can run it like this (these options will replicate the defaults)</span>
 <span class="c1">#</span>
 <span class="c1">#    python3 -m nano_llm.vision.example \</span>
-<span class="c1">#      --model Efficient-Large-Model/VILA-2.7b \</span>
+<span class="c1">#      --model Efficient-Large-Model/VILA1.5-3b \</span>
 <span class="c1">#      --video-input &quot;/data/images/*.jpg&quot; \</span>
 <span class="c1">#      --prompt &quot;Describe the image.&quot; \</span>
 <span class="c1">#      --prompt &quot;Are there people in the image?&quot;</span>
 <span class="c1">#</span>
 <span class="c1"># You can specify multiple prompts (or a text file) to be applied to each image,</span>
 <span class="c1"># and the video inputs can be sequences of files, camera devices, or network streams.</span>
+<span class="c1">#</span>
 <span class="c1"># For example, `--video-input /dev/video0` will capture from a V4L2 webcam. See here:</span>
-<span class="c1">#  https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md</span>
+<span class="c1"># https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md</span>
 <span class="c1">#</span>
 <span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
 <span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span><span class="p">,</span> <span class="n">load_prompts</span>
@@ -137,7 +139,7 @@
     <span class="n">prompts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Describe the image.&quot;</span><span class="p">,</span> <span class="s2">&quot;Are there people in the image?&quot;</span><span class="p">]</span>
     
 <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
-    <span class="n">args</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Efficient-Large-Model/VILA-2.7b&quot;</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Efficient-Large-Model/VILA1.5-3b&quot;</span>
 
 <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">video_input</span><span class="p">:</span>
     <span class="n">args</span><span class="o">.</span><span class="n">video_input</span> <span class="o">=</span> <span class="s2">&quot;/data/images/*.jpg&quot;</span>

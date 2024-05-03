@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Multimodality" href="multimodal.html" />
+    <link rel="next" title="Multimodal" href="multimodal.html" />
     <link rel="prev" title="Models" href="models.html" /> 
 </head>
 
@@ -86,7 +86,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="multimodal.html">Multimodality</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multimodal.html">Multimodal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
@@ -308,7 +308,10 @@ chat entries when the history overflows past the max context window of the model
 <section id="function-calling">
 <h2>Function Calling<a class="headerlink" href="#function-calling" title="Link to this heading"></a></h2>
 <p>You can expose Python functions that the model is able to invoke using its code generation abilities, should you so instruct it to.  A list of functions can be provided to <a class="reference internal" href="#model-api"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></span></a> that will be called inline with the generation, and recieve the output produced so far by the model.</p>
-<p>These functions can then parse the text from the bot to determine if it was called, and execute it accordingly.  Any text returned by these functions will be added to the chat before resuming generation, so the bot is able to utilize them the rest of its reply.</p>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/7lKBJPpasAQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+<br/>
+<br/><p>These functions can then parse the text from the bot to determine if it was called, and execute it accordingly.  Any text returned by these functions will be added to the chat before resuming generation, so the bot is able to utilize them the rest of its reply.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">bot_function()</span></code> decorator automatically wraps Python functions, performs regex matching on the model output, runs them if they were called using Python <code class="docutils literal notranslate"><span class="pre">eval()</span></code>, and returns any results:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span><span class="p">,</span> <span class="n">BotFunctions</span><span class="p">,</span> <span class="n">bot_function</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
@@ -485,7 +488,7 @@ Returns true if all tests passed, otherwise false.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="models.html" class="btn btn-neutral float-left" title="Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="multimodal.html" class="btn btn-neutral float-right" title="Multimodality" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="multimodal.html" class="btn btn-neutral float-right" title="Multimodal" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
