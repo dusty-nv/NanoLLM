@@ -6,15 +6,16 @@
 # You can run it like this (these options will replicate the defaults)
 #
 #    python3 -m nano_llm.vision.example \
-#      --model Efficient-Large-Model/VILA-2.7b \
+#      --model Efficient-Large-Model/VILA1.5-3b \
 #      --video-input "/data/images/*.jpg" \
 #      --prompt "Describe the image." \
 #      --prompt "Are there people in the image?"
 #
 # You can specify multiple prompts (or a text file) to be applied to each image,
 # and the video inputs can be sequences of files, camera devices, or network streams.
+#
 # For example, `--video-input /dev/video0` will capture from a V4L2 webcam. See here:
-#  https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
+# https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
 #
 from nano_llm import NanoLLM, ChatHistory
 from nano_llm.utils import ArgParser, load_prompts
@@ -30,7 +31,7 @@ if not prompts:
     prompts = ["Describe the image.", "Are there people in the image?"]
     
 if not args.model:
-    args.model = "Efficient-Large-Model/VILA-2.7b"
+    args.model = "Efficient-Large-Model/VILA1.5-3b"
 
 if not args.video_input:
     args.video_input = "/data/images/*.jpg"
