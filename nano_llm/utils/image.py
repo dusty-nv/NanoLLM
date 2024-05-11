@@ -44,11 +44,11 @@ def load_image(path):
       ``PIL.Image`` instance
     """
     if path.startswith('http') or path.startswith('https'):
-        logging.debug(f'-- downloading {path}')
+        logging.debug(f'downloading {path}')
         response = requests.get(path)
         image = PIL.Image.open(io.BytesIO(response.content)).convert('RGB')
     else:
-        logging.debug(f'-- loading {path}')
+        logging.debug(f'loading {path}')
         image = PIL.Image.open(path).convert('RGB')
         
     return image
