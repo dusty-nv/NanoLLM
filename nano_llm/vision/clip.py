@@ -43,7 +43,7 @@ class CLIPImageEmbedding():
     
     def __init__(self, model, dtype=torch.float16, crop=False, use_tensorrt=True, **kwargs):
         self.stats = AttributeDict()
-        self.config = AttributeDict(name=model)
+        self.config = AttributeDict(name=model, crop=crop)
         
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.stream = None
@@ -232,6 +232,6 @@ class CLIPImageEmbedding():
 
         return output
         
-    def __call__(self, image, crop=False, hidden_state=None, return_tensors='pt', **kwargs):
-        return self.embed_image(image, crop=crop, hidden_state=hidden_state, return_tensors='pt', **kwargs)
+    def __call__(self, image, hidden_state=None, return_tensors='pt', **kwargs):
+        return self.embed_image(image, hidden_state=hidden_state, return_tensors='pt', **kwargs)
         
