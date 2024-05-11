@@ -12,49 +12,8 @@ If you load a multimodal model (like `liuhaotian/llava-v1.6-vicuna-7b`), you can
 
 ## Code Example
 
-```python
-from nano_llm import NanoLLM, ChatHistory
-
-# load model
-model = NanoLLM.from_pretrained(
-   "meta-llama/Meta-Llama-3-8B-Instruct ",  # HuggingFace repo/model name, or local path
-   api='mlc',                # supported APIs are: mlc, awq, hf
-   api_token='hf_abc123def', # HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)
-   quantization='q4f16_ft'   # q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights
-)
-
-# create the chat history
-chat_history = ChatHistory(model, system_prompt="You are a helpful and friendly AI assistant.")
-
-while True:
-    # enter the user query from terminal
-    print('>> ', end='', flush=True)
-    prompt = input().strip()
-
-    # add user prompt and generate chat tokens/embedding
-    chat_history.append(role='user', msg=prompt)
-    embedding, position = chat_history.embed_chat()
-
-    # generate bot reply
-    reply = model.generate(
-        embedding, 
-        streaming=True, 
-        kv_cache=chat_history.kv_cache,
-        stop_tokens=chat_history.template.stop,
-        max_new_tokens=256,
-    )
-        
-    # append the output stream to the chat history
-    bot_reply = chat_history.append(role='bot', text='')
-    
-    for token in reply:
-        bot_reply.text += token
-        print(token, end='', flush=True)
-            
-    print('\n')
-
-    # save the inter-request KV cache 
-    chat_history.kv_cache = reply.kv_cache
+```{eval-rst}
+.. literalinclude:: ../nano_llm/chat/example.py
 ```
 
 ## Templates
@@ -78,6 +37,14 @@ See `nano_llm/chat/templates.py` for them.  You can also specify a JSON file con
 
 ```{eval-rst}
 .. autoclass:: nano_llm.ChatHistory
+   :members:
+   :special-members: __len__, __getitem__, __delitem__
+```
+
+## Chat Message
+
+```{eval-rst}
+.. autoclass:: nano_llm.ChatMessage
    :members:
 ```
 
@@ -146,7 +113,7 @@ while True:
         print(token, end='\n\n' if reply.eos else '', flush=True)
 
     # save the final output
-    chat_history.append(role='bot', text=reply.text)
+    chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
     chat_history.kv_cache = reply.kv_cache
 ```
    

@@ -155,11 +155,12 @@ class NanoLLM():
         Returns:
           The string containing the decoded text.
         """
-        return self.model.tokenizer.decode(tokens, skip_special_tokens=skip_special_tokens, **kwargs)
+        return self.tokenizer.decode(tokens, skip_special_tokens=skip_special_tokens, **kwargs)
         
-    def embed_text(self, text, add_special_tokens=False, use_cache=False, return_tensors='np', **kwargs):
+    def embed_text(self, text, add_special_tokens=False, use_cache=False, return_tensors='np', return_tokens=False, **kwargs):
         """
-        Tokenize the string with :meth:`NanoLLM.tokenize` and return its embedding as computed by :meth:`NanoLLM.embed_tokens`
+        Tokenize the string with :meth:`NanoLLM.tokenize` and return its embedding as computed by :meth:`NanoLLM.embed_tokens`.
+        Note that if ``model.has_embed=False``, then None will be returned for the embedding and the tokens should be used instead.
         
         Args:
           text (str): the text to tokenize and embed.
@@ -169,18 +170,36 @@ class NanoLLM():
                             that are relatively static, but probably shouldn't be used for dynamic user inputs that are unlikely
                             to be re-used again (leading to unnecessarily increased memory usage).  The default is false.
           return_tensors (str): ``'np'`` to return a `np.ndarray` or ``'pt'`` to return a `torch.Tensor`
+          return_tokens (bool): if True, then the tokens will also be returned in addition to the embedding.
           kwargs:  additional arguments forwarded to :meth:`NanoLLM.tokenize` and the HuggingFace `transformers.AutoTokenizer <https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer>`_ 
           
         Returns:
           The embedding with the tensor type as indicated by `return_tensors` (either `'np'` for `np.ndarray`
-          or `'pt'` for `torch.Tensor`) with ``float32`` data.
+          or `'pt'` for `torch.Tensor`) with ``float32`` data.  If ``return_tokens=True``, then an (embedding, tokens)
+          tuple will be returned instead of only the embeddings. If ``model.has_embed=False`, then the embedding will be None.
         """
-        # TODO migrate this from models.MLC and have the text cache in this class for all model APIs
-        raise NotImplementedError("embed_text() not implemented for this model")
+        result = None
         
+        if use_cache:
+            result = self.embed_cache.get(text)
+            logging.debug(f'text embedding cache hit `{text}`'.replace('\n', '\\n'))
+            
+        if result is None:
+            tokens = self.tokenize(text, add_special_tokens=add_special_tokens, return_tensors=return_tensors, **kwargs)
+            embed = self.embed_tokens(tokens, return_tensors=return_tensors) if self.has_embed else None
+            result = (embed, tokens)
+
+        if use_cache:
+            self.embed_cache[text] = result
+            
+        if return_tokens:
+            return result
+        else:
+            return result[0]
+
     def embed_tokens(self, tokens, return_tensors='np', **kwargs):
         """
-        Compute the token embedding and return its tensor.
+        Compute the token embedding and return its tensor.  This will raise an exception if ``model.has_embed=False``.
         
         Args:
           tokens (list[int], np.ndarray, torch.Tensor): the array of token ID's
@@ -216,7 +235,7 @@ class NanoLLM():
         embedding = embedding.to(dtype=torch.float16)
         embedding = self.mm_projector(embedding if 'mm_projector_cfg' in self.config else embedding[:, 1:])
 
-        logging.debug(f"image_embedding  shape={embedding.shape}  dtype={embedding.dtype}  device={embedding.device}")
+        logging.debug(f"image embedding  shape={embedding.shape}  dtype={embedding.dtype}  device={embedding.device}")
         
         if return_dict:
             output.embedding = embedding
@@ -255,6 +274,12 @@ class NanoLLM():
         
         #: True if this is a multimodal vision/language model.
         self.has_vision = self.config_vision()
+        
+        #: True if this model has a separate text embedding layer for embed_text()
+        self.has_embed = False
+        
+        # token and embedding caches
+        self.embed_cache = {}
         
     def patch_config(self, **kwargs):
         # Update the original HF model's config.json with different settings from the provided kwargs.

@@ -66,11 +66,11 @@ while True:
 
     # add the latest user prompt to the chat history
     if args.automatic_generation or user_prompt.lower() != 'generate':
-        entry = chat_history.append(role='user', msg=user_prompt)
+        message = chat_history.append(role='user', msg=user_prompt)
 
     # images should be followed by text prompts
     if args.automatic_generation:
-        if 'image' in entry and 'text' not in entry:
+        if message.is_type('image'):
             logging.debug("image message, waiting for user prompt")
             continue
     elif user_prompt.lower() != 'generate':
@@ -82,9 +82,6 @@ while True:
         wrap_tokens=args.wrap_tokens,
         return_tokens=not model.has_embed,
     )
-    
-    if logging.getLogger().isEnabledFor(logging.DEBUG):
-        logging.debug(f"adding embedding shape={embedding.shape} position={position}")
 
     # generate bot reply
     reply = model.generate(
@@ -117,5 +114,6 @@ while True:
         print_table(model.stats)
         print('')
     
-    chat_history.append(role='bot', text=reply.text) # save the output
-    chat_history.kv_cache = reply.kv_cache           # save the KV cache 
+    # save the output and kv cache
+    chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
+    chat_history.kv_cache = reply.kv_cache

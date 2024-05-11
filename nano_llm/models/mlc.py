@@ -18,8 +18,9 @@ import numpy as np
 
 from tvm.runtime.relax_vm import VirtualMachine
 from transformers import AutoTokenizer, AutoConfig
+from cuda.cudart import cudaMemcpy, cudaMemcpyKind, cudaDeviceSynchronize
 
-from nano_llm import NanoLLM, StreamingResponse
+from nano_llm import NanoLLM, StreamingResponse, KVCache
 from nano_llm.utils import AttributeDict, ends_with_token
 
 
@@ -227,8 +228,6 @@ class MLCModel(NanoLLM):
         # create multithreading
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._run, daemon=True).start()        
-        self.embedding_cache = {}
-
     
     @staticmethod
     def quantize(model, config, method='q4f16_ft', max_context_len=None, output='/data/models/mlc/dist', **kwargs):
@@ -279,72 +278,10 @@ class MLCModel(NanoLLM):
         
         return quant_path
         
-    def get_kv_cache_size(self, kv_cache, length=None):
-        """
-        Calculate the size (in bytes) that the KV cache consumes for the given token length
-        (or by default for the maximum window size if length is None)
-        """
-        size = 0
-        for n in range(len(kv_cache)):
-            view = self._kv_cache_view(kv_cache[n])
-            if length is None:
-                length = view.shape[0]
-            size += length * view.shape[1] * view.shape[2] * np.dtype(view.dtype).itemsize
-        return size
-    
-    def create_kv_cache(self, use_cache=True):
-        """
-        Allocate or return a free KV cache available to use. If use_cache is true, then an existing
-        KV cache that isn't in use is returned, because KV caches take ~100ms to allocate.
-        Otherwise, a new cache is allocated and returned (which can take considerable time)
-        """
-        if use_cache:
-            for kv_cache in self.kv_caches:
-                if sys.getrefcount(kv_cache) <= 3:  # existing references from this call, loop, and list
-                    self._kv_cache_clear(kv_cache)  # clearing is much faster than allocating (<0.1ms)
-                    return kv_cache
-
-        time_begin = time.perf_counter()
-        
-        if self.kv_cache_paged:
-            kv_cache = self._kv_cache_create(
-                tvm.runtime.ShapeTuple([1]),  # max sequences
-                tvm.runtime.ShapeTuple([self.config.max_length]),  # max window size
-                tvm.runtime.ShapeTuple([self.config.prefill_chunk_size]),  # prefill chunk size
-                tvm.runtime.ShapeTuple([16])  # page size
-            )
-            self._kv_cache_add_sequence(kv_cache, 0)
-        else:
-            kv_cache = self._kv_cache_create()
-        
-        logging.debug(f"allocated new KV cache in {(time.perf_counter()-time_begin)*1000:.1f} ms  (existing cache refcounts={[sys.getrefcount(k) for k in self.kv_caches]})")
-        self.kv_caches.append(kv_cache)
-        return kv_cache
-        
-    def embed_text(self, text, add_special_tokens=False, use_cache=False, return_tensors='np', **kwargs):  # pt, np, tvm
-        if not self.has_embed:
-            raise RuntimeError(f"{self.config.name} does not have embed() in {self.module_path}")
-            
-        if use_cache:
-            embedding = self.embedding_cache.get(text)
-        else:
-            embedding = None
-            
-        if embedding is None:
-            tokens = self.tokenize(text)
-            embedding = self.embed_tokens(tokens, return_tensors=return_tensors)
-            self.device = embedding.device
-            #if use_cache: # BUG for some reason this makes _decode() errors
-            self.embedding_cache[text] = embedding
-        else:
-            logging.debug(f'text embedding cache hit ({text})')
-         
-        if return_tensors == 'np':
-            embedding = embedding.numpy()
-            
-        return embedding
-    
     def embed_tokens(self, tokens, return_tensors='np', **kwargs):  # pt, np, tvm
+        """
+        Generate embedding from token IDs
+        """
         if not self.has_embed:
             raise RuntimeError(f"{self.config.name} does not have embed() in {self.module_path}")
             
@@ -363,6 +300,11 @@ class MLCModel(NanoLLM):
         time_begin = time.perf_counter()
         embedding = self._embed(tokens, self.params)
         self.stats.embed_time = time.perf_counter() - time_begin
+        #self.device = embedding.device
+        
+        if return_tensors == 'np':
+            embedding = embedding.numpy()
+            
         return embedding
         
     def generate(self, inputs, streaming=True, functions=None, **kwargs):
@@ -472,7 +414,7 @@ class MLCModel(NanoLLM):
         
         # create a kv_cache if needed
         if stream.kv_cache is None:
-            stream.kv_cache = AttributeDict(state=self.create_kv_cache(), num_tokens=0)
+            stream.kv_cache = MLCKVCache(self)
 
         stream.kv_cache.num_tokens += input.shape[1]
 
@@ -523,20 +465,12 @@ class MLCModel(NanoLLM):
                 output = prefill(self.embed_tokens(tokens, return_tensors='tvm'), stream.kv_cache)
                 continue
                 
-            stream.event.set()
-
-            if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
-                break
-
-            if len(stream.tokens) >= max_new_tokens:
-                break
-                
-            if stream.stopping or stream.stopped:
-                break
-
             stream.kv_cache.num_tokens += 1
             self.stats.output_tokens += 1
 
+            stream.event.set()
+
+            # decode the next token
             if self.kv_cache_paged:
                 self._kv_cache_begin_forward(
                     stream.kv_cache.state, 
@@ -556,6 +490,18 @@ class MLCModel(NanoLLM):
                     tvm.runtime.ShapeTuple([stream.kv_cache.num_tokens]), stream.kv_cache.state, self.params
                 )
 
+            # stop generation on EOS tokens
+            if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
+                break
+
+            # add EOS token on early stop
+            if len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
+                stream.add_tokens(self.tokenizer.eos_token_id)
+                stream.kv_cache.num_tokens += 1
+                self.stats.output_tokens += 1
+                prefill(self.embed_tokens([self.tokenizer.eos_token_id], return_tensors='tvm'), stream.kv_cache)
+                break
+
         time_end_decode = time.perf_counter()
         
         stream.stopped = True
@@ -567,15 +513,160 @@ class MLCModel(NanoLLM):
         self.stats.decode_rate = self.stats.output_tokens / self.stats.decode_time
        
     def _sample(self, logits, do_sample, temperature, top_p, repetition_penalty):
-        # TODO implement repetition penalty
-        # https://github.com/mlc-ai/mlc-llm/blob/6e40c21fb6433aeffe50ee321f1b589ef846b6fb/cpp/llm_chat.cc#L1044
+        """
+        Perform token sampling (TODO implement repetition penalty)
+        https://github.com/mlc-ai/mlc-llm/blob/6e40c21fb6433aeffe50ee321f1b589ef846b6fb/cpp/llm_chat.cc#L1044
+        """
         if do_sample:
             return self._sample_top_p_from_logits(logits, top_p, temperature, random.random())
         else:
             return np.argmax(logits.numpy()) #, axis=-1)
 
     def _run(self):
+        """
+        Run the generation requests thread.
+        """
         while True:
             stream = self.queue.get()
             self._generate(stream)
+        
+    def _create_kv_cache(self, use_cache=True):
+        """
+        Allocate or return a free KV cache available to use. If use_cache is true, then an existing
+        KV cache that isn't in use is returned, because KV caches take ~100ms to allocate.
+        Otherwise, a new cache is allocated and returned (which can take considerable time)
+        """
+        if use_cache:
+            for kv_cache in self.kv_caches:
+                if sys.getrefcount(kv_cache) <= 3:  # existing references from this call, loop, and list
+                    self._kv_cache_clear(kv_cache)  # clearing is much faster than allocating (<0.1ms)
+                    return kv_cache
+
+        time_begin = time.perf_counter()
+        
+        if self.kv_cache_paged:
+            kv_cache = self._kv_cache_create(
+                tvm.runtime.ShapeTuple([1]),  # max sequences
+                tvm.runtime.ShapeTuple([self.config.max_length]),  # max window size
+                tvm.runtime.ShapeTuple([self.config.prefill_chunk_size]),  # prefill chunk size
+                tvm.runtime.ShapeTuple([16])  # page size
+            )
+            self._kv_cache_add_sequence(kv_cache, 0)
+        else:
+            kv_cache = self._kv_cache_create()
+        
+        logging.debug(f"allocated new KV cache in {(time.perf_counter()-time_begin)*1000:.1f} ms  (existing cache refcounts={[sys.getrefcount(k) for k in self.kv_caches]})")
+        self.kv_caches.append(kv_cache)
+        return kv_cache    
+
+
+class MLCKVCache(KVCache):
+    """
+    Interface for storing & manipulating the chat's KV cache.
+    """
+    def __init__(self, model, state=None):
+        super().__init__()
+        
+        self.model = model
+        self.state = state
+        
+        if not self.state:
+            self.state = self.model._create_kv_cache()
+            
+        self.num_tokens = 0
+        
+        self.tvm = None    # list of tvm.ndarray
+        self.torch = None  # list of torch.cuda.Tensor
+        self.cuda = None   # list of cuda pointers
+        
+    def __len__(self):
+        """
+        Return the current length of the cache in terms of tokens or embedding positions.
+        """
+        return self.num_tokens
+    
+    def pop(self, tokens):
+        """
+        Remove the given number of tokens from the end of the cache.
+        """
+        if self.num_tokens - tokens < 0:
+            raise ValueError(f"tried to pop {tokens} from the KV cache, but the cache only had {self.num_tokens} in it")
+            
+        logging.debug(f"popping {tokens} tokens from KV cache (num_tokens={self.num_tokens})")
+        
+        self.model._kv_cache_pop(self.state, tokens)
+        self.num_tokens = self.num_tokens - tokens
+    
+    def remove(self, start, stop, sync=True):
+        """
+        Remove a range of tokens from the cache, from the start index (inclusive) to the stop index (exclusive)
+        """
+        self.map(cuda=True)
+        
+        remove_tokens = stop - start
+        
+        logging.debug(f"removing {remove_tokens} tokens from KV cache at [{start}, {stop})  (num_tokens={self.num_tokens})")
+        
+        for n in range(len(self.torch)):
+            ptr = self.cuda[n]
+            tvm = self.tvm[n]
+            cache_size = tvm.shape[1] * tvm.shape[2] * np.dtype(tvm.dtype).itemsize
+            dst_tokens = start
+            src_tokens = stop
+            
+            #if n == 0:
+            #    print(f" layer {n} - shape={tvm.shape}  size={cache_size}")
+            
+            while src_tokens < self.num_tokens:
+                num_tokens = min(remove_tokens, self.num_tokens - src_tokens)
+
+                #if n == 0:
+                #    print(f"   dst_tokens={dst_tokens}  src_tokens={src_tokens}  copy_tokens={num_tokens}")
+                
+                cudaMemcpy(
+                    ptr + dst_tokens * cache_size,
+                    ptr + src_tokens * cache_size,
+                    num_tokens * cache_size,
+                    cudaMemcpyKind.cudaMemcpyDeviceToDevice
+                )
+                
+                src_tokens = src_tokens + num_tokens
+                dst_tokens = dst_tokens + num_tokens
+                
+        self.pop(remove_tokens)
+        
+        if sync:
+            cudaDeviceSynchronize()
+               
+    def get_size(self, length=None):
+        """
+        Calculate the size (in bytes) that the KV cache consumes for the given token length
+        (or by default for the maximum window size if length is None)
+        """
+        self.map(tvm=True)
+        size = 0
+        for x in self.tvm:
+            if length is None:
+                length = x.shape[0]
+            size += length * x.shape[1] * x.shape[2] * np.dtype(x.dtype).itemsize
+        return size
+        
+    def map(self, tvm=False, pytorch=False, cuda=False):
+        """
+        Allocate the mappings needed to access the KV cache for performing various manipulations.
+        """
+        if cuda:
+            pytorch = True
+            
+        if pytorch:
+            tvm = True
+            
+        if tvm and not self.tvm:
+            self.tvm = [self.model._kv_cache_view(x) for x in self.state]
+            
+        if pytorch and not self.torch:
+            self.torch = [torch.utils.dlpack.from_dlpack(x.to_dlpack()) for x in self.tvm]
+            
+        if cuda and not self.cuda:
+            self.cuda = [x.data_ptr() for x in self.torch]
             

@@ -85,7 +85,7 @@ while True:
         for token in reply:
             cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
-        chat_history.append(role='bot', text=reply.text)
+        chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
         chat_history.kv_cache = reply.kv_cache
         
     chat_history.reset()

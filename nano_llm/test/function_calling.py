@@ -147,5 +147,5 @@ while True:
     #print_table(model.stats)
     #print('')
     
-    chat_history.append(role='bot', text=reply.text) # save the output
+    chat_history.append(role='bot', text=reply.text, tokens=reply.tokens) # save the output
     chat_history.kv_cache = reply.kv_cache           # save the KV cache 

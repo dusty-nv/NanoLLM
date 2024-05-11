@@ -157,7 +157,7 @@ class ChatQuery(Plugin):
             raise TypeError(f"ChatQuery plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
 
         # images should be followed by text prompts
-        if 'image' in chat_history[-1] and 'text' not in chat_history[-1]:
+        if chat_history[-1].is_type('image'):
             logging.debug("image message, waiting for user prompt")
             return
         
@@ -191,7 +191,7 @@ class ChatQuery(Plugin):
         self.output(self.stream, ChatQuery.OutputStream)
 
         # output the generated tokens on channel 0
-        bot_reply = chat_history.append(role='bot', text='')
+        bot_reply = chat_history.append(role='bot', text='', cached=True)
         words = ''
         
         for token in self.stream:
@@ -202,6 +202,7 @@ class ChatQuery(Plugin):
             # sync the reply with the entire text, so that multi-token
             # unicode unicode sequences are detokenized and decoded together
             bot_reply.text = self.stream.text
+            bot_reply.tokens = self.stream.tokens
             
             # output stream of raw tokens
             self.output(token, ChatQuery.OutputToken)
@@ -221,7 +222,8 @@ class ChatQuery(Plugin):
             self.output(words, ChatQuery.OutputWords)
             
         bot_reply.text = self.stream.text
-        self.history.kv_cache = self.stream.kv_cache
+        bot_reply.tokens = self.stream.tokens
+        chat_history.kv_cache = self.stream.kv_cache
         self.stream = None
         
         # output the final generated text on channel 2

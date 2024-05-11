@@ -43,5 +43,5 @@ while True:
         termcolor.cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
     # save the final output
-    chat_history.append(role='bot', text=reply.text)
+    chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
     chat_history.kv_cache = reply.kv_cache

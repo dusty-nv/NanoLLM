@@ -95,3 +95,11 @@ These include fine-tuned derivatives that share the same network architecture as
    :special-members: __next__
 ```
 
+## KV Cache
+
+```{eval-rst}
+.. autoclass:: nano_llm.KVCache
+   :members:
+   :special-members: __len__
+```
+

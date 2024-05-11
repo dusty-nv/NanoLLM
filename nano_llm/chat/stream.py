@@ -36,7 +36,7 @@ class StreamingResponse():
         #: the :class:`NanoLLM` model instance being used to generate the output
         self.model = model
         
-        #: the KV cache used by this request
+        #: the :class:`KVCache` used by this request
         self.kv_cache = kwargs.get('kv_cache', None)
         
         #: set if the user requested early termination
@@ -56,11 +56,19 @@ class StreamingResponse():
         Wait until the model generates more output, and return the new text (only the delta)
         """
         if self.stopped:
+            '''
+            # early-stop EOS token is now added inside LLM APIs
             stop_tokens = self.kwargs.get('stop_tokens', [self.model.tokenizer.eos_token_id])
             if not ends_with_token(self.tokens, stop_tokens, self.model.tokenizer):
                 self.add_tokens(self.model.tokenizer.eos_token_id) # add EOS if necessary
                 return self._pop_delta()
-            raise StopIteration
+            '''
+            delta = self._pop_delta()
+            
+            if delta:
+                return delta
+            else:
+                raise StopIteration
             
         self.event.wait()
         self.event.clear()
@@ -95,7 +103,8 @@ class StreamingResponse():
             
         # detokenize the entire reply on each new output token, because multiple tokens can
         # combine with each other, changing the previous text (like with long words and unicode)
-        message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False) #, clean_up_tokenization_spaces=None
+        message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+        
         self.delta = self.delta + message[len(self.text):]
         self.text = message
 

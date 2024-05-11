@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-
 from .nano_llm import NanoLLM
 
 from .chat.stream import StreamingResponse
-from .chat.history import ChatHistory, ChatEntry
+from .chat.message import ChatMessage
+from .chat.history import ChatHistory
+from .chat.kv_cache import KVCache
 from .chat.templates import ChatTemplate, ChatTemplates, StopTokens
 
 from .agent import Agent, Pipeline

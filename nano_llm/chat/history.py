@@ -1,69 +1,32 @@
 #!/usr/bin/env python3
 import os
 import json
-import inspect
 import logging
 import numpy as np
 
+from .message import ChatMessage
 from .templates import ChatTemplate, ChatTemplates
-from ..utils import AttributeDict, ImageExtensions, ImageTypes, replace_text, print_table
-
-
-def ChatEntry(role='user', msg=None, **kwargs):
-    """
-    Create a chat entry consisting of a text message, image, ect as input.  
-    
-    Args:
-    
-      role (str): The chat's turn template to apply, typically 'user' or 'bot'.
-                    The role should have a corresponding entry in the active ChatTemplate.
-                    
-      msg (str|image): If a string, it should either contain text or a path
-                         to a txt, json, or image file that will be loaded.
-
-                         If an image, can be a np.ndarray, torch.Tensor, or PIL.Image.
-                                  
-                         If a dict, it will be passed through as the ChatEntry.
-                                  
-                         The embedding type of 'message' will attempt to be automatically
-                         determined as text/image/ect, but if not possible, you should
-                         explicitly set its type by passing it in via kwargs instead.
-     
-      kwargs: For messages whose embedding type is unable to be determined automatically, or to create
-              a chat entry containing multiple message types, pass them in via kwargs like this::
-       
-                 entry = ChatEntry(role='user', text='abc', image='xyz.jpg')
-         
-    Returns:
-    
-       A dict that has keys for 'role', 'text', 'image', ect.  This will return an AttributeDict,
-       so you can access it like entry.role, entry.text, and so on.
-    """    
-    entry = AttributeDict(role=role, **kwargs)
-    
-    if msg is not None:
-        entry[ChatHistory.embedding_type(msg)] = msg
-        
-    return entry
-    
-    
+from ..utils import AttributeDict
+                        
 class ChatHistory():
     """
     Multimodal chat history that can contain a mix of media including text/images.
     
-    ChatHistory objects can be indexed like a list of chat entry dicts,
-    where each entry dict may have keys for ``'text', 'image', 'role'``, ect::
+    ChatHistory objects can be indexed like a list to access its messages,
+    where each :class:`ChatMessage` can have a different type of content::
     
        chat_history[n]  # will return the n-th chat entry
 
-    Each type of media has a different embedding function (e.g. LLM's typically 
+    Each type of media has an associated embedding function (e.g. LLM's typically 
     do text token embedding internally, and images use CLIP + projection layers). 
     From these, it assembles the embedding for the entire chat as input to the LLM.
     
     It uses templating to add the required special tokens as defined by different
     model architectures.  In normal 2-turn chat, there are 'user' and 'bot' roles
     defined, but arbitrary roles can be added, each with their own template.
-    The system prompt can also be configured through the chat template.
+    
+    The system prompt can also be configured through the chat template
+    and by setting the :attr:`ChatHistory.system_prompt` property.
     """
     def __init__(self, model, chat_template=None, system_prompt=None, **kwargs):
         """
@@ -81,7 +44,10 @@ class ChatHistory():
            print_stats (bool) -- if True, generation performance will be printed to the terminal after EOS.
                                  This also gets enabled by default if --debug or --verbose is used.
         """
-        self.model = model
+        self.model = model 
+        self.messages = None
+        
+        #: The :class:`KVCache` from :meth:`NanoLLM.generate()` used to store the model state.
         self.kv_cache = None
         
         if not chat_template:
@@ -116,12 +82,6 @@ class ChatHistory():
         if system_prompt:
             self.template['system_prompt'] = system_prompt
 
-        self.embedding_functions = {}
-        
-        self.register_embedding('text', self.embed_text)
-        self.register_embedding('dict', self.embed_dict)
-        self.register_embedding('image', self.embed_image)
-    
         self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
         
         self.reset()
@@ -130,80 +90,150 @@ class ChatHistory():
     def num_tokens(self):
         """
         Return the number of tokens used by the chat so far.
-        embed_chat() needs to have been called for this to be upated,
+        :meth:`embed_chat()` needs to have been called for this to be upated,
         because otherwise the input wouldn't have been tokenized yet.
         """
         position = 0
-        for n, entry in enumerate(self.entries):
-            keys = self.valid_entry_keys(entry)
-            for key in keys:
-                embed_key = key + '_embedding'
-                if embed_key in entry:
-                    position += entry[embed_key].shape[1]
+        for msg in self.messages:
+            position += msg.num_tokens
         return position
         
     def __len__(self):
         """
-        Returns the number of entries in the chat history
+        Returns the number of messages in the chat history
         """
-        return len(self.entries)
+        return len(self.messages)
         
-    def __getitem__(self, entry):
+    def __getitem__(self, key):
         """
-        Return the n-th chat entry with the subscript indexing operator
+        Return the n-th chat message with the subscript indexing operator
         """
-        return self.entries[entry]
+        return self.messages[key]
         
+    def __delitem__(self, key):
+        """
+        Remove one or more messages from the chat history::
+        
+           del chat_history[-2]   # remove the second-to-last entry
+           del chat_history[-2:]  # pop the last 2 entries
+           del chat_history[1:]   # remove all entries but the first
+           
+        This will also update the KV cache and alter the bot memory.
+        """
+        if isinstance(key, int):
+            start = key
+            stop = key + 1
+        elif isinstance(key, ChatMessage):
+            start = self.messages.index(key)
+            stop = start + 1
+        elif isinstance(key, slice):
+            start = key.start
+            stop = key.stop
+        else:
+            raise TypeError(f"The `del chat_history[*]` operator expects an int, ChatMessage, or slice (was '{type(key)}')")
+        
+        if start is None:
+            start = 0
+            
+        if stop is None:
+            stop = len(self.messages)
+      
+        self.remove(start, stop)
+     
     def append(self, role='user', msg=None, **kwargs):
         """
         Add a chat entry consisting of a text message, image, ect.
-        See the ChatEntry() function for description of arguments.
-        This can also accept an existing ChatEntry dict as msg.
+        See the :class:`ChatMessage` class for description of arguments.
+        This can also accept an existing :class:`ChatMessage` set to ``msg``.
         """
-        if isinstance(msg, dict):
-            self.entries.append(msg)
+        if isinstance(msg, ChatMessage):
+            self.messages.append(msg)
         else:
-            self.entries.append(ChatEntry(role, msg, **kwargs))
-        return self.entries[-1]
+            self.messages.append(ChatMessage(role, msg=msg, **kwargs))
+            
+        self.reindex()
+        return self.messages[-1]
 
-    def reset(self, add_system_prompt=True, wrap_tokens=None):
+    def pop(self, count):
+        """
+        Remove the last N messages from the chat and KV cache.
+        """
+        num_tokens = 0
+        
+        for n in range(0, count):
+            num_tokens += self.messages[len(self.messages)-n-1].num_tokens
+            
+        if self.kv_cache:
+            self.kv_cache.pop(num_tokens)
+            
+        del self.messages[-count:]
+        self.reindex()
+
+    def remove(self, start, stop=None):
+        """
+        Remove the chat entries from the start (inclusive) to stop (exclusive) indexes.
+        If stop is not specified, then only the single entry at the start index will be removed::
+        
+          chat_history.remove(0)    # remove the first chat entry
+          chat_history.remove(0,2)  # remove the first and second chat entries
+          chat_history.remove(-1)   # remove the last chat entry
+          chat_history.remove(-2,0) # remove the last two entries
+          
+        This will also update the KV cache and alter the bot's memory (potentially destructively)
+        """
+        num_messages = len(self.messages)
+        
+        if stop is None:
+            stop = start + 1
+             
+        if start < 0:
+            start += num_messages
+            
+        if stop <= 0:
+            stop += num_messages
+
+        if stop > num_messages:
+            raise ValueError(f"remove index {stop} exceeded the number of messages ({num_messages})")
+            
+        if stop == num_messages:
+            return self.pop(num_messages - start)
+       
+        if self.kv_cache:
+            self.kv_cache.remove(self.messages[start].start_token, self.messages[stop].start_token)
+            
+        del self.messages[start:stop]       
+        self.reindex()
+       
+    def reset(self, add_system_prompt=True, use_cache=True, wrap_tokens=None):
         """
         Reset the chat history, and optionally add the system prompt to the new chat.
+        If ``use_cache=True``, then the system prompt tokens/embedding will be cached.
+        If `wrap_tokens` is set, then the most recent N tokens from the chat will be kept.
         """
         if wrap_tokens:
             wrap_entry = self.find_wrap_entry(wrap_tokens)
             if wrap_entry:
-                logging.warning(f"Wrapping chat to keep the most recent {len(self.entries)-wrap_entry} messages")
-                self.entries = self.entries[wrap_entry:]
+                logging.warning(f"Wrapping chat to keep the most recent {len(self.messages)-wrap_entry} messages")
+                self.messages = self.messages[wrap_entry:]
             else:
                 logging.warning(f"Chat history overflow couldn't find previous chat entry to wrap to (clearing chat)")
-                self.entries = []
+                self.messages = []
         else:
-            self.entries = []
+            self.messages = []
 
         self.kv_cache = None
         self.image_embedding = None
         
         if add_system_prompt and 'system' in self.template:
-            self.append(role='system', text=self.system_prompt)
+            self.append(role='system', text=self.system_prompt, use_cache=use_cache)
      
     def to_list(self):
         """
         Serialize the history to a list of dicts, where each dict is a chat entry
         with the non-critical keys removed (suitable for web transport, ect)
         """
-        history = []
-        
-        for entry in self.entries:
-            keys = self.valid_entry_keys(entry, is_embedding=False)
-            
-            if not keys:
-                continue
-                
-            history.append({key: entry[key] for key in keys})
-            
-        return history
-        
+        return [{msg.type : msg.content} for msg in self.messages]
+
     @property
     def system_prompt(self):
         """
@@ -223,170 +253,41 @@ class ChatHistory():
             
         self.template['system_prompt'] = instruction
         self.reset()
-        
-    def embed(self, input, type=None, **kwargs):
-        """
-        Get the embedding for a general input (text, image, ect)
-        
-        The embedding type is typically 'text', 'image', and will attempted
-        to be determined automatically if it isn't explicitly specified. 
-        Paths that end in image extensions are assumed to be an image, 
-        otherwise strings are treated as text.
-        
-        The kwargs are passed through to the input type's embedding function.
-        """
-        if not type:
-            type = self.embedding_type(input)
-            
-        if type not in self.embedding_functions:
-            raise ValueError(f"type '{type}' did not have an embedding registered")
-            
-        return self.embedding_functions[type].func(input, **kwargs)
-        
-    def embed_text(self, text, template=None, use_cache=False, return_tokens=False, **kwargs):
-        """
-        Get the text embedding after applying the template for 'user', 'bot', ect.
-        """
-        if template:
-            text = replace_text(template, {'${MESSAGE}': text})
-
-        if return_tokens:
-            embedding = self.model.tokenize(text)
-        else:
-            embedding = self.model.embed_text(text, use_cache=use_cache)
-            
-        logging.debug(f"embedding text {embedding.shape} {embedding.dtype} -> ```{text}```".replace('\n', '\\n'))
-        
-        return embedding
-    
-    def embed_dict(self, dict, **kwargs):
-        """
-        Get the embedding of a chat entry dict that can contain multiple embedding types.
-        """
-        embeddings = []
-        
-        for key, value in dict.items():
-            if value is None:
-                continue
-            if key in self.embedding_functions:
-                embeddings.append(self.embed(value, type=key, **kwargs))
-                
-        if len(embeddings) == 0:
-            raise ValueError("dict did not contain any entries with valid embedding types")
-        elif len(embeddings) == 1:
-            return embeddings[0]
-        else:
-            return np.concatenate(embeddings, axis=1)
-                
-    def embed_image(self, image, template=None, **kwargs):
-        """
-        Given an image, extract features and perfom the image embedding.
-        This uses the CLIP encoder and a projection model that
-        maps it into the embedding space the model expects.
-        
-        This is only applicable to vision VLM's like Llava and Mini-GPT4,
-        and will throw an exception if model.has_vision is False.
-        """
-        embeddings = [] 
-
-        if template: # get the text embedding for the template prefix
-            template = template.split("${MESSAGE}")[0]
-            
-            if len(template) > 0:
-                embeddings.append(self.embed_text(template, use_cache=True))
-                logging.debug(f"image template:  ```{template}```")
-
-        image_outputs = self.model.embed_image(image, return_tensors='np', return_dict=True)
-        self.image_embedding = image_outputs.image_embeds
-        
-        embeddings.append(image_outputs.embedding)
-        embeddings.append(self.embed_text('\n', use_cache=True))
-        
-        embeddings = np.concatenate(embeddings, axis=1)
-        
-        if self.print_stats:
-            print_table(self.model.vision.stats)
-            
-        logging.debug(f"embedding image {embeddings.shape} {embeddings.dtype}")
-        
-        return embeddings
 
     def embed_chat(self, use_cache=True, max_tokens=None, wrap_tokens=None, **kwargs):
         """
         Assemble the embedding of either the latest or entire chat.
         
-        If use_cache is true (the default), and only the new embeddings will be returned.
-        If use_cache is set to false, then the entire chat history will be returned.
+        If ``use_cache=True`` (the default), and only the new embeddings will be returned.
+        If ``use_cache=False``, then the entire chat history will be returned.
         
-        The kwargs are passed to the embedding functions - for example, return_tokens=True
-        will return tokens for the chat rather than embeddings.
-        
-        This function returns an (embedding, position) tuple, where the embedding array
+        This function returns an ``(embedding, position)`` tuple, where the embedding array
         contains the new embeddings (or tokens) from the chat, and position is the current
         overall position in the history (up to the model's context window length)
         
-        If the number of tokens in the chat history exceeds the length given in `max_tokens` argument
+        If the number of tokens in the chat history exceeds the length given in ``max_tokens`` argument
         (which is typically the model's context window, minus the max generation length),
-        then the chat history will drop all but the latest `wrap_tokens`, starting with a user prompt.
+        then the chat history will drop all but the latest ``wrap_tokens``, starting with a user prompt.
         If `max_tokens` is provided but `wrap_tokens` is not, then the overflow tokens will be truncated.
         """
         embeddings = []
         position = 0
-        
-        num_user_prompts = 0
-        open_user_prompt = False
+      
+        for n, msg in enumerate(self.messages):
+            if use_cache:
+                if msg.cached:
+                    position += msg.num_tokens
+                else:
+                    embeddings.append(msg.embed())
+                    use_cache = False  # all entries after this need to be included
+            else:
+                embeddings.append(msg.embed())
+              
+            if not use_cache and logging.getLogger().isEnabledFor(logging.DEBUG):
+                logging.debug(f"chat msg {n}  role={msg.role}  type={msg.type}  tokens={msg.num_tokens}  `{msg.template if msg.template else msg.content if isinstance(msg.content, str) else ''}`".replace('\n', '\\n'))
 
-        for i, entry in enumerate(self.entries):
-            keys = self.valid_entry_keys(entry)
-            
-            if not keys:
-                logging.warning(f"chat entry {i} had no valid/registered keys ({entry.keys()})")
-                continue
-                
-            for key in keys:
-                if 'first' in self.template and entry['role'] == 'user' and num_user_prompts == 0:
-                    role_template = self.template['first']  # if the first non-system message has a different template
-                else:
-                    if entry.role not in self.template:
-                        raise RuntimeError(f"chat template {self.template_name} didn't have an entry for role={entry.role}")
-                    role_template = self.template[entry.role]
-                    if open_user_prompt:
-                        role_template = role_template[role_template.find('${MESSAGE}'):] # user prompt needs closed out from an image
-                        open_user_prompt = False
-                
-                embed_key = key + '_embedding'
-                cached = embed_key in entry and use_cache
-                
-                if logging.getLogger().isEnabledFor(logging.DEBUG) and not cached:
-                    logging.debug(f"processing chat entry {i}  role='{entry.role}' template='{role_template}' open_user_prompt={open_user_prompt} cached={'true' if cached else 'false'} {key}='{entry[key] if isinstance(entry[key], str) else type(entry[key])}'".replace('\n', '\\n'))
-                
-                if use_cache:
-                    if embed_key not in entry: # TODO  and entry.role != 'bot'  -- only compute bot embeddings when needed
-                        entry[embed_key] = self.embed(entry[key], type=key, template=role_template, **kwargs)
-                        
-                        # bot message already included in kv_cache, except trailing template
-                        # TODO handle bot generation prompt and trailing template
-                        if entry.role != 'bot':
-                            embeddings.append(entry[embed_key])
-                            use_cache = False  # all entries after this need to be included
-                            if key == 'image':
-                                open_user_prompt = True  # image is inside first half of a user prompt
-                        else:
-                            position += entry[embed_key].shape[1]
-                    else:
-                        position += entry[embed_key].shape[1]
-                else:
-                    if embed_key not in entry:
-                        entry[embed_key] = self.embed(entry[key], type=key, template=role_template, **kwargs)
-                        if key == 'image':
-                            open_user_prompt = True
-                    embeddings.append(entry[embed_key])
-                
-                if entry['role'] == 'user' and key == 'text':
-                    num_user_prompts += 1
-                
         embeddings = np.concatenate(embeddings, axis=1) #, position
-        
+
         '''
         if max_tokens and position + embeddings.shape[1] > max_tokens:
             if wrap_tokens:
@@ -397,50 +298,29 @@ class ChatHistory():
                 logging.warning(f"Truncating chat history overflow to {max_tokens} tokens")
                 return embeddings[:,:max_tokens,:], position
         '''
-        
-        return embeddings, position      
-
-    def tokenize(self, use_cache=True, **kwargs):
-        return self.embed_chat(use_cache=use_cache, return_tokens=True, **kwargs)
-        
-    def valid_entry_keys(self, entry, is_embedding=True):
-        keys = []
-        
-        for key in entry:       
-            if key.endswith('_embedding') or entry[key] is None:
-                continue
+            
+        logging.debug(f"chat embed  shape={embeddings.shape}  position={position}")
+        return embeddings, position  
+                        
+    def reindex(self):
+        """
+        Update the linked lists in the messages that refer to each other.
+        This gets called after messages are added, removed, or their order changed.
+        You wouldn't typically need to call this yourself.
+        """
+        for i, msg in enumerate(self.messages):
+            msg.index = i
+            msg.history = self
+            
+            if i == 0:
+                msg.prev = None
+            elif i > 0:
+                msg.prev = self.messages[i-1]
+                msg.prev.next = msg
                 
-            if is_embedding and key not in self.embedding_functions:
-                continue
-              
-            #if exclude and key in exclude:
-            #    continue
-            
-            keys.append(key)
-            
-        return keys
-        
-    def register_embedding(self, type, func):
-        params = inspect.signature(func).parameters
-        self.embedding_functions[type] = AttributeDict(
-            func=func,
-            uses_template=len(params) > 1 #'role_template' in params
-        )
-        
-    @staticmethod
-    def embedding_type(input):
-        if isinstance(input, str):
-            if input.endswith(ImageExtensions):
-                return 'image'
-            else:
-                return "text" 
-        elif isinstance(input, ImageTypes):
-            return 'image'
-        elif isinstance(input, list) and len(input) > 0 and isinstance(input[0], str):
-            return 'text'
-        else:
-            raise ValueError(f"couldn't find type of embedding for {type(input)}, please specify the 'type' argument")
-            
+            if i >= len(self.messages) - 1:
+                msg.next = None
+           
     def find_wrap_entry(self, wrap_tokens):
         """
         Find the oldest entry from which the chat doesn't exceed the number of wrap_tokens,
@@ -448,15 +328,11 @@ class ChatHistory():
         chat entries when the history overflows past the max context window of the model.
         """
         position = 0
-        for n in range(len(self.entries)-1, -1, -1):
-            entry = self.entries[n]
-            keys = self.valid_entry_keys(entry)
-            for key in keys:
-                embed_key = key + '_embedding'
-                if embed_key in entry:
-                    position += entry[embed_key].shape[1]
-                    if position >= wrap_tokens:
-                        for i in range(n+1, len(self.entries)):
-                            if self.entries[i].role == 'user':
-                                return i
+        for n in range(len(self.messages)-1, -1, -1):
+            msg = self.messages[n]
+            position += msg.num_tokens
+            if position >= wrap_tokens:
+                for i in range(n+1, len(self.messages)):
+                    if self.messages[i].role == 'user':
+                        return i
             
