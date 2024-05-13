@@ -41,20 +41,13 @@ class VideoQuery(Agent):
             vision_scaling = 'resize'
             
         #: The model plugin (ChatQuery)
-        self.llm = ProcessProxy('ChatQuery', model=model, drop_inputs=True, vision_scaling=vision_scaling, **kwargs) #ProcessProxy((lambda **kwargs: ChatQuery(model, drop_inputs=True, **kwargs)), **kwargs)
+        self.llm = ProcessProxy('ChatQuery', model=model, drop_inputs=True, vision_scaling=vision_scaling, warmup=True, **kwargs)
         self.llm.add(PrintStream(color='green', relay=True).add(self.on_text))
         self.llm.start()
 
-        # test / warm-up query
-        self.warmup = True
         self.text = ""
         self.eos = False
-        
-        self.llm("What is 2+2?")
-        
-        while self.warmup:
-            time.sleep(0.25)
-            
+
         # create video streams    
         self.video_source = VideoSource(**kwargs)  #: The video source plugin
         self.video_output = VideoOutput(**kwargs)  #: The video output plugin
@@ -97,15 +90,20 @@ class VideoQuery(Agent):
         self.keyboard_thread = threading.Thread(target=self.poll_keyboard)
         self.keyboard_thread.start()
 
-        #: The `NanoDB <https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb>`_ vector database 
+        # load vector database
         if nanodb:
+            self.db_share_embed = (self.llm.config.mm_vision_tower == 'openai/clip-vit-large-patch14-336')
+            
+            #: The `NanoDB <https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb>`_ vector database 
             self.db = NanoDB(
                 path=nanodb, 
-                model=None, # disable DB's model because VLM's CLIP is used 
+                model=None if self.db_share_embed else 'ViT-L/14@336px',
                 reserve=kwargs.get('nanodb_reserve'), 
                 k=18, drop_inputs=True,
             ).start().add(self.on_search)
-            self.llm.add(self.on_image_embedding, channel=ChatQuery.OutputImageEmbedding)
+            
+            if self.db_share_embed:
+                self.llm.add(self.on_image_embedding, channel=ChatQuery.OutputImageEmbedding)
         else:
             self.db = None
             
@@ -204,18 +202,19 @@ class VideoQuery(Agent):
         and check if it satisfied any of the event filters when the output is complete.
         """
         if self.eos:
-            self.text = text  # new query response
-            self.eos = False
-        elif not self.warmup:  # don't view warmup response
+            self.text = text  # reset rolling text
+            self.eos = False  # new query response
+        else:
             self.text = self.text + text
 
         if text.endswith(tuple(StopTokens + ['###'])):
             self.print_stats()
+
+            self.events(self.text, prompt=self.prompt)
             
-            if not self.warmup:
-                self.events(self.text, prompt=self.prompt)
-                
-            self.warmup = False
+            if self.db and not self.db_share_embed:
+                self.on_image_embedding(None) # use self.last_image instead of embeddings
+
             self.eos = True
 
     def on_image_embedding(self, embedding):
@@ -233,13 +232,13 @@ class VideoQuery(Agent):
             
             def save_image(filename, image, embedding, metadata):
                 saveImage(filename, image)
-                self.db(embedding, add=True, metadata=metadata)
+                self.db(embedding if embedding is not None else image, add=True, metadata=metadata)
                 logging.info(f"added incoming image to database with tags '{self.tag_image}' ({filename})")
         
             threading.Thread(target=save_image, args=(filename, self.last_image, embedding, metadata)).start()
             
         if self.auto_refresh_db:
-            self.db(embedding)
+            self.db(embedding if embedding is not None else self.last_image)
         
     def on_search(self, results):
         """

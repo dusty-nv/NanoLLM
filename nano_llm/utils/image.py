@@ -92,7 +92,9 @@ def torch_image(image, dtype=None, device=None):
         raise TypeError(f"expected an image of type {ImageTypes} (was {type(image)})")
         
     if isinstance(image, cudaImage):
-        return torch.as_tensor(image, dtype=dtype, device=device)
+        image = torch.as_tensor(image, dtype=dtype, device=device).permute(2,0,1)
+        if dtype == torch.float16 or dtype == torch.float32:
+            image = image / 255.0
     elif isinstance(image, (PIL.Image.Image, np.ndarray)):
         image = F.to_tensor(image)
 

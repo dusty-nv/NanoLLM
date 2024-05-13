@@ -136,6 +136,9 @@ class NanoLLM():
           The token ID's with the tensor type as indicated by `return_tensors` (either `'np'` for `np.ndarray`
           or `'pt'` for `torch.Tensor`) and datatype as indicated by `dtype` (by default ``int32``)
         """
+        if return_tensors == 'tvm':
+            return_tensors = 'np'
+            
         return self.tokenizer(
             text, 
             add_special_tokens=add_special_tokens, 

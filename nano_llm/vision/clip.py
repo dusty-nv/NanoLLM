@@ -2,6 +2,7 @@
 import os
 import json
 import time
+import psutil
 import logging
 import traceback
 
@@ -47,7 +48,9 @@ class CLIPImageEmbedding():
         
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.stream = None
+        
         self.dtype = torch.float32 if use_tensorrt else dtype # TRT handles FP16 internally
+        self.output_dtype = dtype  # still output the embeddings with the requested dtype
         
         self.model_types = {
             'clip':  dict(preprocessor=CLIPImageProcessor, model=CLIPVisionModelWithProjection, mean=(0.48145466, 0.4578275, 0.40821073), std=(0.26862954, 0.26130258, 0.27577711)),
@@ -129,7 +132,11 @@ class CLIPImageEmbedding():
             except Exception as error:
                 logging.error(f"Exception occurred trying to use TensorRT for {self.model_type} model ({self.config.name})\n\n{traceback.format_exc()}")
 
-    def init_trt(self, trt_cache="/data/models/clip"):  
+    def init_trt(self, trt_cache="/data/models/clip"): 
+        if psutil.virtual_memory().total < 20 * (1024 ** 3):
+            logging.warning(f"disabling CLIP TensorRT due to limited memory (falling back to --vision-api=hf)")
+            return
+         
         trt_path = os.path.join(trt_cache, self.config.name.replace('/','-').replace('@','-') + '-trt.pt')
         test_model_inputs = torch.ones(1, 3, *self.config.input_shape, dtype=self.dtype, device='cuda')
 
@@ -174,9 +181,10 @@ class CLIPImageEmbedding():
         """
         if isinstance(image, str):
             image = load_image(image)
-        else:
-            image = torch_image(image)
         
+        def _convert_tensor(x):
+            return convert_tensor(x, return_tensors=return_tensors, device=self.device, dtype=self.output_dtype)
+            
         output = AttributeDict() if return_dict else None
         
         with torch.cuda.StreamContext(stream), torch.inference_mode():
@@ -184,7 +192,7 @@ class CLIPImageEmbedding():
             
             image = torch_image(image, dtype=self.dtype, device=self.device)
             ndims = len(image.shape)
-            
+
             if ndims != 3 and ndims != 4:
                 raise ValueError(f"image with dims {image.shape} was not in NCHW or NHWC format")
             
@@ -198,17 +206,12 @@ class CLIPImageEmbedding():
             model_output = self.model(image) #, output_hidden_states=hidden_state is not None)   #.pooler_output  .last_hidden_state
 
             if self.model_type == 'clip':
-               output_embeds = model_output['image_embeds']
+                output_embeds = model_output['image_embeds']
             elif self.model_type == 'siglip':
                 output_embeds = model_output['pooler_output']
                 
             if hidden_state is not None:
-                hidden_tensor = convert_tensor(
-                    model_output['hidden_states'][hidden_state], 
-                    return_tensors=return_tensors, 
-                    device=self.device, 
-                    dtype=self.dtype
-                )
+                hidden_tensor = _convert_tensor(model_output['hidden_states'][hidden_state])
                 if return_dict:
                     output.hidden_state = hidden_tensor
                 else:
@@ -218,10 +221,9 @@ class CLIPImageEmbedding():
                 self.config.output_shape = output_embeds.shape
                 
             if return_dict:
-                #output.pooler_output = convert_tensor(model_output.pooler_output, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
-                output.image_embeds = convert_tensor(output_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
+                output.image_embeds = _convert_tensor(output_embeds) 
             elif hidden_state is None:
-                output = convert_tensor(output_embeds, return_tensors=return_tensors, device=self.device, dtype=self.dtype) 
+                output = _convert_tensor(output_embeds) 
 
         time_end_enc = time.perf_counter()
         

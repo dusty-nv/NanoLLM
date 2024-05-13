@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import nanodb
+import torch
 
 from nano_llm import Plugin
+from nano_llm.utils import torch_image
+
+from jetson_utils import cudaImage
 
 
 class NanoDB(Plugin):
@@ -42,7 +46,10 @@ class NanoDB(Plugin):
         """
         if not k:
             k = self.k
-            
+        
+        if isinstance(input, cudaImage): # TODO migrate this inside CLIP implementation
+            input = torch_image(input, dtype=torch.float32, device='cuda')
+
         if add:
             self.db.add(input, metadata=metadata)
         else:

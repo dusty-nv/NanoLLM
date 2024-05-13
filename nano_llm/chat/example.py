@@ -6,7 +6,7 @@ from nano_llm import NanoLLM, ChatHistory
 
 # parse arguments
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf', help="path to the model, or HuggingFace model repo")
+parser.add_argument('--model', type=str, default='meta-llama/Meta-Llama-3-8B-Instruct', help="path to the model, or HuggingFace model repo")
 parser.add_argument('--max-new-tokens', type=int, default=256, help="the maximum response length for each bot reply")
 args = parser.parse_args()
 

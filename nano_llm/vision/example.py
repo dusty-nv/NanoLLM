@@ -22,6 +22,7 @@ from nano_llm.utils import ArgParser, load_prompts
 from nano_llm.plugins import VideoSource
 
 from termcolor import cprint
+from jetson_utils import cudaMemcpy, cudaToNumpy
 
 # parse args and set some defaults
 args = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input']).parse_args()

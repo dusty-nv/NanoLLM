@@ -80,7 +80,6 @@ while True:
     embedding, position = chat_history.embed_chat(
         max_tokens=model.config.max_length - args.max_new_tokens,
         wrap_tokens=args.wrap_tokens,
-        return_tokens=not model.has_embed,
     )
 
     # generate bot reply
