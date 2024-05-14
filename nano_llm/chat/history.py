@@ -232,7 +232,7 @@ class ChatHistory():
         Serialize the history to a list of dicts, where each dict is a chat entry
         with the non-critical keys removed (suitable for web transport, ect)
         """
-        return [{msg.type : msg.content} for msg in self.messages]
+        return [{'role' : msg.role, msg.type : msg.content} for msg in self.messages]
 
     @property
     def system_prompt(self):

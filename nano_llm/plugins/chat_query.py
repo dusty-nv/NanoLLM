@@ -216,7 +216,7 @@ class ChatQuery(Plugin):
                 
             # sync the reply with the entire text, so that multi-token
             # unicode unicode sequences are detokenized and decoded together
-            bot_reply.text = self.stream.text
+            bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens
             
             # output stream of raw tokens
@@ -236,13 +236,13 @@ class ChatQuery(Plugin):
         if len(words) > 0:
             self.output(words, ChatQuery.OutputWords)
             
-        bot_reply.text = self.stream.text
+        bot_reply.content = self.stream.text
         bot_reply.tokens = self.stream.tokens
         chat_history.kv_cache = self.stream.kv_cache
         self.stream = None
         
         # output the final generated text on channel 2
-        self.output(bot_reply.text, ChatQuery.OutputFinal)
+        self.output(bot_reply.content, ChatQuery.OutputFinal)
     
         if self.print_stats:
             print_table(self.model.stats)
