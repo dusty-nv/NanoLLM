@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../multimodal.html">Multimodal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../webserver.html">Webserver</a></li>
@@ -86,11 +87,13 @@
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">tensorrt</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">AutoConfig</span>
+<span class="kn">from</span> <span class="nn">packaging.version</span> <span class="kn">import</span> <span class="n">Version</span>
 
 <span class="kn">from</span> <span class="nn">.vision</span> <span class="kn">import</span> <span class="n">CLIPImageEmbedding</span><span class="p">,</span> <span class="n">MMProjector</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">AttributeDict</span><span class="p">,</span> <span class="n">convert_tensor</span><span class="p">,</span> <span class="n">download_model</span><span class="p">,</span> <span class="n">default_model_api</span><span class="p">,</span> <span class="n">print_table</span>
@@ -247,14 +250,15 @@
 <span class="sd">        Returns:</span>
 <span class="sd">          The string containing the decoded text.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="n">skip_special_tokens</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="n">skip_special_tokens</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
         
 <div class="viewcode-block" id="NanoLLM.embed_text">
 <a class="viewcode-back" href="../../models.html#nano_llm.NanoLLM.embed_text">[docs]</a>
-    <span class="k">def</span> <span class="nf">embed_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">embed_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">,</span> <span class="n">return_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Tokenize the string with :meth:`NanoLLM.tokenize` and return its embedding as computed by :meth:`NanoLLM.embed_tokens`</span>
+<span class="sd">        Tokenize the string with :meth:`NanoLLM.tokenize` and return its embedding as computed by :meth:`NanoLLM.embed_tokens`.</span>
+<span class="sd">        Note that if ``model.has_embed=False``, then None will be returned for the embedding and the tokens should be used instead.</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
 <span class="sd">          text (str): the text to tokenize and embed.</span>
@@ -264,21 +268,39 @@
 <span class="sd">                            that are relatively static, but probably shouldn&#39;t be used for dynamic user inputs that are unlikely</span>
 <span class="sd">                            to be re-used again (leading to unnecessarily increased memory usage).  The default is false.</span>
 <span class="sd">          return_tensors (str): ``&#39;np&#39;`` to return a `np.ndarray` or ``&#39;pt&#39;`` to return a `torch.Tensor`</span>
+<span class="sd">          return_tokens (bool): if True, then the tokens will also be returned in addition to the embedding.</span>
 <span class="sd">          kwargs:  additional arguments forwarded to :meth:`NanoLLM.tokenize` and the HuggingFace `transformers.AutoTokenizer &lt;https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer&gt;`_ </span>
 <span class="sd">          </span>
 <span class="sd">        Returns:</span>
 <span class="sd">          The embedding with the tensor type as indicated by `return_tensors` (either `&#39;np&#39;` for `np.ndarray`</span>
-<span class="sd">          or `&#39;pt&#39;` for `torch.Tensor`) with ``float32`` data.</span>
+<span class="sd">          or `&#39;pt&#39;` for `torch.Tensor`) with ``float32`` data.  If ``return_tokens=True``, then an (embedding, tokens)</span>
+<span class="sd">          tuple will be returned instead of only the embeddings. If ``model.has_embed=False`, then the embedding will be None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># TODO migrate this from models.MLC and have the text cache in this class for all model APIs</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;embed_text() not implemented for this model&quot;</span><span class="p">)</span></div>
-
+        <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
         
+        <span class="k">if</span> <span class="n">use_cache</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;text embedding cache hit `</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s1">`&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">add_special_tokens</span><span class="o">=</span><span class="n">add_special_tokens</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="n">return_tensors</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_tokens</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="n">return_tensors</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_embed</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">embed</span><span class="p">,</span> <span class="n">tokens</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">embed_cache</span><span class="p">[</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+            
+        <span class="k">if</span> <span class="n">return_tokens</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
 <div class="viewcode-block" id="NanoLLM.embed_tokens">
 <a class="viewcode-back" href="../../models.html#nano_llm.NanoLLM.embed_tokens">[docs]</a>
     <span class="k">def</span> <span class="nf">embed_tokens</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tokens</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the token embedding and return its tensor.</span>
+<span class="sd">        Compute the token embedding and return its tensor.  This will raise an exception if ``model.has_embed=False``.</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
 <span class="sd">          tokens (list[int], np.ndarray, torch.Tensor): the array of token ID&#39;s</span>
@@ -317,7 +339,7 @@
         <span class="n">embedding</span> <span class="o">=</span> <span class="n">embedding</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span>
         <span class="n">embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mm_projector</span><span class="p">(</span><span class="n">embedding</span> <span class="k">if</span> <span class="s1">&#39;mm_projector_cfg&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="k">else</span> <span class="n">embedding</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:])</span>
 
-        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;image_embedding  shape=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">  dtype=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">  device=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;image embedding  shape=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">  dtype=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">  device=</span><span class="si">{</span><span class="n">embedding</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">return_dict</span><span class="p">:</span>
             <span class="n">output</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">embedding</span>
@@ -357,6 +379,12 @@
         
         <span class="c1">#: True if this is a multimodal vision/language model.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">has_vision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_vision</span><span class="p">()</span>
+        
+        <span class="c1">#: True if this model has a separate text embedding layer for embed_text()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_embed</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="c1"># token and embedding caches</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed_cache</span> <span class="o">=</span> <span class="p">{}</span>
         
     <span class="k">def</span> <span class="nf">patch_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="c1"># Update the original HF model&#39;s config.json with different settings from the provided kwargs.</span>
@@ -430,18 +458,23 @@
           
         <span class="k">return</span> <span class="n">has_vision</span>
                
-    <span class="k">def</span> <span class="nf">init_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">init_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vision_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vision_api</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="c1"># Load the vision encoder (CLIP/SigLIP) and mm_projector for multimodal models</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_vision</span><span class="p">:</span>
             <span class="k">return</span>
 
+        <span class="c1"># CLIP/SigLIP won&#39;t build in TensorRT &lt; 8.6 (before JetPack 6.0)</span>
+        <span class="n">use_tensorrt</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="k">if</span> <span class="n">Version</span><span class="p">(</span><span class="n">tensorrt</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">Version</span><span class="p">(</span><span class="s1">&#39;8.6&#39;</span><span class="p">):</span>
+            <span class="n">use_tensorrt</span> <span class="o">=</span> <span class="p">(</span><span class="n">vision_api</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span> <span class="ow">or</span> <span class="n">vision_api</span> <span class="o">==</span> <span class="s1">&#39;trt&#39;</span><span class="p">)</span>
+            
         <span class="c1"># load the image embedding model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vision</span> <span class="o">=</span> <span class="n">CLIPImageEmbedding</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-            <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vision_model&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vision_model&#39;</span><span class="p">)</span>
-            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mm_vision_tower</span><span class="p">,</span>
+            <span class="n">vision_model</span> <span class="k">if</span> <span class="n">vision_model</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mm_vision_tower</span><span class="p">,</span>
             <span class="n">crop</span><span class="o">=</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vision_scaling&#39;</span><span class="p">,</span> <span class="s1">&#39;resize&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;crop&#39;</span><span class="p">),</span>
+            <span class="n">use_tensorrt</span><span class="o">=</span><span class="n">use_tensorrt</span><span class="p">,</span> 
             <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span>
-            <span class="n">use_tensorrt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
         <span class="p">)</span> 
         
         <span class="c1"># create image embedding projection model</span>

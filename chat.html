@@ -54,17 +54,43 @@
 <li class="toctree-l2"><a class="reference internal" href="#templates">Templates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#chat-history">Chat History</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.ChatHistory"><code class="docutils literal notranslate"><span class="pre">ChatHistory</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.kv_cache"><code class="docutils literal notranslate"><span class="pre">ChatHistory.kv_cache</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.num_tokens"><code class="docutils literal notranslate"><span class="pre">ChatHistory.num_tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.__len__"><code class="docutils literal notranslate"><span class="pre">ChatHistory.__len__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.__getitem__"><code class="docutils literal notranslate"><span class="pre">ChatHistory.__getitem__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.__delitem__"><code class="docutils literal notranslate"><span class="pre">ChatHistory.__delitem__()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.append"><code class="docutils literal notranslate"><span class="pre">ChatHistory.append()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.pop"><code class="docutils literal notranslate"><span class="pre">ChatHistory.pop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.remove"><code class="docutils literal notranslate"><span class="pre">ChatHistory.remove()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.reset"><code class="docutils literal notranslate"><span class="pre">ChatHistory.reset()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.to_list"><code class="docutils literal notranslate"><span class="pre">ChatHistory.to_list()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.system_prompt"><code class="docutils literal notranslate"><span class="pre">ChatHistory.system_prompt</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_text"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_text()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_dict"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_image"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_image()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_chat"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_chat()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.reindex"><code class="docutils literal notranslate"><span class="pre">ChatHistory.reindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.find_wrap_entry"><code class="docutils literal notranslate"><span class="pre">ChatHistory.find_wrap_entry()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#chat-message">Chat Message</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.ChatMessage"><code class="docutils literal notranslate"><span class="pre">ChatMessage</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.role"><code class="docutils literal notranslate"><span class="pre">ChatMessage.role</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.template"><code class="docutils literal notranslate"><span class="pre">ChatMessage.template</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.tokens"><code class="docutils literal notranslate"><span class="pre">ChatMessage.tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.embedding"><code class="docutils literal notranslate"><span class="pre">ChatMessage.embedding</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.history"><code class="docutils literal notranslate"><span class="pre">ChatMessage.history</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.use_cache"><code class="docutils literal notranslate"><span class="pre">ChatMessage.use_cache</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.cached"><code class="docutils literal notranslate"><span class="pre">ChatMessage.cached</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.index"><code class="docutils literal notranslate"><span class="pre">ChatMessage.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.prev"><code class="docutils literal notranslate"><span class="pre">ChatMessage.prev</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.next"><code class="docutils literal notranslate"><span class="pre">ChatMessage.next</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.type"><code class="docutils literal notranslate"><span class="pre">ChatMessage.type</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.content"><code class="docutils literal notranslate"><span class="pre">ChatMessage.content</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.num_tokens"><code class="docutils literal notranslate"><span class="pre">ChatMessage.num_tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.start_token"><code class="docutils literal notranslate"><span class="pre">ChatMessage.start_token</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.content_type"><code class="docutils literal notranslate"><span class="pre">ChatMessage.content_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.is_type"><code class="docutils literal notranslate"><span class="pre">ChatMessage.is_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatMessage.embed"><code class="docutils literal notranslate"><span class="pre">ChatMessage.embed()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -129,14 +155,23 @@
 <p>If you load a multimodal model (like <code class="docutils literal notranslate"><span class="pre">liuhaotian/llava-v1.6-vicuna-7b</span></code>), you can enter image filenames or URLs and a query to chat about images.  Enter <code class="docutils literal notranslate"><span class="pre">/reset</span></code> to reset the chat history.</p>
 <section id="code-example">
 <h2>Code Example<a class="headerlink" href="#code-example" title="Link to this heading"></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">termcolor</span>
+
+<span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
+
+<span class="c1"># parse arguments</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--model&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;meta-llama/Meta-Llama-3-8B-Instruct&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;path to the model, or HuggingFace model repo&quot;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--max-new-tokens&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;the maximum response length for each bot reply&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
 
 <span class="c1"># load model</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">NanoLLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-   <span class="s2">&quot;meta-llama/Meta-Llama-3-8B-Instruct &quot;</span><span class="p">,</span>  <span class="c1"># HuggingFace repo/model name, or local path</span>
-   <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span><span class="p">,</span>                <span class="c1"># supported APIs are: mlc, awq, hf</span>
-   <span class="n">api_token</span><span class="o">=</span><span class="s1">&#39;hf_abc123def&#39;</span><span class="p">,</span> <span class="c1"># HuggingFace API key for authenticated models ($HUGGINGFACE_TOKEN)</span>
-   <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span>   <span class="c1"># q4f16_ft, q4f16_1, q8f16_0 for MLC, or path to AWQ weights</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> 
+    <span class="n">quantization</span><span class="o">=</span><span class="s1">&#39;q4f16_ft&#39;</span><span class="p">,</span> 
+    <span class="n">api</span><span class="o">=</span><span class="s1">&#39;mlc&#39;</span>
 <span class="p">)</span>
 
 <span class="c1"># create the chat history</span>
@@ -147,7 +182,7 @@
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&gt;&gt; &#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">prompt</span> <span class="o">=</span> <span class="nb">input</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
-    <span class="c1"># add user prompt and generate chat tokens/embedding</span>
+    <span class="c1"># add user prompt and generate chat tokens/embeddings</span>
     <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
     <span class="n">embedding</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()</span>
 
@@ -157,19 +192,15 @@
         <span class="n">streaming</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
         <span class="n">kv_cache</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span><span class="p">,</span>
         <span class="n">stop_tokens</span><span class="o">=</span><span class="n">chat_history</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span>
-        <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="n">max_new_tokens</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">max_new_tokens</span><span class="p">,</span>
     <span class="p">)</span>
         
-    <span class="c1"># append the output stream to the chat history</span>
-    <span class="n">bot_reply</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
-    
+    <span class="c1"># stream the output</span>
     <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">reply</span><span class="p">:</span>
-        <span class="n">bot_reply</span><span class="o">.</span><span class="n">text</span> <span class="o">+=</span> <span class="n">token</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">termcolor</span><span class="o">.</span><span class="n">cprint</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="c1"># save the inter-request KV cache </span>
+    <span class="c1"># save the final output</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
     <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
 </pre></div>
 </div>
@@ -196,38 +227,91 @@
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ChatHistory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chat_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Multimodal chat history that can contain a mix of media including text/images.</p>
-<p>ChatHistory objects can be indexed like a list of chat entry dicts,
-where each entry dict may have keys for <code class="docutils literal notranslate"><span class="pre">'text',</span> <span class="pre">'image',</span> <span class="pre">'role'</span></code>, ect:</p>
+<p>ChatHistory objects can be indexed like a list to access its messages,
+where each <a class="reference internal" href="#nano_llm.ChatMessage" title="nano_llm.ChatMessage"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatMessage</span></code></a> can have a different type of content:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">chat_history</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>  <span class="c1"># will return the n-th chat entry</span>
 </pre></div>
 </div>
-<p>Each type of media has a different embedding function (e.g. LLM’s typically
+<p>Each type of media has an associated embedding function (e.g. LLM’s typically
 do text token embedding internally, and images use CLIP + projection layers).
 From these, it assembles the embedding for the entire chat as input to the LLM.</p>
 <p>It uses templating to add the required special tokens as defined by different
 model architectures.  In normal 2-turn chat, there are ‘user’ and ‘bot’ roles
-defined, but arbitrary roles can be added, each with their own template.
-The system prompt can also be configured through the chat template.</p>
+defined, but arbitrary roles can be added, each with their own template.</p>
+<p>The system prompt can also be configured through the chat template
+and by setting the <a class="reference internal" href="#nano_llm.ChatHistory.system_prompt" title="nano_llm.ChatHistory.system_prompt"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ChatHistory.system_prompt</span></code></a> property.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.kv_cache">
+<span class="sig-name descname"><span class="pre">kv_cache</span></span><a class="headerlink" href="#nano_llm.ChatHistory.kv_cache" title="Link to this definition"></a></dt>
+<dd><p>The <a class="reference internal" href="models.html#nano_llm.KVCache" title="nano_llm.KVCache"><code class="xref py py-class docutils literal notranslate"><span class="pre">KVCache</span></code></a> from <a class="reference internal" href="models.html#nano_llm.NanoLLM.generate" title="nano_llm.NanoLLM.generate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></a> used to store the model state.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.num_tokens">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_tokens</span></span><a class="headerlink" href="#nano_llm.ChatHistory.num_tokens" title="Link to this definition"></a></dt>
 <dd><p>Return the number of tokens used by the chat so far.
-embed_chat() needs to have been called for this to be upated,
+<a class="reference internal" href="#nano_llm.ChatHistory.embed_chat" title="nano_llm.ChatHistory.embed_chat"><code class="xref py py-meth docutils literal notranslate"><span class="pre">embed_chat()</span></code></a> needs to have been called for this to be upated,
 because otherwise the input wouldn’t have been tokenized yet.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.__len__" title="Link to this definition"></a></dt>
+<dd><p>Returns the number of messages in the chat history</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.__getitem__">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.__getitem__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.__getitem__" title="Link to this definition"></a></dt>
+<dd><p>Return the n-th chat message with the subscript indexing operator</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.__delitem__">
+<span class="sig-name descname"><span class="pre">__delitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.__delitem__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.__delitem__" title="Link to this definition"></a></dt>
+<dd><p>Remove one or more messages from the chat history:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">del</span> <span class="n">chat_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>   <span class="c1"># remove the second-to-last entry</span>
+<span class="k">del</span> <span class="n">chat_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>  <span class="c1"># pop the last 2 entries</span>
+<span class="k">del</span> <span class="n">chat_history</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>   <span class="c1"># remove all entries but the first</span>
+</pre></div>
+</div>
+<p>This will also update the KV cache and alter the bot memory.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.append">
 <span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'user'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.append"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.append" title="Link to this definition"></a></dt>
 <dd><p>Add a chat entry consisting of a text message, image, ect.
-See the ChatEntry() function for description of arguments.
-This can also accept an existing ChatEntry dict as msg.</p>
+See the <a class="reference internal" href="#nano_llm.ChatMessage" title="nano_llm.ChatMessage"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatMessage</span></code></a> class for description of arguments.
+This can also accept an existing <a class="reference internal" href="#nano_llm.ChatMessage" title="nano_llm.ChatMessage"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatMessage</span></code></a> set to <code class="docutils literal notranslate"><span class="pre">msg</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.pop">
+<span class="sig-name descname"><span class="pre">pop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">count</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.pop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.pop" title="Link to this definition"></a></dt>
+<dd><p>Remove the last N messages from the chat and KV cache.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.remove"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.remove" title="Link to this definition"></a></dt>
+<dd><p>Remove the chat entries from the start (inclusive) to stop (exclusive) indexes.
+If stop is not specified, then only the single entry at the start index will be removed:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">chat_history</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>    <span class="c1"># remove the first chat entry</span>
+<span class="n">chat_history</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># remove the first and second chat entries</span>
+<span class="n">chat_history</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>   <span class="c1"># remove the last chat entry</span>
+<span class="n">chat_history</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># remove the last two entries</span>
+</pre></div>
+</div>
+<p>This will also update the KV cache and alter the bot’s memory (potentially destructively)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.reset">
-<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">add_system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reset" title="Link to this definition"></a></dt>
-<dd><p>Reset the chat history, and optionally add the system prompt to the new chat.</p>
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">add_system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reset" title="Link to this definition"></a></dt>
+<dd><p>Reset the chat history, and optionally add the system prompt to the new chat.
+If <code class="docutils literal notranslate"><span class="pre">use_cache=True</span></code>, then the system prompt tokens/embedding will be cached.
+If <cite>wrap_tokens</cite> is set, then the most recent N tokens from the chat will be kept.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -245,44 +329,11 @@ of the chat like “You are a curious and helpful AI assistant, …”</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed">
-<span class="sig-name descname"><span class="pre">embed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed" title="Link to this definition"></a></dt>
-<dd><p>Get the embedding for a general input (text, image, ect)</p>
-<p>The embedding type is typically ‘text’, ‘image’, and will attempted
-to be determined automatically if it isn’t explicitly specified.
-Paths that end in image extensions are assumed to be an image,
-otherwise strings are treated as text.</p>
-<p>The kwargs are passed through to the input type’s embedding function.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_text">
-<span class="sig-name descname"><span class="pre">embed_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_text" title="Link to this definition"></a></dt>
-<dd><p>Get the text embedding after applying the template for ‘user’, ‘bot’, ect.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_dict">
-<span class="sig-name descname"><span class="pre">embed_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_dict" title="Link to this definition"></a></dt>
-<dd><p>Get the embedding of a chat entry dict that can contain multiple embedding types.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_image">
-<span class="sig-name descname"><span class="pre">embed_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_image" title="Link to this definition"></a></dt>
-<dd><p>Given an image, extract features and perfom the image embedding.
-This uses the CLIP encoder and a projection model that
-maps it into the embedding space the model expects.</p>
-<p>This is only applicable to vision VLM’s like Llava and Mini-GPT4,
-and will throw an exception if model.has_vision is False.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.embed_chat">
 <span class="sig-name descname"><span class="pre">embed_chat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.embed_chat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.embed_chat" title="Link to this definition"></a></dt>
 <dd><p>Assemble the embedding of either the latest or entire chat.</p>
-<p>If use_cache is true (the default), and only the new embeddings will be returned.
-If use_cache is set to false, then the entire chat history will be returned.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">use_cache=True</span></code> (the default), and only the new embeddings will be returned.
+If <code class="docutils literal notranslate"><span class="pre">use_cache=False</span></code>, then the entire chat history will be returned.</p>
 <p>The kwargs are passed to the embedding functions - for example, return_tokens=True
 will return tokens for the chat rather than embeddings.</p>
 <p>This function returns an (embedding, position) tuple, where the embedding array
@@ -295,11 +346,154 @@ If <cite>max_tokens</cite> is provided but <cite>wrap_tokens</cite> is not, then
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.reindex">
+<span class="sig-name descname"><span class="pre">reindex</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reindex"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reindex" title="Link to this definition"></a></dt>
+<dd><p>Update the linked lists in the messages that refer to each other.
+This gets called after messages are added, removed, or their order changed.
+You wouldn’t typically need to call this yourself.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.find_wrap_entry">
 <span class="sig-name descname"><span class="pre">find_wrap_entry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.find_wrap_entry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.find_wrap_entry" title="Link to this definition"></a></dt>
 <dd><p>Find the oldest entry from which the chat doesn’t exceed the number of wrap_tokens,
 and that the entry should be a user query.  This is used to keep those more recent
 chat entries when the history overflows past the max context window of the model.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="chat-message">
+<h2>Chat Message<a class="headerlink" href="#chat-message" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ChatMessage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'user'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/message.html#ChatMessage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatMessage" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Create a chat entry consisting of a text message, image, ect as input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>role</strong> (<em>str</em>) – The chat’s turn template to apply, typically ‘user’ or ‘bot’.
+The role should have a corresponding entry in the active ChatTemplate.</p></li>
+<li><p><strong>text</strong> (<em>str</em>) – String containing the message’s content for text messages.</p></li>
+<li><p><strong>image</strong> (<em>str</em><em>|</em><em>image</em>) – Either a np.ndarray, torch.Tensor, cudaImage, PIL.Image,
+or a path to an image file (.jpg, .png, .bmp, ect)</p></li>
+<li><p><strong>kwargs</strong> – <p>For messages with alternate content types, pass them in via kwargs
+and they will automatically be determined like so:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">message</span> <span class="o">=</span> <span class="n">ChatMessage</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="s1">&#39;sounds.wav&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>There are additional lower-level kwargs that can be set below.</p>
+</p></li>
+<li><p><strong>use_cache</strong> (<em>bool</em>) – cache the tokens/embeddings for reused prompts (defaults to false)</p></li>
+<li><p><strong>tokens</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>np.ndarray</em>) – the message contents already having been tokenized</p></li>
+<li><p><strong>embedding</strong> (<em>np.ndarray</em>) – the message contents already having been embedded</p></li>
+<li><p><strong>history</strong> (<a class="reference internal" href="#nano_llm.ChatHistory" title="nano_llm.ChatHistory"><em>ChatHistory</em></a>) – the ChatHistory object this message belongs to</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.role">
+<span class="sig-name descname"><span class="pre">role</span></span><a class="headerlink" href="#nano_llm.ChatMessage.role" title="Link to this definition"></a></dt>
+<dd><p>The user role or character (‘user’, ‘assistant’, ‘system’, ect)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.template">
+<span class="sig-name descname"><span class="pre">template</span></span><a class="headerlink" href="#nano_llm.ChatMessage.template" title="Link to this definition"></a></dt>
+<dd><p>The version of this message with the role template applied</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.tokens">
+<span class="sig-name descname"><span class="pre">tokens</span></span><a class="headerlink" href="#nano_llm.ChatMessage.tokens" title="Link to this definition"></a></dt>
+<dd><p>The tokenized version of the message</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.embedding">
+<span class="sig-name descname"><span class="pre">embedding</span></span><a class="headerlink" href="#nano_llm.ChatMessage.embedding" title="Link to this definition"></a></dt>
+<dd><p>The embedding of the message</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.history">
+<span class="sig-name descname"><span class="pre">history</span></span><a class="headerlink" href="#nano_llm.ChatMessage.history" title="Link to this definition"></a></dt>
+<dd><p>The ChatHistory object this message belongs to</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.use_cache">
+<span class="sig-name descname"><span class="pre">use_cache</span></span><a class="headerlink" href="#nano_llm.ChatMessage.use_cache" title="Link to this definition"></a></dt>
+<dd><p>Set to true if the tokens/embeddings should be cached for reused prompts</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.cached">
+<span class="sig-name descname"><span class="pre">cached</span></span><a class="headerlink" href="#nano_llm.ChatMessage.cached" title="Link to this definition"></a></dt>
+<dd><p>Set to true if the message is already in the chat embedding</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.index">
+<span class="sig-name descname"><span class="pre">index</span></span><a class="headerlink" href="#nano_llm.ChatMessage.index" title="Link to this definition"></a></dt>
+<dd><p>The index of this message in the chat history</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.prev">
+<span class="sig-name descname"><span class="pre">prev</span></span><a class="headerlink" href="#nano_llm.ChatMessage.prev" title="Link to this definition"></a></dt>
+<dd><p>The previous message in the chat history</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.next">
+<span class="sig-name descname"><span class="pre">next</span></span><a class="headerlink" href="#nano_llm.ChatMessage.next" title="Link to this definition"></a></dt>
+<dd><p>The next message in the chat history</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#nano_llm.ChatMessage.type" title="Link to this definition"></a></dt>
+<dd><p>The type of the message (‘text’, ‘image’, ‘audio’, ect)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.content">
+<span class="sig-name descname"><span class="pre">content</span></span><a class="headerlink" href="#nano_llm.ChatMessage.content" title="Link to this definition"></a></dt>
+<dd><p>The content or media contained in the message</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.num_tokens">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_tokens</span></span><a class="headerlink" href="#nano_llm.ChatMessage.num_tokens" title="Link to this definition"></a></dt>
+<dd><p>Return the number of tokens used by this message.
+embed() needs to have been called for this to be valid.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.start_token">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">start_token</span></span><a class="headerlink" href="#nano_llm.ChatMessage.start_token" title="Link to this definition"></a></dt>
+<dd><p>The token offset or position in the chat history at which this message begins.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.content_type">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">content_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/message.html#ChatMessage.content_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatMessage.content_type" title="Link to this definition"></a></dt>
+<dd><p>Try to automatically determine the message content type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.is_type">
+<span class="sig-name descname"><span class="pre">is_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/message.html#ChatMessage.is_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatMessage.is_type" title="Link to this definition"></a></dt>
+<dd><p>Return true if the message is of the given type (like ‘text’, ‘image’, ect)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatMessage.embed">
+<span class="sig-name descname"><span class="pre">embed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/message.html#ChatMessage.embed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatMessage.embed" title="Link to this definition"></a></dt>
+<dd><p>Apply message templates, tokenization, and generate the embedding.</p>
 </dd></dl>
 
 </dd></dl>
@@ -360,7 +554,7 @@ chat entries when the history overflows past the max context window of the model
         <span class="nb">print</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="c1"># save the final output</span>
-    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
     <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
 </pre></div>
 </div>

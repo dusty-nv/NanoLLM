@@ -66,6 +66,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.config"><code class="docutils literal notranslate"><span class="pre">NanoLLM.config</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.stats"><code class="docutils literal notranslate"><span class="pre">NanoLLM.stats</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.has_vision"><code class="docutils literal notranslate"><span class="pre">NanoLLM.has_vision</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.has_embed"><code class="docutils literal notranslate"><span class="pre">NanoLLM.has_embed</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -84,6 +85,16 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.eos"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.eos</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.stop"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.stop()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.StreamingResponse.add_tokens"><code class="docutils literal notranslate"><span class="pre">StreamingResponse.add_tokens()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kv-cache">KV Cache</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nano_llm.KVCache"><code class="docutils literal notranslate"><span class="pre">KVCache</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.KVCache.num_tokens"><code class="docutils literal notranslate"><span class="pre">KVCache.num_tokens</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.KVCache.__len__"><code class="docutils literal notranslate"><span class="pre">KVCache.__len__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.KVCache.pop"><code class="docutils literal notranslate"><span class="pre">KVCache.pop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.KVCache.remove"><code class="docutils literal notranslate"><span class="pre">KVCache.remove()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -311,8 +322,9 @@ or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) and datatype as indicate
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.NanoLLM.embed_text">
-<span class="sig-name descname"><span class="pre">embed_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_special_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_text" title="Link to this definition"></a></dt>
-<dd><p>Tokenize the string with <a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a> and return its embedding as computed by <a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens" title="nano_llm.NanoLLM.embed_tokens"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.embed_tokens()</span></code></a></p>
+<span class="sig-name descname"><span class="pre">embed_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_special_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_text" title="Link to this definition"></a></dt>
+<dd><p>Tokenize the string with <a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a> and return its embedding as computed by <a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens" title="nano_llm.NanoLLM.embed_tokens"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.embed_tokens()</span></code></a>.
+Note that if <code class="docutils literal notranslate"><span class="pre">model.has_embed=False</span></code>, then None will be returned for the embedding and the tokens should be used instead.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -323,13 +335,15 @@ the same string was already embedded previously.  This is useful for things like
 that are relatively static, but probably shouldn’t be used for dynamic user inputs that are unlikely
 to be re-used again (leading to unnecessarily increased memory usage).  The default is false.</p></li>
 <li><p><strong>return_tensors</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'np'</span></code> to return a <cite>np.ndarray</cite> or <code class="docutils literal notranslate"><span class="pre">'pt'</span></code> to return a <cite>torch.Tensor</cite></p></li>
+<li><p><strong>return_tokens</strong> (<em>bool</em>) – if True, then the tokens will also be returned in addition to the embedding.</p></li>
 <li><p><strong>kwargs</strong> – <p>additional arguments forwarded to <a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.tokenize()</span></code></a> and the HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a></p>
 </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The embedding with the tensor type as indicated by <cite>return_tensors</cite> (either <cite>‘np’</cite> for <cite>np.ndarray</cite>
-or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) with <code class="docutils literal notranslate"><span class="pre">float32</span></code> data.</p>
+or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) with <code class="docutils literal notranslate"><span class="pre">float32</span></code> data.  If <code class="docutils literal notranslate"><span class="pre">return_tokens=True</span></code>, then an (embedding, tokens)
+tuple will be returned instead of only the embeddings. If <a href="#id3"><span class="problematic" id="id4">``</span></a>model.has_embed=False`, then the embedding will be None.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -337,7 +351,7 @@ or <cite>‘pt’</cite> for <cite>torch.Tensor</cite>) with <code class="docuti
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.NanoLLM.embed_tokens">
 <span class="sig-name descname"><span class="pre">embed_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.embed_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.embed_tokens" title="Link to this definition"></a></dt>
-<dd><p>Compute the token embedding and return its tensor.</p>
+<dd><p>Compute the token embedding and return its tensor.  This will raise an exception if <code class="docutils literal notranslate"><span class="pre">model.has_embed=False</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -410,6 +424,12 @@ if <code class="docutils literal notranslate"><span class="pre">return_dict=True
 <dd><p>True if this is a multimodal vision/language model.</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.has_embed">
+<span class="sig-name descname"><span class="pre">has_embed</span></span><a class="headerlink" href="#nano_llm.NanoLLM.has_embed" title="Link to this definition"></a></dt>
+<dd><p>True if this model has a separate text embedding layer for embed_text()</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -463,7 +483,7 @@ which will signal the model to stop from generating additional output tokens.</p
 <dl class="py attribute">
 <dt class="sig sig-object py" id="nano_llm.StreamingResponse.kv_cache">
 <span class="sig-name descname"><span class="pre">kv_cache</span></span><a class="headerlink" href="#nano_llm.StreamingResponse.kv_cache" title="Link to this definition"></a></dt>
-<dd><p>the KV cache used by this request</p>
+<dd><p>the <a class="reference internal" href="#nano_llm.KVCache" title="nano_llm.KVCache"><code class="xref py py-class docutils literal notranslate"><span class="pre">KVCache</span></code></a> used by this request</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -501,6 +521,56 @@ which will signal the model to stop from generating additional output tokens.</p
 <span class="sig-name descname"><span class="pre">add_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detokenize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.add_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.add_tokens" title="Link to this definition"></a></dt>
 <dd><p>Add an output token, detokenize the reply, and accumulate the delta message.
 This function is only used by the model APIs when they generate a new token.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="kv-cache">
+<h2>KV Cache<a class="headerlink" href="#kv-cache" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="nano_llm.KVCache">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">KVCache</span></span><a class="reference internal" href="_modules/nano_llm/chat/kv_cache.html#KVCache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.KVCache" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract interface for storing &amp; manipulating the KV cache,
+which encodes all the context and model state in the chat.
+These are implemented by different LLM backends and are
+backed by CUDA memory for each layer in the model, which
+these functions provide some modifications.</p>
+<p>It gets returned in the <a class="reference internal" href="#nano_llm.StreamingResponse" title="nano_llm.StreamingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">StreamingResponse</span></code></a> iterator
+from <a class="reference internal" href="#nano_llm.NanoLLM.generate" title="nano_llm.NanoLLM.generate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">NanoLLM.generate()</span></code></a> and as an optional argument
+can be re-used during the next generation to grow the cache
+instead of having to refill the chat context each request.</p>
+<p>For example, <a class="reference internal" href="#nano_llm.KVCache.pop" title="nano_llm.KVCache.pop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">KVCache.pop()</span></code></a> will drop the most recent
+N tokens off the end of the cache, while <a class="reference internal" href="#nano_llm.KVCache.remove" title="nano_llm.KVCache.remove"><code class="xref py py-meth docutils literal notranslate"><span class="pre">KVCache.remove()</span></code></a>
+while remove a range of tokens from anywhere in the cache.</p>
+<p>The <a class="reference internal" href="chat.html#nano_llm.ChatHistory" title="nano_llm.ChatHistory"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatHistory</span></code></a> object provides a higher-level way
+of maintaining consistency for removing messages from the chat
+by keeping track of their token counts and positions in the chat.
+It also keeps the KV cache between requests, so that only the
+new tokens need to be added (and the model only processes those).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.KVCache.num_tokens">
+<span class="sig-name descname"><span class="pre">num_tokens</span></span><a class="headerlink" href="#nano_llm.KVCache.num_tokens" title="Link to this definition"></a></dt>
+<dd><p>The current length of the KV cache</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.KVCache.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/kv_cache.html#KVCache.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.KVCache.__len__" title="Link to this definition"></a></dt>
+<dd><p>Return the current length of the cache in terms of tokens or embedding positions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.KVCache.pop">
+<span class="sig-name descname"><span class="pre">pop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/kv_cache.html#KVCache.pop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.KVCache.pop" title="Link to this definition"></a></dt>
+<dd><p>Remove the given number of tokens from the end of the cache.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.KVCache.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/kv_cache.html#KVCache.remove"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.KVCache.remove" title="Link to this definition"></a></dt>
+<dd><p>Remove a range of tokens from the cache, from the start index (inclusive) to the stop index (exclusive)</p>
 </dd></dl>
 
 </dd></dl>

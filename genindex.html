@@ -101,6 +101,7 @@
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  | <a href="#W"><strong>W</strong></a>
  
@@ -109,6 +110,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="plugins.html#nano_llm.Plugin.__call__">__call__() (Plugin method)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatHistory.__delitem__">__delitem__() (ChatHistory method)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatHistory.__getitem__">__getitem__() (ChatHistory method)</a>
 </li>
       <li><a href="utilities.html#nano_llm.utils.ArgParser.__init__">__init__() (ArgParser method)</a>
 
@@ -128,6 +133,12 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatHistory.__len__">__len__() (ChatHistory method)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.KVCache.__len__">(KVCache method)</a>
+</li>
+      </ul></li>
       <li><a href="chat.html#nano_llm.BotFunctions.__new__">__new__() (BotFunctions static method)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.__next__">__next__() (StreamingResponse method)</a>
@@ -178,11 +189,15 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatMessage.cached">cached (ChatMessage attribute)</a>
+</li>
       <li><a href="agents.html#nano_llm.agents.chat.ChatAgent.chat">chat (ChatAgent attribute)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.chat.ChatAgent">ChatAgent (class in nano_llm.agents.chat)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatHistory">ChatHistory (class in nano_llm)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage">ChatMessage (class in nano_llm)</a>
 </li>
       <li><a href="plugins.html#nano_llm.Plugin.clear_inputs">clear_inputs() (Plugin method)</a>
 </li>
@@ -191,6 +206,10 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#nano_llm.NanoLLM.config_path">config_path (NanoLLM attribute)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.content">content (ChatMessage attribute)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.content_type">content_type() (ChatMessage static method)</a>
 </li>
       <li><a href="utilities.html#nano_llm.utils.convert_audio">convert_audio() (in module nano_llm.utils)</a>
 </li>
@@ -222,27 +241,19 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="chat.html#nano_llm.ChatHistory.embed">embed() (ChatHistory method)</a>
+      <li><a href="chat.html#nano_llm.ChatMessage.embed">embed() (ChatMessage method)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatHistory.embed_chat">embed_chat() (ChatHistory method)</a>
 </li>
-      <li><a href="chat.html#nano_llm.ChatHistory.embed_dict">embed_dict() (ChatHistory method)</a>
+      <li><a href="models.html#nano_llm.NanoLLM.embed_image">embed_image() (NanoLLM method)</a>
 </li>
-      <li><a href="chat.html#nano_llm.ChatHistory.embed_image">embed_image() (ChatHistory method)</a>
-
-      <ul>
-        <li><a href="models.html#nano_llm.NanoLLM.embed_image">(NanoLLM method)</a>
+      <li><a href="models.html#nano_llm.NanoLLM.embed_text">embed_text() (NanoLLM method)</a>
 </li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="chat.html#nano_llm.ChatHistory.embed_text">embed_text() (ChatHistory method)</a>
-
-      <ul>
-        <li><a href="models.html#nano_llm.NanoLLM.embed_text">(NanoLLM method)</a>
-</li>
-      </ul></li>
       <li><a href="models.html#nano_llm.NanoLLM.embed_tokens">embed_tokens() (NanoLLM method)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.embedding">embedding (ChatMessage attribute)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.eos">eos (StreamingResponse property)</a>
 </li>
@@ -284,7 +295,13 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models.html#nano_llm.NanoLLM.has_embed">has_embed (NanoLLM attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#nano_llm.NanoLLM.has_vision">has_vision (NanoLLM attribute)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.history">history (ChatMessage attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -293,6 +310,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utilities.html#nano_llm.utils.image_size">image_size() (in module nano_llm.utils)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.index">index (ChatMessage attribute)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.input">input (StreamingResponse attribute)</a>
 </li>
@@ -304,13 +323,23 @@
 </li>
       <li><a href="utilities.html#nano_llm.utils.is_image">is_image() (in module nano_llm.utils)</a>
 </li>
+      <li><a href="chat.html#nano_llm.ChatMessage.is_type">is_type() (ChatMessage method)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="K">K</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#nano_llm.StreamingResponse.kv_cache">kv_cache (StreamingResponse attribute)</a>
+      <li><a href="chat.html#nano_llm.ChatHistory.kv_cache">kv_cache (ChatHistory attribute)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.StreamingResponse.kv_cache">(StreamingResponse attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models.html#nano_llm.KVCache">KVCache (class in nano_llm)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -366,12 +395,20 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#nano_llm.NanoLLM">NanoLLM (class in nano_llm)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatMessage.next">next (ChatMessage attribute)</a>
+</li>
       <li><a href="plugins.html#nano_llm.Plugin.num_outputs">num_outputs (Plugin property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.ChatHistory.num_tokens">num_tokens (ChatHistory property)</a>
+
+      <ul>
+        <li><a href="chat.html#nano_llm.ChatMessage.num_tokens">(ChatMessage property)</a>
 </li>
+        <li><a href="models.html#nano_llm.KVCache.num_tokens">(KVCache attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -424,9 +461,17 @@
 </li>
       <li><a href="agents.html#nano_llm.agents.chat.ChatAgent.pipeline">pipeline (ChatAgent attribute)</a>
 </li>
+      <li><a href="plugins.html#nano_llm.Plugin">Plugin (class in nano_llm)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="plugins.html#nano_llm.Plugin">Plugin (class in nano_llm)</a>
+      <li><a href="chat.html#nano_llm.ChatHistory.pop">pop() (ChatHistory method)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.KVCache.pop">(KVCache method)</a>
+</li>
+      </ul></li>
+      <li><a href="chat.html#nano_llm.ChatMessage.prev">prev (ChatMessage attribute)</a>
 </li>
       <li><a href="plugins.html#nano_llm.Plugin.process">process() (Plugin method)</a>
 </li>
@@ -440,11 +485,21 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.BotFunctions.register">register() (BotFunctions class method)</a>
 </li>
-      <li><a href="chat.html#nano_llm.ChatHistory.reset">reset() (ChatHistory method)</a>
+      <li><a href="chat.html#nano_llm.ChatHistory.reindex">reindex() (ChatHistory method)</a>
 </li>
+      <li><a href="chat.html#nano_llm.ChatHistory.remove">remove() (ChatHistory method)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.KVCache.remove">(KVCache method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatHistory.reset">reset() (ChatHistory method)</a>
+</li>
       <li><a href="utilities.html#nano_llm.utils.ArgParser.Riva">Riva (ArgParser attribute)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.role">role (ChatMessage attribute)</a>
 </li>
       <li><a href="plugins.html#nano_llm.Plugin.run">run() (Plugin method)</a>
 </li>
@@ -474,6 +529,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatMessage.start_token">start_token (ChatMessage property)</a>
+</li>
       <li><a href="models.html#nano_llm.NanoLLM.stats">stats (NanoLLM attribute)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.stop">stop() (StreamingResponse method)</a>
@@ -496,21 +553,37 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatMessage.template">template (ChatMessage attribute)</a>
+</li>
       <li><a href="chat.html#nano_llm.BotFunctions.test">test() (BotFunctions class method)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.text">text (StreamingResponse attribute)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatHistory.to_list">to_list() (ChatHistory method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#nano_llm.NanoLLM.tokenize">tokenize() (NanoLLM method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="models.html#nano_llm.NanoLLM.tokenizer">tokenizer (NanoLLM attribute)</a>
 </li>
-      <li><a href="models.html#nano_llm.StreamingResponse.tokens">tokens (StreamingResponse attribute)</a>
+      <li><a href="chat.html#nano_llm.ChatMessage.tokens">tokens (ChatMessage attribute)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.StreamingResponse.tokens">(StreamingResponse attribute)</a>
 </li>
+      </ul></li>
       <li><a href="utilities.html#nano_llm.utils.torch_image">torch_image() (in module nano_llm.utils)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatMessage.type">type (ChatMessage attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatMessage.use_cache">use_cache (ChatMessage attribute)</a>
 </li>
   </ul></td>
 </tr></table>
