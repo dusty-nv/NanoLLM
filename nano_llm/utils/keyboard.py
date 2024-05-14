@@ -22,7 +22,7 @@ class KeyboardInterrupt():
         self.last_interrupt = curr_time
         
         if self.timeout <= 0 or time_diff > 2.0:
-            logging.warning("Ctrl+C:  interrupting output")
+            logging.warning("Ctrl+C:  interrupting output (press again to exit)")
             self.interrupted = True
             if self.callback is not None:
                 self.callback()
