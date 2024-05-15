@@ -115,7 +115,8 @@ class VideoSource(Plugin):
                 img = self.capture()
             except Exception as error:
                 logging.error(f"Exception occurred during video source capture of \"{self.resource}\"\n\n{traceback.format_exc()}")
-            
+                img = None
+
             if img is None:
                 if self.file:
                     return
