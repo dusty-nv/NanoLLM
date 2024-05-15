@@ -120,11 +120,21 @@ ChatTemplates['llava-llama-2'].update({
     'system_prompt': "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
 })
 
-StopTokens = ['</s>', '<|endoftext|>', '<|im_end|>', '<eos>', '<|end_of_text|>', '<|eot_id|>']
-
 for key in ChatTemplates:
     ChatTemplates[key] = AttributeDict(name=key, **ChatTemplates[key])
 
+StopTokens = ['</s>', '<|endoftext|>', '<|im_end|>', '<eos>', '<|end_of_text|>', '<|eot_id|>']
+
+def remove_special_tokens(text):
+    """
+    Remove special tokens (BOS/EOS) from the string.
+    """
+    text = text.replace('<s>', '')
+    
+    for stop_token in StopTokens:
+        text = text.replace(stop_token, '')
+        
+    return text
 
 def ChatTemplate(model):
     """

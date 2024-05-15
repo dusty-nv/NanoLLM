@@ -5,7 +5,7 @@ from .chat.stream import StreamingResponse
 from .chat.message import ChatMessage
 from .chat.history import ChatHistory
 from .chat.kv_cache import KVCache
-from .chat.templates import ChatTemplate, ChatTemplates, StopTokens
+from .chat.templates import ChatTemplate, ChatTemplates, StopTokens, remove_special_tokens
 
 from .agent import Agent, Pipeline
 
