@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-# Example for vision/language model inference on continous video streams
+#
+# Example for vision/language model inference on continuous video streams
+# by keeping a rolling history of the past N frames (--max-images=N)
+#
+# You can run it on video files or devices like this:
+#
+#    python3 -m nano_llm.vision.video \
+#      --model Efficient-Large-Model/VILA1.5-3b \
+#      --max-images 8 \
+#      --max-new-tokens 48 \
+#      --video-input /data/my_video.mp4 \
+#      --video-output /data/my_output.mp4 \
+#      --prompt 'What changes occurred in the video?'
+#
+# The model should have been trained to understand video sequences (like VILA-1.5)
+#
 import time
 import logging
 
