@@ -51,8 +51,10 @@
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="chat.html">Chat</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Multimodal</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#image-messages">Image Messages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#code-example">Code Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#multimodal-demos">Multimodal Demos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#video-sequences">Video Sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multimodal-agents">Multimodal Agents</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugins</a></li>
@@ -104,6 +106,17 @@
 </pre></div>
 </div>
 <p>See the <a class="reference internal" href="models.html#tested-models"><span class="std std-ref">Tested Models</span></a> section for the list of multimodal models that are supported in NanoLLM.</p>
+<section id="image-messages">
+<h2>Image Messages<a class="headerlink" href="#image-messages" title="Link to this heading"></a></h2>
+<p>You can get a vision/language model to respond about an image by adding it to the <a class="reference internal" href="chat.html"><span class="std std-doc">chat history</span></a>, and then asking a query about it:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="n">img</span><span class="p">)</span> <span class="c1"># np.ndarray, torch.Tensor, PIL.Image, cudaImage</span>
+<span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;Describe the image.&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">streaming</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Image messages will be embedded into the chat using the model’s CLIP/SigLIP vision encoder and multimodal projector.  Supported image types are <code class="docutils literal notranslate"><span class="pre">np.ndarray</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">PIL.Image</span></code>, <code class="docutils literal notranslate"><span class="pre">jetson_utils.cudaImage</span></code>, and URLs or local paths to image files (<em>jpg, png, tga, bmp, gif</em>)</p>
+</section>
 <section id="code-example">
 <h2>Code Example<a class="headerlink" href="#code-example" title="Link to this heading"></a></h2>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
@@ -204,14 +217,32 @@
 </pre></div>
 </div>
 </section>
-<section id="multimodal-demos">
-<h2>Multimodal Demos<a class="headerlink" href="#multimodal-demos" title="Link to this heading"></a></h2>
+<section id="video-sequences">
+<h2>Video Sequences<a class="headerlink" href="#video-sequences" title="Link to this heading"></a></h2>
+<p>The code in <a class="reference external" href="https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/video.py"><code class="docutils literal notranslate"><span class="pre">vision/video.py</span></code></a> keeps a rolling history of image frames and can be used with models that were trained to understand video (like <a class="reference external" href="https://github.com/Efficient-Large-Model/VILA">VILA-1.5</a>) to apply video summarization, action &amp; behavior analysis, change detection, and other temporal-based vision functions:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span>  <span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">nano_llm</span><span class="o">.</span><span class="n">vision</span><span class="o">.</span><span class="n">video</span> \
+    <span class="o">--</span><span class="n">model</span> <span class="n">Efficient</span><span class="o">-</span><span class="n">Large</span><span class="o">-</span><span class="n">Model</span><span class="o">/</span><span class="n">VILA1</span><span class="mf">.5</span><span class="o">-</span><span class="mi">3</span><span class="n">b</span> \
+    <span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">images</span> <span class="mi">8</span> \
+    <span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">new</span><span class="o">-</span><span class="n">tokens</span> <span class="mi">48</span> \
+    <span class="o">--</span><span class="n">video</span><span class="o">-</span><span class="nb">input</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">my_video</span><span class="o">.</span><span class="n">mp4</span> \
+    <span class="o">--</span><span class="n">video</span><span class="o">-</span><span class="n">output</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">my_output</span><span class="o">.</span><span class="n">mp4</span> \
+    <span class="o">--</span><span class="n">prompt</span> <span class="s1">&#39;What changes occurred in the video?&#39;</span>
+</pre></div>
+</div>
+<p><a href="https://youtu.be/_7gughth8C0" target="_blank"><img src="https://jetson-ai-lab.com/images/video_vila_wildfire.gif" title="Link to YouTube video of more clips (Realtime Video Vision/Language Model with VILA1.5-3b and Jetson Orin)"></a></p>
+</section>
+<section id="multimodal-agents">
+<h2>Multimodal Agents<a class="headerlink" href="#multimodal-agents" title="Link to this heading"></a></h2>
 <p><a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_llamaspeak.html"><strong>llamaspeak</strong></a> - Talk live with Llama using Riva ASR/TTS, and chat about images with VLMs.</p>
 <iframe width="720" height="405" src="https://www.youtube.com/embed/UOjqF3YCGkY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 <br/>
 <br/><p><a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_live-llava.html"><strong>Live Llava</strong></a> - Run multimodal models on live video streams over a repeating set of prompts.</p>
 <iframe width="720" height="405" src="https://www.youtube.com/embed/8Eu6zG0eEGY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+<br/>
+<br/><p><a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_nano-vlm.html#video-sequences"><strong>Video VILA</strong></a> - Process multiple images per query for temporal understanding of video sequences.</p>
+<iframe width="720" height="405" src="https://www.youtube.com/embed/_7gughth8C0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 <br/>
 <br/></section>
