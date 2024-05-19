@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to NanoLLM! &mdash; NanoLLM 24.5 documentation</title>
+  <title>Welcome to NanoLLM! &mdash; NanoLLM 24.5.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/documentation_options.js?v=c34423f4"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -36,6 +36,9 @@
           <a href="#" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.5.1
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -121,15 +124,39 @@
 <ul>
 <li><p>Riva ASR</p></li>
 <li><p>Riva TTS</p></li>
+<li><p>Piper TTS</p></li>
 <li><p>XTTS</p></li>
 </ul>
 </li>
 </ul>
 <p>See the <a class="reference internal" href="models.html#models"><span class="std std-ref">Models</span></a> section for more info and API documentation.</p>
 </section>
-<section id="platform-support">
-<h2>Platform Support<a class="headerlink" href="#platform-support" title="Link to this heading"></a></h2>
-<p>Currently built for Jetson Orin and JetPack 6.  Containers are provided by <a class="reference external" href="https://www.github.com/dusty-nv/jetson-containers">jetson-containers</a>.</p>
+<section id="containers">
+<h2>Containers<a class="headerlink" href="#containers" title="Link to this heading"></a></h2>
+<p>Currently supported on Jetson Orin and JetPack 5/6.  Containers are built by <a class="reference external" href="https://www.github.com/dusty-nv/jetson-containers">jetson-containers</a> with images available on <a class="reference external" href="https://hub.docker.com/r/dustynv/nano_llm/tags">DockerHub</a>.  These are the monthly releases (there are also point releases):</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Version</p></th>
+<th class="head"><p>JetPack 5</p></th>
+<th class="head"><p>JetPack 6</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>main</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>24.5</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.5-r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.5-r36.2.0</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>24.4</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.4-r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.4-r36.2.0</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>See the <a class="reference internal" href="releases.html#release-notes"><span class="std std-ref">Release Notes</span></a> and <a class="reference internal" href="install.html#installation"><span class="std std-ref">Installation Guide</span></a> for info about running the containers and samples.</p>
 </section>
 <section id="videos">
 <h2>Videos<a class="headerlink" href="#videos" title="Link to this heading"></a></h2>
@@ -141,6 +168,7 @@
 <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#container-images">Container Images</a></li>
 <li class="toctree-l2"><a class="reference internal" href="install.html#running-models">Running Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="install.html#building-in-other-containers">Building In Other Containers</a></li>
 </ul>
@@ -251,9 +279,10 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="releases.html">Release Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="releases.html#id1">24.5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="releases.html#id2">24.4.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="releases.html#id3">24.4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="releases.html#id1">24.5.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="releases.html#id2">24.5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="releases.html#id3">24.4.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="releases.html#id4">24.4</a></li>
 </ul>
 </li>
 </ul>

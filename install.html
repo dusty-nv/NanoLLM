@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>Installation &mdash; NanoLLM 24.5.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/documentation_options.js?v=c34423f4"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,6 +37,9 @@
           <a href="index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.5.1
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -48,6 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Documentation:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#container-images">Container Images</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-models">Running Models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#building-in-other-containers">Building In Other Containers</a></li>
 </ul>
@@ -97,7 +101,37 @@ bash<span class="w"> </span>jetson-containers/install.sh
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jetson-containers<span class="w"> </span>run<span class="w"> </span><span class="k">$(</span>autotag<span class="w"> </span>nano_llm<span class="k">)</span>
 </pre></div>
 </div>
-<p>This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code> for JetPack 6.0)</p>
+<p>This will automatically pull/run the latest container image compatible with your version of JetPack-L4T (e.g. <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code>).  For other versions, see the <a class="reference internal" href="releases.html"><span class="std std-doc">Release Notes</span></a> and <a class="reference internal" href="#container-images"><span class="xref myst">Containers</span></a> list.</p>
+<section id="container-images">
+<h2>Container Images<a class="headerlink" href="#container-images" title="Link to this heading"></a></h2>
+<p>The latest builds are from the main branch, with monthly releases and bi-weekly point releases:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Version</p></th>
+<th class="head"><p>JetPack 5</p></th>
+<th class="head"><p>JetPack 6</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>main</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>24.5</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.5-r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.5-r36.2.0</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>24.4</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.4-r35.4.1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:24.4-r36.2.0</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>The full list you can find in the <a class="reference internal" href="releases.html"><span class="std std-doc">Release Notes</span></a>.  To specify a particular version of NanoLLM to run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jetson-containers<span class="w"> </span>run<span class="w"> </span>dustynv/nano_llm:24.5-r36.2.0<span class="w">  </span><span class="c1"># stable release for JP6 instead of main</span>
+</pre></div>
+</div>
+</section>
 <section id="running-models">
 <h2>Running Models<a class="headerlink" href="#running-models" title="Link to this heading"></a></h2>
 <p>Once in the container, you should be able to <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">nano_llm</span></code> in a Python3 interpreter, and run the various example commands from the docs like:</p>

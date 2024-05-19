@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>Chat &mdash; NanoLLM 24.5.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/documentation_options.js?v=c34423f4"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,6 +37,9 @@
           <a href="index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.5.1
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -334,14 +337,12 @@ of the chat like “You are a curious and helpful AI assistant, …”</p>
 <dd><p>Assemble the embedding of either the latest or entire chat.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">use_cache=True</span></code> (the default), and only the new embeddings will be returned.
 If <code class="docutils literal notranslate"><span class="pre">use_cache=False</span></code>, then the entire chat history will be returned.</p>
-<p>The kwargs are passed to the embedding functions - for example, return_tokens=True
-will return tokens for the chat rather than embeddings.</p>
-<p>This function returns an (embedding, position) tuple, where the embedding array
+<p>This function returns an <code class="docutils literal notranslate"><span class="pre">(embedding,</span> <span class="pre">position)</span></code> tuple, where the embedding array
 contains the new embeddings (or tokens) from the chat, and position is the current
 overall position in the history (up to the model’s context window length)</p>
-<p>If the number of tokens in the chat history exceeds the length given in <cite>max_tokens</cite> argument
+<p>If the number of tokens in the chat history exceeds the length given in <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code> argument
 (which is typically the model’s context window, minus the max generation length),
-then the chat history will drop all but the latest <cite>wrap_tokens</cite>, starting with a user prompt.
+then the chat history will drop all but the latest <code class="docutils literal notranslate"><span class="pre">wrap_tokens</span></code>, starting with a user prompt.
 If <cite>max_tokens</cite> is provided but <cite>wrap_tokens</cite> is not, then the overflow tokens will be truncated.</p>
 </dd></dl>
 

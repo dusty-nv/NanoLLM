@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multimodal &mdash; NanoLLM 24.5 documentation</title>
+  <title>Multimodal &mdash; NanoLLM 24.5.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/documentation_options.js?v=c34423f4"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,6 +37,9 @@
           <a href="index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.5.1
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -219,7 +222,7 @@
 </section>
 <section id="video-sequences">
 <h2>Video Sequences<a class="headerlink" href="#video-sequences" title="Link to this heading"></a></h2>
-<p>The code in <a class="reference external" href="https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/video.py"><code class="docutils literal notranslate"><span class="pre">vision/video.py</span></code></a> keeps a rolling history of image frames and can be used with models that were trained to understand video (like <a class="reference external" href="https://github.com/Efficient-Large-Model/VILA">VILA-1.5</a>) to apply video summarization, action &amp; behavior analysis, change detection, and other temporal-based vision functions:</p>
+<p>The code in <a class="reference external" href="https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/video.py"><code class="docutils literal notranslate"><span class="pre">vision/video.py</span></code></a> keeps a rolling history of image frames and can be used with models that were trained to understand video (like <a class="reference external" href="https://github.com/Efficient-Large-Model/VILA">VILA-1.5</a>) to apply video search/summarization, action &amp; behavior analysis, change detection, and other temporal-based vision functions:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span>  <span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">nano_llm</span><span class="o">.</span><span class="n">vision</span><span class="o">.</span><span class="n">video</span> \
     <span class="o">--</span><span class="n">model</span> <span class="n">Efficient</span><span class="o">-</span><span class="n">Large</span><span class="o">-</span><span class="n">Model</span><span class="o">/</span><span class="n">VILA1</span><span class="mf">.5</span><span class="o">-</span><span class="mi">3</span><span class="n">b</span> \
     <span class="o">--</span><span class="nb">max</span><span class="o">-</span><span class="n">images</span> <span class="mi">8</span> \

@@ -50,7 +50,7 @@ Image messages will be embedded into the chat using the model's CLIP/SigLIP visi
 ## Video Sequences
 
 
-The code in [`vision/video.py`](https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/video.py) keeps a rolling history of image frames and can be used with models that were trained to understand video (like [VILA-1.5](https://github.com/Efficient-Large-Model/VILA)) to apply video summarization, action & behavior analysis, change detection, and other temporal-based vision functions:
+The code in [`vision/video.py`](https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/video.py) keeps a rolling history of image frames and can be used with models that were trained to understand video (like [VILA-1.5](https://github.com/Efficient-Large-Model/VILA)) to apply video search/summarization, action & behavior analysis, change detection, and other temporal-based vision functions:
 
 ```
   python3 -m nano_llm.vision.video \

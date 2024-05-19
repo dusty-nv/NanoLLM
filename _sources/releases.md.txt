@@ -1,5 +1,19 @@
 # Release Notes
 
+Each release has a corresponding branch in the NanoLLM [GitHub repository](https://github.com/dusty-nv/NanoLLM) and container images on [DockerHub](https://hub.docker.com/r/dustynv/nano_llm/tags).  For more info about running these, see the [Installation Guide](install.md).
+
+```{eval-rst}
+.. admonition:: Container Versions
+
+   The latest builds following the main branch are ``dustynv/nano_llm:r35.4.1`` for JetPack 5 and ``dustynv/nano_llm:r36.2.0`` for JetPack 6.  Check the tags on `DockerHub <https://hub.docker.com/r/dustynv/nano_llm/tags>`_ for the versions below.
+```
+  
+## 24.5.1
+
+* Added [Video VILA](multimodal.md#video-sequences) on image sequences
+* Added [`KVCache`](models.md#kv-cache) interface for KV cache manipulation
+* Updated [`ChatHistory`](chat.md#chat-history) and [`ChatMessage`](chat.md#chat-history) with deletion/removal operators
+
 ## 24.5
 
 * Added [function calling](chat.md#function-calling) with Llama 3
@@ -17,3 +31,4 @@
 * Migration from `local_llm` in jetson-containers
 * Generated docs site ([dusty-nv.github.io/NanoLLM](https://dusty-nv.github.io/NanoLLM))
 * Year/month/date versioning with stable releases being cut for each month
+

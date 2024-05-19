@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agents &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>Agents &mdash; NanoLLM 24.5.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="_static/documentation_options.js?v=c34423f4"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,6 +37,9 @@
           <a href="index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.5.1
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -105,6 +108,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.llm"><code class="docutils literal notranslate"><span class="pre">VideoQuery.llm</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.video_source"><code class="docutils literal notranslate"><span class="pre">VideoQuery.video_source</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.video_output"><code class="docutils literal notranslate"><span class="pre">VideoQuery.video_output</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.db"><code class="docutils literal notranslate"><span class="pre">VideoQuery.db</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.server"><code class="docutils literal notranslate"><span class="pre">VideoQuery.server</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.events"><code class="docutils literal notranslate"><span class="pre">VideoQuery.events</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.agents.video_query.VideoQuery.on_video"><code class="docutils literal notranslate"><span class="pre">VideoQuery.on_video()</span></code></a></li>
@@ -405,6 +409,12 @@ or <code class="docutils literal notranslate"><span class="pre">crop</span></cod
 <dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.video_output">
 <span class="sig-name descname"><span class="pre">video_output</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.video_output" title="Link to this definition"></a></dt>
 <dd><p>The video output plugin</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.agents.video_query.VideoQuery.db">
+<span class="sig-name descname"><span class="pre">db</span></span><a class="headerlink" href="#nano_llm.agents.video_query.VideoQuery.db" title="Link to this definition"></a></dt>
+<dd><p>The <a class="reference external" href="https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb">NanoDB</a> vector database</p>
 </dd></dl>
 
 <dl class="py attribute">
