@@ -5,6 +5,6 @@ Optimized local inference for LLMs with HuggingFace-like APIs for quantization, 
 
 > [!NOTE]  
 > See [`dusty-nv.github.io/NanoLLM`](https://dusty-nv.github.io/NanoLLM) for docs and [**Jetson AI Lab**](https://www.jetson-ai-lab.com) for tutorials.
-> &nbsp;&nbsp; 
-> Latest Release:  [24.5.1](https://dusty-nv.github.io/NanoLLM/releases.html)  ([`dustynv/nano_llm:24.5.1-r36.2.0`](https://hub.docker.com/r/dustynv/nano_llm/tags))
+> &nbsp;&nbsp;<br/> 
+> Latest Release:  [24.5.1](https://dusty-nv.github.io/NanoLLM/releases.html)  ([`dustynv/nano_llm:24.5.1-r36.2.0`](https://hub.docker.com/r/dustynv/nano_llm/tags)) <br/> 
 > Latest Build: [main](https://dusty-nv.github.io/NanoLLM/releases.html)  ([`dustynv/nano_llm:r36.2.0`](https://hub.docker.com/r/dustynv/nano_llm/tags))
