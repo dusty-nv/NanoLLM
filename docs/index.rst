@@ -49,15 +49,35 @@ Model Support
 
   * Riva ASR
   * Riva TTS
+  * Piper TTS
   * XTTS
 
 See the :ref:`Models` section for more info and API documentation.
 
 -------------
-Platform Support
+Containers
 -------------
 
-Currently built for Jetson Orin and JetPack 6.  Containers are provided by `jetson-containers <https://www.github.com/dusty-nv/jetson-containers>`_.
+Currently supported on Jetson Orin and JetPack 5/6.  Containers are built by `jetson-containers <https://www.github.com/dusty-nv/jetson-containers>`_ with images available on `DockerHub <https://hub.docker.com/r/dustynv/nano_llm/tags>`_.  These are the monthly releases (there are also point releases):
+
+.. list-table:: Container Images
+   :header-rows: 1
+   
+   * - Version
+     - JetPack 5
+     - JetPack 6
+   * - main
+     - ``dustynv/nano_llm:r35.4.1``
+     - ``dustynv/nano_llm:r36.2.0``
+   * - 24.5
+     - ``dustynv/nano_llm:24.5-r35.4.1``
+     - ``dustynv/nano_llm:24.5-r36.2.0``
+   * - 24.4
+     - ``dustynv/nano_llm:24.4-r35.4.1``
+     - ``dustynv/nano_llm:24.4-r36.2.0``
+     
+See the :ref:`Release Notes` and :ref:`Installation Guide <Installation>` for info about running the containers and samples.
+
 
 ----------
 Videos

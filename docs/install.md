@@ -13,7 +13,7 @@ Then you can start the `nano_llm` container like this:
 jetson-containers run $(autotag nano_llm)
 ```
 
-This will automatically pull/run the container image compatible with your version of JetPack-L4T (e.g. `dustynv/nano_llm:r36.2.0` for JetPack 6.0)
+This will automatically pull/run the latest container image compatible with your version of JetPack-L4T (e.g. `dustynv/nano_llm:r36.2.0`).  For other versions, see the [Release Notes](releases.md) and [Containers](index.rst#containers) list.
 
 ### Running Models
 
