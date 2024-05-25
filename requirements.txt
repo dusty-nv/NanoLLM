@@ -1,7 +1,7 @@
 torch
 torchvision
 torchaudio
-transformers
+transformers>=4.37.0
 websockets
 termcolor
 tabulate
