@@ -63,6 +63,18 @@ class WebRequest:
         else:
             raise ValueError(f"return_type should be 'str', 'dict', or 'json'  (was '{return_type}')")     
 
+    def to_dict(self):
+        """
+        Convert the response to a dict from the original json (this gets cached).
+        """
+        return self.to('dict')
+        
+    def to_json(self):
+        """
+        Convert the response to json string.
+        """
+        return self.to('json')
+        
     @property
     def status_code(self):
         """

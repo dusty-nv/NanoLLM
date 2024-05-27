@@ -10,7 +10,7 @@ import tensorrt
 import torch
 import numpy as np
 
-from transformers import AutoConfig
+from transformers import AutoTokenizer
 from packaging.version import Version
 
 from .vision import CLIPImageEmbedding, MMProjector
@@ -138,14 +138,16 @@ class NanoLLM():
         """
         if return_tensors == 'tvm':
             return_tensors = 'np'
-            
-        return self.tokenizer(
+  
+        tokens = self.tokenizer(
             text, 
             add_special_tokens=add_special_tokens, 
             return_tensors=return_tensors,
             **kwargs
-        ).input_ids.astype(dtype, copy=False)
-    
+        ).input_ids
+
+        return convert_tensor(tokens, return_tensors=return_tensors, dtype=dtype)
+
     def detokenize(self, tokens, skip_special_tokens=False, **kwargs) -> str:
         """
         Detokenize the given token ID's and return the decoded string.
@@ -251,7 +253,7 @@ class NanoLLM():
     def __init__(self, model_path, **kwargs):
         #: HuggingFace `transformers.AutoTokenizer <https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer>`_ instance used for tokenization/detokenization.
         self.tokenizer = None
-        
+
         #: Dict containing the model configuration (inspect it on the HuggingFace model card)
         self.config = AttributeDict()
         
@@ -283,6 +285,13 @@ class NanoLLM():
         
         # token and embedding caches
         self.embed_cache = {}
+        
+        # create the tokenizer        
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True, trust_remote_code=True)
+        except:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=False, trust_remote_code=True)
+            
         
     def patch_config(self, **kwargs):
         # Update the original HF model's config.json with different settings from the provided kwargs.

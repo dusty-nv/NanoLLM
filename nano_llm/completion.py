@@ -42,7 +42,7 @@ while True:
     reply = model.generate(
         user_prompt, 
         streaming=not args.no_streaming, 
-        stop_tokens=StopTokens,
+        #stop_tokens=StopTokens,
         max_new_tokens=args.max_new_tokens,
         min_new_tokens=args.min_new_tokens,
         do_sample=args.do_sample,

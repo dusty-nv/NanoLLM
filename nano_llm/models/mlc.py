@@ -67,13 +67,7 @@ class MLCModel(NanoLLM):
         
         if not os.path.isdir(self.weight_path):
             self.weight_path = self.quant_path
-        
-        # create the tokenizer (TODO use a faster implementation than HF, or MLC's C++ version?)
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True, trust_remote_code=True)
-        except:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=False, trust_remote_code=True)
-            
+
         # initialize tvm device
         self.device = tvm.runtime.cuda(0)  # tvm.runtime.Device(tvm.runtime.Device.kDLCUDAManaged, 0)
         assert(self.device.exist) # this is needed to initialize CUDA?
@@ -360,7 +354,7 @@ class MLCModel(NanoLLM):
             text = ''
             for token in stream:
                 text += token
-            return text
+            return stream.text  # return the fully-detokenized copy
         
         return stream
 
@@ -572,19 +566,11 @@ class MLCKVCache(KVCache):
         
         if not self.state:
             self.state = self.model._create_kv_cache()
-            
-        self.num_tokens = 0
-        
+
         self.tvm = None    # list of tvm.ndarray
         self.torch = None  # list of torch.cuda.Tensor
         self.cuda = None   # list of cuda pointers
-        
-    def __len__(self):
-        """
-        Return the current length of the cache in terms of tokens or embedding positions.
-        """
-        return self.num_tokens
-    
+
     def pop(self, tokens):
         """
         Remove the given number of tokens from the end of the cache.
