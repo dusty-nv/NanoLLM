@@ -64,6 +64,9 @@ class ArgParser(argparse.ArgumentParser):
             self.add_argument("--repetition-penalty", type=float, default=1.0,
                 help="the parameter for repetition penalty. 1.0 means no penalty")
 
+        if 'tools' in extras:
+            self.add_argument("--enable-tools", action="store_true", help="enable the model to call tool functions")
+
         # VIDEO
         if 'video_input' in extras:
             self.add_argument("--video-input", type=str, default=None, help="video camera device name, stream URL, file/dir path")

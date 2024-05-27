@@ -12,7 +12,7 @@ from nano_llm import NanoLLM, ChatHistory, ChatTemplates
 from nano_llm.utils import ImageExtensions, ArgParser, KeyboardInterrupt, load_prompts, print_table 
 
 # see utils/args.py for options
-parser = ArgParser()
+parser = ArgParser(extras=ArgParser.Defaults + ['tools'])
 
 parser.add_argument("--prompt-color", type=str, default='blue', help="color to print user prompts (see https://github.com/termcolor/termcolor)")
 parser.add_argument("--reply-color", type=str, default='green', help="color to print user prompts (see https://github.com/termcolor/termcolor)")
@@ -38,7 +38,12 @@ model = NanoLLM.from_pretrained(
 )
 
 # create the chat history
-chat_history = ChatHistory(model, args.chat_template, args.system_prompt)
+chat_history = ChatHistory(
+    model, 
+    chat_template=args.chat_template, 
+    system_prompt=args.system_prompt,
+    tools=args.enable_tools
+ )
 
 
 while True: 
@@ -80,6 +85,7 @@ while True:
     embedding, position = chat_history.embed_chat(
         max_tokens=model.config.max_length - args.max_new_tokens,
         wrap_tokens=args.wrap_tokens,
+        use_cache=model.has_embed,
     )
 
     # generate bot reply
@@ -116,3 +122,8 @@ while True:
     # save the output and kv cache
     chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
     chat_history.kv_cache = reply.kv_cache
+    
+    # run tools
+    if args.enable_tools:
+        chat_history.run_tools()
+        

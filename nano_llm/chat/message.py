@@ -145,7 +145,9 @@ class ChatMessage():
         if self.embedding is not None:
             return self.embedding
             
-        if self.tokens is not None:
+        if self.tokens is not None and not self.history.model.has_embed:
+            if isinstance(self.tokens, list):
+                self.tokens = np.expand_dims(np.asarray(self.tokens, dtype=np.int32), axis=0)
             return self.tokens
           
         if self.history is None:
@@ -192,11 +194,15 @@ class ChatMessage():
         """
         self.template = template[0] + self.content + template[1]
         
-        self.embedding, self.tokens = model.embed_text(
-            self.template, use_cache=self.use_cache,
-            return_tensors=return_tensors, return_tokens=True,
-            **kwargs
-        )
+        if self.tokens is not None:
+            if model.has_embed:
+                self.embedding = model.embed_tokens(self.tokens, return_tensors=return_tensors, **kwargs)
+        else:     
+            self.embedding, self.tokens = model.embed_text(
+                self.template, use_cache=self.use_cache,
+                return_tensors=return_tensors, return_tokens=True,
+                **kwargs
+            )
     
     def _embed_image(self, model, template, return_tensors='np', **kwargs):
         """

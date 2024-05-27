@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import os
+import re
 import json
 import logging
+import traceback
+import termcolor
 import numpy as np
 
 from .message import ChatMessage
@@ -28,28 +31,35 @@ class ChatHistory():
     The system prompt can also be configured through the chat template
     and by setting the :attr:`ChatHistory.system_prompt` property.
     """
-    def __init__(self, model, chat_template=None, system_prompt=None, **kwargs):
+    def __init__(self, model, chat_template=None, system_prompt=None, tools=False, **kwargs):
         """
         Parameters:
            
-           model (NanoLLM) -- the model instance used for embeddings
+           model (NanoLLM):  The model instance used for embeddings
            
-           chat_template (str|dict) -- either a chat template dict, or the name of the 
-                                       chat template to use like 'llama-2', 'vicuna-v1'
-                                       If None, will attempt to determine model type.
+           chat_template (str|dict):  Either a chat template dict, or the name of the 
+                                      chat template to use like ``llama-2``, ``vicuna-v1``
+                                      If None, will attempt to determine model type.
                                   
-           system_prompt (str) -- set the default system prompt
-                                  if None, will use system prompt from the template.
-                                  
-           print_stats (bool) -- if True, generation performance will be printed to the terminal after EOS.
-                                 This also gets enabled by default if --debug or --verbose is used.
+           system_prompt (str):  Set the default system prompt used at the beginning of chats.
+                                 If ``None``, will use system prompt from the template by default.
+           
+           tools (bool|str):  If True, tool calling will be enabled for models that have the
+                              ``tool_call`` and ``tool_response`` roles in their chat templates.
+                              When enabled, the function descriptors will automatically be generated
+                              from their pydoc strings, and appended to the system prompt.
+                                   
+           print_stats (bool):  If True, generation performance will be printed to the terminal after EOS.
+                                This also gets enabled by default if ``--debug`` or ``--verbose`` is used.
         """
         self.model = model 
+        self.tools = tools
         self.messages = None
         
         #: The :class:`KVCache` from :meth:`NanoLLM.generate()` used to store the model state.
         self.kv_cache = None
         
+        # look-up or load the chat template
         if not chat_template:
             self.template = ChatTemplate(model)
             if self.template is None:
@@ -66,6 +76,7 @@ class ChatHistory():
         else:
             raise TypeError(f"chat_template should be a str or dict (was {type(chat_template)})")
             
+        # parse the stop tokens    
         if 'stop' in self.template:
             if not isinstance(self.template.stop, list):
                 self.template.stop = [self.template.stop]
@@ -79,12 +90,18 @@ class ChatHistory():
         #self.template.stop = [x for x in self.template.stop if x >= 0]  # filter out ignored stop tokens
         logging.info(f"model '{self.model.config.name}', chat template '{self.template.name}' stop tokens:  {self.model.tokenizer.batch_decode(self.template.stop)} -> {self.template.stop}")      
 
+        # setup the default system prompt
         if system_prompt:
             self.template['system_prompt'] = system_prompt
 
-        self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
-        
+        if self.tools:
+            from ..plugins.bot_functions import BotFunctions
+            self.BotFunctions = BotFunctions
+            self.BotFunctions.load(test=False)
+            
         self.reset()
+        
+        self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
 
     @property
     def num_tokens(self):
@@ -224,9 +241,9 @@ class ChatHistory():
         self.kv_cache = None
         self.image_embedding = None
         
-        if add_system_prompt and 'system' in self.template:
-            self.append(role='system', text=self.system_prompt, use_cache=use_cache)
-     
+        if add_system_prompt:
+            self.add_system_prompt(use_cache=use_cache)
+
     def to_list(self):
         """
         Serialize the history to a list of dicts, where each dict is a chat entry
@@ -234,6 +251,32 @@ class ChatHistory():
         """
         return [{'role' : msg.role, msg.type : msg.content} for msg in self.messages]
 
+    def add_system_prompt(self, use_cache=True):
+        """
+        Add the system prompt message to the chat, containing :attr:`ChatHistory.system_prompt`
+        appended by the tool function descriptions if tools are enabled.  If the ``system`` role
+        is not defined by the model's chat template, then this function does nothing.
+        
+        Arguments:
+        
+            use_cache (bool):  If true, then the system prompt tokens/embeddedings will be cached.
+                               This is the default because the system prompt typically may not change.
+        Returns:
+        
+            The :class:`ChatMessage` that was added to the chat with the ``system`` role.
+        """
+        if 'system' not in self.template:
+            return None
+            
+        system_prompt = self.system_prompt
+        system_prompt = [system_prompt] if system_prompt else []
+
+        if self.tools:
+            tool_style = 'openai' if 'tool_call' in self.template else 'python'
+            system_prompt.append(self.BotFunctions.generate_docs(style=tool_style))
+            
+        return self.append(role='system', text=' '.join(system_prompt), use_cache=use_cache)
+            
     @property
     def system_prompt(self):
         """
@@ -301,7 +344,90 @@ class ChatHistory():
             
         logging.debug(f"chat embed  shape={embeddings.shape}  position={position}")
         return embeddings, position  
-                        
+    
+    def generate(self, **kwargs):
+        """
+        Run a generation and add the bot reply to the chat history.
+        This uses the same arguments as :meth:`NanoLLM.generate`.
+        """
+        if self.kv_cache is not None and 'kv_cache' not in kwargs:
+            kwargs['kv_cache'] = self.kv_cache
+            
+        embedding, position = self.embed_chat()
+        stream = self.model.generate(embedding, **kwargs)
+        reply = self.append(role='bot', text='', cached=True)
+        
+        for token in stream:
+            termcolor.cprint(token, 'yellow', end='', flush=True)
+            reply.content = stream.text
+            reply.tokens = stream.tokens
+
+        print('')
+        
+        self.kv_cache = stream.kv_cache
+        return stream.text
+        
+    def run_tools(self):
+        """
+        Invoke any tool calls in the most recent reply from the bot.
+        """
+        if not self.messages or self.messages[-1].role != 'bot':
+            raise RuntimeError("to run tools, the last message in the chat history should have been a bot reply")
+            
+        if 'tool_call' in self.template and 'tool_response' in self.template:
+            style = 'openai'
+        else:
+            raise RuntimeError("to run tools, the chat template needs to have keys for 'tool_call' and 'tool_response'")
+         
+        if 'tool_regex' not in self.template:
+            self.template.tool_regex = re.compile(self.template.tool_call, flags=re.DOTALL) # allow for newlines in matches
+               
+        if self.messages[-1].type != 'text':
+            logging.warning("the last bot reply did not contain text, not running tools...")
+            return
+        
+        def parse_tools(text):
+            try:
+                for match in self.template.tool_regex.finditer(text):
+                    print('PARSE_TOOLS REGEX MATCH', match)
+                    return json.loads(match.group(1)) # extract what is inside any prefix/postfix tags
+            except Exception as error:
+                logging.warning(f"Exception occurred trying to parse tool calls from bot reply:\n\n```{text}```\n\n{traceback.format_exc()}")             
+        
+        while True:
+            call = parse_tools(self.messages[-1].content)
+            
+            if call is None:
+                return
+             
+            logging.debug(f'invoking tool call {call}')
+               
+            if style == 'openai':
+                func_name = call['name']
+                func_args = call.get('arguments', {})
+            else:
+                raise ValueError("Tool calling is only currently supported with openai format")
+             
+            func = self.BotFunctions.find(func_name)
+            
+            if not func:
+                logging.warning(f"Could not find tool with name '{func_name}'")
+                return
+                
+            try:
+                response = func.function(**func_args)
+            except Exception as error:
+                logging.error(f"Exception occurred running tool {func_name}({func_args})\n\n{traceback.format_exc()}")
+                return
+                
+            if style == 'openai':  
+                response = json.dumps({"name": func_name, "content": response})
+
+            termcolor.cprint(response, 'light_yellow')
+            
+            self.append(role='tool_response', text=response)
+            self.generate(max_new_tokens=512)
+           
     def reindex(self):
         """
         Update the linked lists in the messages that refer to each other.

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import threading
 
+import torch
+import numpy as np
+
 from nano_llm.utils import ends_with_token
 
 
@@ -88,18 +91,21 @@ class StreamingResponse():
         """
         self.stopping = True
 
-    def add_tokens(self, tokens, detokenize=True):
+    def add_tokens(self, tokens, detokenize=True, event=False):
         """
         Add an output token, detokenize the reply, and accumulate the delta message.
         This function is only used by the model APIs when they generate a new token.
         """
+        if isinstance(tokens, (torch.Tensor, np.ndarray)):
+            tokens = tokens.squeeze().tolist()
+            
         if isinstance(tokens, list):
             self.tokens.extend(tokens)
         elif tokens is not None:
             self.tokens.append(tokens)
             
         if not detokenize:
-            return ''
+            return
             
         # detokenize the entire reply on each new output token, because multiple tokens can
         # combine with each other, changing the previous text (like with long words and unicode)
@@ -107,6 +113,9 @@ class StreamingResponse():
         
         self.delta = self.delta + message[len(self.text):]
         self.text = message
+        
+        if event:
+            self.event.set()
 
     def _pop_delta(self, reset=True):
         """

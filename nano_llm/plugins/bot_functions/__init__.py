@@ -6,10 +6,11 @@ import functools
 import traceback
 
 from decorator_args import decorator_args
+from nano_llm.utils import convert_to_openai_tool
 
 
 @decorator_args(optional=True)        
-def bot_function(func, name=None, docs='pydoc', code='python', enabled=True):
+def bot_function(func, name=None, docs='pydoc', enabled=True):
     """
     Decorator for exposing a function to be callable by the LLM.
     This will create wrapper functions that do the parsing to
@@ -37,16 +38,15 @@ def bot_function(func, name=None, docs='pydoc', code='python', enabled=True):
                    By default, it will be the actual Python function name.
                    
       docs (str):  Description of the function that is added to the model's
-                   system prompt.  By default, the Python docstring is used
-                   from the function's code comment block (`''' docs here '''`)
-                   
-      code (str):  Language that the model is expected to write code in.
-                   By default this is Python, but JSON will be added also.
-         
+                   system prompt.  If ``docs='pydoc'``, then the Python docstring 
+                   is extracted from the function's comment block with its signature.
+                   If ``docs='openai'`` or ``None``, then the docs will be generated 
+                   with in the pydantic OpenAI tool-calling style.
+
       enabled (bool):  Boolean that toggles whether this function is added
                        to the system prompt and able to be called or not.
     """                   
-    return BotFunctions.register(func, name=name, docs=docs, code=code, enabled=enabled)
+    return BotFunctions.register(func, name=name, docs=docs, enabled=enabled)
 
 
 class BotFunctions:
@@ -119,9 +119,18 @@ class BotFunctions:
                 if function.name == filter.lower():
                     function.enabled == mode.startswith('enable')
         return cls.list()
-        
+    
     @classmethod
-    def generate_docs(cls, prologue=True, epilogue=True):
+    def find(cls, name):
+        """
+        Find a function by name, or return None if not found
+        """
+        for function in cls.functions:
+            if function.name == name:
+                return function
+    
+    @classmethod
+    def generate_docs(cls, prologue=True, epilogue=True, style='python'):
         """
         Collate the documentation strings from all the enabled functions
         """
@@ -129,26 +138,46 @@ class BotFunctions:
             if prologue is None or prologue == False:
                 prologue = ''
             elif prologue == True:
-                prologue = "You are able to call the Python functions defined below, and the returned values will be added to the chat:\n\n"
-        
+                if style == 'python':
+                    prologue = "You are able to call the Python functions defined below, and the returned values will be added to the chat:\n\n"
+                elif style == 'openai':
+                    prologue = "Here are the available tools: <tools> "
+                    
         if not isinstance(epilogue, str):
             if epilogue is None or epilogue == False:
                 epilogue = ''
             elif epilogue == True:
-                epilogue = "For example, if the user asks for the temperature, call the WEATHER() function."
-
-        docs = '\n'.join(['* ' + x.docs for x in cls.functions if x.enabled])
-        
+                if style == 'python':
+                    epilogue = "\n\nFor example, if the user asks for the temperature, call the WEATHER() function."
+                else:
+                    epilogue = '\n'.join([
+                        " </tools> Make sure that the json object above with code markdown block is parseable with json.loads() and the XML block with XML ElementTree. Use the following pydantic model json schema for each tool call you will make: {'properties': {'arguments': {'title': 'Arguments', 'type': 'object'}, 'name': {'title': 'Name', 'type': 'string'}}, 'required': ['arguments', 'name'], 'title': 'FunctionCall', 'type': 'object'} At the very first turn you don't have <tool_results> so you shouldn't not make up the results.",
+                        "If the user asks something you don't know or for recent information, call the google_search_and_scrape() function.",
+                        "Please keep a running summary with analysis of previous function results and summaries from previous iterations.",
+                        "Do not stop calling functions until the task has been accomplished or you've reached max iteration of 10.",
+                        "Calling multiple functions at once can overload the system and increase cost so call one function at a time please.",
+                        "If you plan to continue with analysis, always call another function.",
+                        "For each function call return a valid json object (using double quotes) with function name and arguments within <tool_call></tool_call> XML tags as follows:",
+                        "<tool_call>",
+                        '{"arguments": <args-dict>, "name": <function-name>}',
+                        "</tool_call>"
+                    ])
+          
+        if style == 'python':          
+            docs = '\n'.join(['* ' + x.docs for x in cls.functions if x.enabled])
+        elif style == 'openai':
+            docs = str([x.docs for x in cls.functions if x.enabled and x.style == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
+            
         if prologue:
             docs = prologue + docs
             
         if epilogue:
-            docs = docs + '\n\n' + epilogue
+            docs = docs + epilogue
             
         return docs
 
     @classmethod
-    def register(cls, func, name=None, docs='pydoc', code='python', enabled=True):
+    def register(cls, func, name=None, docs='pydoc', enabled=True):
         """
         See the docs for :func:`bot_function`
         """
@@ -182,13 +211,20 @@ class BotFunctions:
 
         wrapper.name = name
         wrapper.docs = ''
+        wrapper.style = None
         wrapper.enabled = enabled
         wrapper.function = func
         wrapper.regex = regex
         
+        if docs is None:
+            docs = ''
+            
         if docs == 'nosig':
             docs = 'pydoc_nosig'
-            
+         
+        if docs == 'python':
+            docs = 'pydoc'
+               
         if docs.startswith('pydoc'):
             if wrapper.__doc__:
                 if docs == 'pydoc':
@@ -197,6 +233,10 @@ class BotFunctions:
                     wrapper.docs = wrapper.__doc__.strip()
             else:
                 wrapper.docs = name + '() '
+            wrapper.style = 'python'
+        elif docs.startswith('openai') or not docs:
+            wrapper.docs = convert_to_openai_tool(func)
+            wrapper.style = 'openai'
         elif docs:
             wrapper.docs = docs
             

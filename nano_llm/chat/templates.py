@@ -61,16 +61,23 @@ ChatTemplates = {
     },
     
     # https://github.com/MicrosoftDocs/azure-docs/blob/main/articles/ai-services/openai/includes/chat-markup-language.md#working-with-chat-markup-language-chatml
-    # TODO:  if bot template has prefix prompt before $MESSAGE, prepend generation prompt to the chat
-    #        make a add_reply() function that makes an empty bot placehold ChatMessage 
-    #        make a generate() function that adds the bot reply, calls LLM
     'chat-ml': {
         'system_prompt': "You are a helpful AI assistant.",
         'system': "<|im_start|>system\n${MESSAGE}<|im_end|>\n",
         'user': "<|im_start|>user\n${MESSAGE}<|im_end|>\n<|im_start|>assistant\n",
         'bot': "${MESSAGE}\n",  # <|im_end|> is after $MESSAGE, but is already included in bot output
     },
-    
+
+    # https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B
+    'chat-ml-tools': {
+        'system_prompt': "You are a function calling AI agent with self-recursion. You can call only one function at a time and analyse data you get from function response. You are provided with function signatures within <tools></tools> XML tags. You may use agentic frameworks for reasoning and planning to help with user query. Please call a function and wait for function results to be provided to you in the next iteration. Don't make assumptions about what values to plug into function arguments. Once you have called a function, results will be fed back to you within <tool_response></tool_response> XML tags. Don't make assumptions about tool results if <tool_response> XML tags are not present since function hasn't been executed yet. Analyze the data once you get the results and call another function. At each iteration please continue adding the your analysis to previous summary. Your final response should directly answer the user query with an anlysis or summary of the results of function calls.",
+        'system': "<|im_start|>system\n${MESSAGE}<|im_end|>\n",
+        'user': "<|im_start|>user\n${MESSAGE}<|im_end|>\n<|im_start|>assistant\n",
+        'bot': "${MESSAGE}\n",  # <|im_end|> is after $MESSAGE, but is already included in bot output
+        'tool_call': "<tool_call>(.*?)</tool_call>",
+        'tool_response': "<|im_start|>tool\n<tool_response>\n${MESSAGE}\n</tool_response>\n<|im_end|>\n<|im_start|>assistant\n",
+    },
+
     # https://github.com/NousResearch/Obsidian/blob/e09c51d88d74657f442a898e3c4607a5b961f0b3/llava/llava/conversation.py#L385
     'nous-obsidian': {
         'system_prompt': "You are a helpful AI assistant.",
