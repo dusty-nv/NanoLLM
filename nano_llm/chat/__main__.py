@@ -85,7 +85,7 @@ while True:
     embedding, position = chat_history.embed_chat(
         max_tokens=model.config.max_length - args.max_new_tokens,
         wrap_tokens=args.wrap_tokens,
-        use_cache=model.has_embed,
+        use_cache=model.has_embed and chat_history.kv_cache,
     )
 
     # generate bot reply
@@ -93,6 +93,7 @@ while True:
         embedding, 
         streaming=not args.disable_streaming, 
         kv_cache=chat_history.kv_cache,
+        cache_position=position,
         stop_tokens=chat_history.template.stop,
         max_new_tokens=args.max_new_tokens,
         min_new_tokens=args.min_new_tokens,
