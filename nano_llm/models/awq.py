@@ -276,7 +276,7 @@ class AWQModel(NanoLLM):
         self.stats.decode_time = time_end_decode - time_begin_decode
         self.stats.decode_rate = self.stats.output_tokens / self.stats.decode_time
 
-        logging.debug(f"AWQ ending cache position:  {cache_position}")
+        #logging.debug(f"AWQ ending cache position:  {cache_position}")
         
         stream.stopped = True
         stream.event.set()  
