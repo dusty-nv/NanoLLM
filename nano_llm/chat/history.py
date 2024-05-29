@@ -8,6 +8,7 @@ import termcolor
 import numpy as np
 
 from .message import ChatMessage
+from .stream import StreamingResponse
 from .templates import ChatTemplate, ChatTemplates
 from ..utils import AttributeDict
                         
@@ -31,7 +32,7 @@ class ChatHistory():
     The system prompt can also be configured through the chat template
     and by setting the :attr:`ChatHistory.system_prompt` property.
     """
-    def __init__(self, model, chat_template=None, system_prompt=None, tools=False, **kwargs):
+    def __init__(self, model, chat_template=None, system_prompt=None, **kwargs):
         """
         Parameters:
            
@@ -53,7 +54,6 @@ class ChatHistory():
                                 This also gets enabled by default if ``--debug`` or ``--verbose`` is used.
         """
         self.model = model 
-        self.tools = tools
         self.messages = None
         
         #: The :class:`KVCache` from :meth:`NanoLLM.generate()` used to store the model state.
@@ -75,7 +75,7 @@ class ChatHistory():
             self.template = AttributeDict(template)
         else:
             raise TypeError(f"chat_template should be a str or dict (was {type(chat_template)})")
-            
+
         # parse the stop tokens    
         if 'stop' in self.template:
             if not isinstance(self.template.stop, list):
@@ -94,14 +94,10 @@ class ChatHistory():
         if system_prompt:
             self.template['system_prompt'] = system_prompt
 
-        if self.tools:
-            from ..plugins.bot_functions import BotFunctions
-            self.BotFunctions = BotFunctions
-            self.BotFunctions.load(test=False)
-            
-        self.reset()
-        
         self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
+        self.tool_style = 'openai' if 'tool_call' in self.template else 'python'
+        
+        self.reset()
 
     @property
     def num_tokens(self):
@@ -165,8 +161,11 @@ class ChatHistory():
         """
         if isinstance(msg, ChatMessage):
             self.messages.append(msg)
+        elif isinstance(msg, StreamingResponse):
+            self.messages.append(ChatMessage(role, text=msg.text, tokens=msg.tokens, history=self, **kwargs))
+            self.kv_cache = msg.kv_cache
         else:
-            self.messages.append(ChatMessage(role, msg=msg, **kwargs))
+            self.messages.append(ChatMessage(role, msg=msg, history=self, **kwargs))
             
         self.reindex()
         return self.messages[-1]
@@ -267,15 +266,8 @@ class ChatHistory():
         """
         if 'system' not in self.template:
             return None
-            
-        system_prompt = self.system_prompt
-        system_prompt = [system_prompt] if system_prompt else []
 
-        if self.tools:
-            tool_style = 'openai' if 'tool_call' in self.template else 'python'
-            system_prompt.append(self.BotFunctions.generate_docs(style=tool_style))
-            
-        return self.append(role='system', text=' '.join(system_prompt), use_cache=use_cache)
+        return self.append(role='system', text=self.system_prompt, use_cache=use_cache)
             
     @property
     def system_prompt(self):
@@ -344,90 +336,7 @@ class ChatHistory():
             
         logging.debug(f"chat embed  shape={embeddings.shape}  position={position}")
         return embeddings, position  
-    
-    def generate(self, **kwargs):
-        """
-        Run a generation and add the bot reply to the chat history.
-        This uses the same arguments as :meth:`NanoLLM.generate`.
-        """
-        if self.kv_cache is not None and 'kv_cache' not in kwargs:
-            kwargs['kv_cache'] = self.kv_cache
-            
-        embedding, position = self.embed_chat()
-        stream = self.model.generate(embedding, **kwargs)
-        reply = self.append(role='bot', text='', cached=True)
-        
-        for token in stream:
-            termcolor.cprint(token, 'yellow', end='', flush=True)
-            reply.content = stream.text
-            reply.tokens = stream.tokens
 
-        print('')
-        
-        self.kv_cache = stream.kv_cache
-        return stream.text
-        
-    def run_tools(self):
-        """
-        Invoke any tool calls in the most recent reply from the bot.
-        """
-        if not self.messages or self.messages[-1].role != 'bot':
-            raise RuntimeError("to run tools, the last message in the chat history should have been a bot reply")
-            
-        if 'tool_call' in self.template and 'tool_response' in self.template:
-            style = 'openai'
-        else:
-            raise RuntimeError("to run tools, the chat template needs to have keys for 'tool_call' and 'tool_response'")
-         
-        if 'tool_regex' not in self.template:
-            self.template.tool_regex = re.compile(self.template.tool_call, flags=re.DOTALL) # allow for newlines in matches
-               
-        if self.messages[-1].type != 'text':
-            logging.warning("the last bot reply did not contain text, not running tools...")
-            return
-        
-        def parse_tools(text):
-            try:
-                for match in self.template.tool_regex.finditer(text):
-                    print('PARSE_TOOLS REGEX MATCH', match)
-                    return json.loads(match.group(1)) # extract what is inside any prefix/postfix tags
-            except Exception as error:
-                logging.warning(f"Exception occurred trying to parse tool calls from bot reply:\n\n```{text}```\n\n{traceback.format_exc()}")             
-        
-        while True:
-            call = parse_tools(self.messages[-1].content)
-            
-            if call is None:
-                return
-             
-            logging.debug(f'invoking tool call {call}')
-               
-            if style == 'openai':
-                func_name = call['name']
-                func_args = call.get('arguments', {})
-            else:
-                raise ValueError("Tool calling is only currently supported with openai format")
-             
-            func = self.BotFunctions.find(func_name)
-            
-            if not func:
-                logging.warning(f"Could not find tool with name '{func_name}'")
-                return
-                
-            try:
-                response = func.function(**func_args)
-            except Exception as error:
-                logging.error(f"Exception occurred running tool {func_name}({func_args})\n\n{traceback.format_exc()}")
-                return
-                
-            if style == 'openai':  
-                response = json.dumps({"name": func_name, "content": response})
-
-            termcolor.cprint(response, 'light_yellow')
-            
-            self.append(role='tool_response', text=response)
-            self.generate(max_new_tokens=512)
-           
     def reindex(self):
         """
         Update the linked lists in the messages that refer to each other.

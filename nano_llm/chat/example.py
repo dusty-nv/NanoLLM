@@ -26,7 +26,7 @@ while True:
     prompt = input().strip()
 
     # add user prompt and generate chat tokens/embeddings
-    chat_history.append(role='user', msg=prompt)
+    chat_history.append('user', prompt)
     embedding, position = chat_history.embed_chat()
 
     # generate bot reply
@@ -43,5 +43,4 @@ while True:
         termcolor.cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
     # save the final output
-    chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
-    chat_history.kv_cache = reply.kv_cache
+    chat_history.append('bot', reply)

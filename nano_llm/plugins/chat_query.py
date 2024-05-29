@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import logging
 
-from nano_llm import Plugin, NanoLLM, ChatHistory
+from nano_llm import Plugin, NanoLLM, ChatHistory 
 from nano_llm.utils import ImageTypes, print_table
 
 
@@ -176,85 +176,101 @@ class ChatQuery(Plugin):
             logging.debug("image message, waiting for user prompt")
             return
         
-        # get the latest chat embeddings
-        embedding, position = chat_history.embed_chat(
-            max_tokens=self.model.config.max_length - self.max_new_tokens,
-            wrap_tokens=self.wrap_tokens
-        )
-        
-        # output vision features
-        if chat_history.image_embedding is not None:
-            self.output(chat_history.image_embedding, ChatQuery.OutputImageEmbedding)
-            
-        # start generating output
-        self.stream = self.model.generate(
-            embedding, 
-            streaming=True, 
-            functions=self.functions,
-            kv_cache=chat_history.kv_cache,
-            stop_tokens=chat_history.template.stop,
-            max_new_tokens=self.max_new_tokens,
-            min_new_tokens=self.min_new_tokens,
-            do_sample=self.do_sample,
-            repetition_penalty=self.repetition_penalty,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            **kwargs
-        )
-        
-        # output the stream iterator on channel 3
-        self.output(self.stream, ChatQuery.OutputStream)
+        # support both inline and multi-generation tools
+        if chat_history.tool_style == 'openai':
+            tool_functions = self.functions
+            inline_functions = None
+        else:
+            tool_functions = None
+            inline_functions = self.functions
 
-        # output the generated tokens on channel 0
-        bot_reply = chat_history.append(role='bot', text='', cached=True)
-        words = ''
-        
-        for token in self.stream:
-            if self.interrupted:
-                logging.debug(f"LLM interrupted, terminating request early")
-                self.stream.stop()
+        while True:
+            # get the latest chat embeddings
+            embedding, position = chat_history.embed_chat(
+                max_tokens=self.model.config.max_length - self.max_new_tokens,
+                wrap_tokens=self.wrap_tokens,
+                use_cache=self.model.has_embed and chat_history.kv_cache,
+            )
+            
+            # output vision features
+            if chat_history.image_embedding is not None:
+                self.output(chat_history.image_embedding, ChatQuery.OutputImageEmbedding)
                 
-            # sync the reply with the entire text, so that multi-token
-            # unicode unicode sequences are detokenized and decoded together
+            # start generating output
+            self.stream = self.model.generate(
+                embedding, 
+                streaming=True, 
+                functions=inline_functions,
+                kv_cache=chat_history.kv_cache,
+                cache_position=position,
+                stop_tokens=chat_history.template.stop,
+                max_new_tokens=self.max_new_tokens,
+                min_new_tokens=self.min_new_tokens,
+                do_sample=self.do_sample,
+                repetition_penalty=self.repetition_penalty,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                **kwargs
+            )
+            
+            # output the stream iterator on channel 3
+            self.output(self.stream, ChatQuery.OutputStream)
+
+            # output the generated tokens on channel 0
+            bot_reply = chat_history.append(role='bot', text='', cached=True)
+            words = ''
+            
+            for token in self.stream:
+                if self.interrupted:
+                    logging.debug(f"LLM interrupted, terminating request early")
+                    self.stream.stop()
+                    
+                # sync the reply with the entire text, so that multi-token
+                # unicode unicode sequences are detokenized and decoded together
+                bot_reply.content = self.stream.text
+                bot_reply.tokens = self.stream.tokens
+                
+                # output stream of raw tokens
+                self.output(token, ChatQuery.OutputToken)
+                
+                # if a space was added, emit new word(s)
+                words += token
+                last_space = words.rfind(' ')
+                
+                if last_space >= 0:
+                    self.output(words[:last_space+1], ChatQuery.OutputWords)
+                    if last_space < len(words) - 1:
+                        words = words[last_space+1:]
+                    else:
+                        words = ''
+                
+            if len(words) > 0:
+                self.output(words, ChatQuery.OutputWords)
+                
             bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens
+            chat_history.kv_cache = self.stream.kv_cache
+            self.stream = None
             
-            # output stream of raw tokens
-            self.output(token, ChatQuery.OutputToken)
-            
-            # if a space was added, emit new word(s)
-            words += token
-            last_space = words.rfind(' ')
-            
-            if last_space >= 0:
-                self.output(words[:last_space+1], ChatQuery.OutputWords)
-                if last_space < len(words) - 1:
-                    words = words[last_space+1:]
-                else:
-                    words = ''
-            
-        if len(words) > 0:
-            self.output(words, ChatQuery.OutputWords)
-            
-        bot_reply.content = self.stream.text
-        bot_reply.tokens = self.stream.tokens
-        chat_history.kv_cache = self.stream.kv_cache
-        self.stream = None
+            # output the final generated text on channel 2
+            self.output(bot_reply.content, ChatQuery.OutputFinal)
         
-        # output the final generated text on channel 2
-        self.output(bot_reply.content, ChatQuery.OutputFinal)
-    
-        if self.print_stats:
-            print_table(self.model.stats)
-    '''
-    def interrupt(self, clear_inputs=True, block=True):
-        """
-        Interrupt any ongoing/pending processing, and optionally clear the input queue.
-        
-        """
-        super().interrupt(clear_inputs=clear_inputs)
-        
-        while self.stream is not None:
-            self.stream.stop()
-    '''
-    
+            if self.print_stats:
+                print_table(self.model.stats)
+                
+            # run bot functions
+            if tool_functions is None:
+                return
+            
+            from nano_llm import BotFunctions
+               
+            tool_response = BotFunctions.run(
+                bot_reply.content, template=chat_history.template, functions=tool_functions
+            )
+            
+            if tool_response:
+                chat_history.append('tool_response', tool_response)
+            else:
+                return
+                
+            

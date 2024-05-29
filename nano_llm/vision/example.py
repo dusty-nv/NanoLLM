@@ -64,10 +64,10 @@ while True:
     if img is None:
         continue
 
-    chat_history.append(role='user', image=img)
+    chat_history.append('user', image=img)
     
     for prompt in prompts:
-        chat_history.append(role='user', msg=prompt)
+        chat_history.append('user', prompt)
         embedding, _ = chat_history.embed_chat()
         
         print('>>', prompt)
@@ -86,8 +86,7 @@ while True:
         for token in reply:
             cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
-        chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
-        chat_history.kv_cache = reply.kv_cache
+        chat_history.append('bot', reply)
         
     chat_history.reset()
     

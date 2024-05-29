@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import logging
+import datetime
+
 import torch
 import numpy as np
 
 from ..utils import ImageExtensions, ImageTypes, print_table
+
 
 class ChatMessage():
     """
@@ -87,6 +90,9 @@ class ChatMessage():
             if self.type is None:
                 raise ValueError(f"couldn't find valid message content in {kwargs}, please specify its type")
 
+        # Apply variable substitutions
+        self.apply_substitutions(kwargs.get('substitutions'))
+        
     @property
     def num_tokens(self):
         """
@@ -137,7 +143,34 @@ class ChatMessage():
         Return true if the message is of the given type (like 'text', 'image', ect)
         """
         return (self.type == type)
-        
+    
+    def apply_substitutions(self, substitutions=None):
+        """
+        Apply variable substitutions to the message content, like "Today's date is ${DATE}".
+        This is separate from the templating that occurs with the special tokens & separators.
+        """
+        if self.type != 'text' or self.cached or substitutions is False:
+            return
+            
+        if isinstance(substitutions, dict):
+            for key, value in substitutions.items():
+                self.content = self.content.replace(key, value)
+            return
+            
+        if "${DATE}" in self.content:
+            self.content = self.content.replace("${DATE}", datetime.date.today().strftime("%Y-%m-%d"))
+            
+        if "${TIME}" in self.content:
+            self.content = self.content.replace("${TIME}", datetime.datetime.now().strftime("%-I:%M %p"))
+           
+        if "${TOOLS}" in self.content:
+            from nano_llm import BotFunctions
+            self.content = self.content.replace("${TOOLS}", BotFunctions.generate_docs(style=self.history.tool_style))
+          
+        if "${LOCATION}" in self.content:
+            from nano_llm.plugins.bot_functions.location import LOCATION
+            self.content = self.content.replace("${LOCATION}", LOCATION())
+               
     def embed(self, return_tensors='np', **kwargs):
         """
         Apply message templates, tokenization, and generate the embedding.

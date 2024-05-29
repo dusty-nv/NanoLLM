@@ -126,4 +126,62 @@ def wrap_text(font, image, text='', x=5, y=5, **kwargs):
             current_line = word + " "
             y=y+line_spacing
     return y
+
+
+def extract_code(text):
+    """
+    Extract code blocks delimited by braces (square and curly, like JSON).
+    Returns a list of (begin, end) tuples with the indices of the blocks.
+    """
+    open_delim=0
+    start=-1
+    blocks=[]
     
+    for i, c in enumerate(text):
+        if c == '[' or c == '{':
+            if open_delim == 0:
+                start = i
+            open_delim += 1
+        elif c == ']' or c == '}':
+            open_delim -= 1
+            if open_delim == 0 and start >= 0:
+                blocks.append((start,i+1))
+                start = -1
+                
+    return blocks
+
+
+def code_tags(text, blocks=None, open_tag='<code>', close_tag='</code>'):
+    """
+    Add code tags to surround blocks of code (i.e. for HTML presentation)
+    Returns the text, but with the desired tags added around the code blocks.
+    This works for JSON-like code with nested curly and square brackets.
+    """
+    if blocks is None:
+        blocks = extract_code(text)
+    
+    if not blocks:
+        return text
+
+    offset = 0
+    
+    for start, end in blocks:
+        text = text[:start+offset] + open_tag + text[start+offset:end+offset] + close_tag + text[end+offset:]
+        offset += len(open_tag) + len(close_tag)
+        
+    return text 
+   
+   
+def filter_keys(dictionary, keep=None, remove=None):
+    """
+    Remove keys from a dict by either a list of keys to keep or remove.
+    """
+    if isinstance(dictionary, list):
+        for x in dictionary:
+            filter_keys(x, keep=keep, remove=remove)
+        return dictionary
+        
+    for key in list(dictionary.keys()):
+        if (keep and key not in keep) or (remove and key in remove):
+            del dictionary[key]
+  

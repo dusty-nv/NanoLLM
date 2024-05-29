@@ -2,9 +2,9 @@
 import os
 
 from nano_llm import bot_function
-from nano_llm.utils import WebRequest
+from nano_llm.utils import WebRequest, filter_keys
 
-from .location import current_location, LOCATION
+from .location import get_current_location, LOCATION
 
 
 ACCUWEATHER_KEY=os.environ.get('ACCUWEATHER_KEY', None)
@@ -17,7 +17,7 @@ WEATHER_ON=True if WEATHER_API else False
 
 
 @bot_function(enabled=WEATHER_ON, docs='openai')
-def get_weather(location : str) -> str:
+def get_current_weather(location : str) -> str:
     """
     Returns the current weather and temperature of the given location.
 
@@ -32,11 +32,8 @@ def get_weather(location : str) -> str:
                 - 'precipitation': If there is active precipitation, a string such as 'Rain', 'Snow', or 'Ice' (otherwise None).
     """
     if not WEATHER_KEY:
-        raise ValueError(f"$ACCUWEATHER_KEY or $OPENWEATHER_KEY should be set to your respective API key to use weather data")
-     
-    if WEATHER_API == "openweather":
-        raise NotImplementedError("OpenWeather API is not currently implemented.")
-        
+        raise ValueError(f"$ACCUWEATHER_KEY should be set to your respective API key to use weather data")
+
     geoposition = _accuweather_geoposition(location, api_key=WEATHER_KEY)
     weather = WebRequest.get(f"http://dataservice.accuweather.com/currentconditions/v1/{geoposition['Key']}?apikey={WEATHER_KEY}", ttl=WEATHER_TTL)[0]
     
@@ -47,8 +44,35 @@ def get_weather(location : str) -> str:
     }
 
     return weather
+
+
+@bot_function(enabled=WEATHER_ON, docs='openai')
+def get_weather_forecast(location : str):
+    """
+    Returns the 5-day weather forecast of the given location.
     
- 
+    Args:
+        location (str): The name of the city or place to get the weather forecast for.
+        
+    Returns:
+        list[dict]: A list of dictionaries containing the weather forecast for each day.
+    """
+    if not WEATHER_KEY:
+        raise ValueError(f"$ACCUWEATHER_KEY should be set to your respective API key to use weather data")
+
+    geoposition = _accuweather_geoposition(location, api_key=WEATHER_KEY)
+
+    forecasts = WebRequest.get(f"http://dataservice.accuweather.com/forecasts/v1/daily/5day/{geoposition['Key']}?apikey={WEATHER_KEY}", ttl=WEATHER_TTL)["DailyForecasts"]
+
+    for day in forecasts:
+        filter_keys(day, keep=['Date', 'Temperature', 'Day', 'Night'])
+        filter_keys(day['Day'], remove=['Icon', 'IconPhrase'])
+        filter_keys(day['Night'], remove=['Icon', 'IconPhrase'])
+        day['Date'] = day['Date'][:10]
+
+    return forecasts
+    
+    
 @bot_function(enabled=WEATHER_ON)
 def WEATHER(location=None, api=WEATHER_API, api_key=WEATHER_KEY, return_type='str'):
     """
@@ -98,7 +122,7 @@ def WEATHER_FORECAST(location=None, day=1, api=WEATHER_API, api_key=WEATHER_KEY,
     
 def _accuweather_geoposition(location=None, api_key=WEATHER_KEY):
     if location is None:
-        location = current_location()
+        location = get_current_location()
     elif isinstance(location, str):
         location = WebRequest.get(f"http://dataservice.accuweather.com/locations/v1/cities/search?q={location}&apikey={api_key}", ttl=WEATHER_TTL)
         location = {'lat': location[0]['GeoPosition']['Latitude'], 'lon': location[0]['GeoPosition']['Longitude']}
@@ -122,8 +146,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"Getting the current weather for '{args.location}'")
+    pprint.pprint(get_current_weather(args.location), indent=2)
     
-    pprint.pprint(get_weather(args.location), indent=2)
-    
-    
+    print(f"Getting the weather forecast for '{args.location}'")
+    pprint.pprint(get_weather_forecast(args.location), indent=2)
     

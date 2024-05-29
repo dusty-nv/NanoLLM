@@ -8,7 +8,7 @@ import numpy as np
 
 from nano_llm import StopTokens, BotFunctions, bot_function
 from nano_llm.web import WebServer
-from nano_llm.utils import ArgParser, KeyboardInterrupt
+from nano_llm.utils import ArgParser, KeyboardInterrupt, code_tags
 from nano_llm.plugins import AutoASR
 
 from .voice_chat import VoiceChat
@@ -92,7 +92,7 @@ class WebChat(VoiceChat):
                 if msg['client_state'] == 'connected':
                     client_init_msg = {
                         'system_prompt': self.llm.history.system_prompt,
-                        'bot_functions': BotFunctions.generate_docs(prologue=False),
+                        'bot_functions': BotFunctions.generate_docs(style=self.llm.history.tool_style, prologue=False, epilogue=False),
                         'user_profile': '\n'.join(self.user_profile),
                     }
                     
@@ -201,8 +201,8 @@ class WebChat(VoiceChat):
             
         system_prompt = [instruct]
         
-        if enable_autodoc and self.llm.functions:
-            system_prompt.append("\n" + BotFunctions.generate_docs())
+        #if enable_autodoc and self.llm.functions:
+        #    system_prompt.append("\n" + BotFunctions.generate_docs())
             
         if enable_profile and self.user_profile:
             system_prompt.append(
@@ -258,17 +258,29 @@ class WebChat(VoiceChat):
             history.append({'role': 'user', 'text': self.asr_history})
             
         def web_text(text):
-            text = text.strip()
-            text = text.strip('\n')
-            text = text.replace('\n', '<br/>')
-            text = text.replace('<s>', '')
-            
             for stop_token in StopTokens:
                 text = text.replace(stop_token, '')
-                
+               
+            text = text.strip()
+            text = text.strip('\n')
+             
+            if text.find('<tool_call>') == 0:
+                text = text.replace('\n', '')
+
+            text = text.replace('<s>', '')
+            text = text.replace('&', '&amp;')
+            text = text.replace('<', '&lt;')
+            text = text.replace('>', '&gt;')
+            text = text.replace('\\n', '\n')
+            text = text.replace('\n', '<br/>')
+            text = text.replace('\\"', '\"')
+            text = text.replace("\\'", "\'")
+            
             for regex, replace in self.web_regex:
                 text = regex.sub(replace, text)
-                
+
+            text = code_tags(text)
+
             return text
           
         def web_image(image):

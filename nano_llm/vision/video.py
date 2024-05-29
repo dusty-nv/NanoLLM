@@ -87,14 +87,14 @@ while True:
     if last_image is None:
         continue
 
-    chat_history.append(role='user', text=f'Image {num_images + 1}:')
-    chat_history.append(role='user', image=last_image)
+    chat_history.append('user', text=f'Image {num_images + 1}:')
+    chat_history.append('user', image=last_image)
     
     last_image = None
     num_images += 1
 
     for prompt in prompts:
-        chat_history.append(role='user', msg=prompt)
+        chat_history.append('user', prompt)
         embedding, _ = chat_history.embed_chat()
         
         print('>>', prompt)
@@ -117,9 +117,7 @@ while True:
             else:
                 last_text = last_text + token
 
-        chat_history.append(role='bot', text=reply.text, tokens=reply.tokens)
-        chat_history.kv_cache = reply.kv_cache
-        
+        chat_history.append('bot', reply)
         chat_history.pop(2)
         
     if num_images >= args.max_images:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import json
 import logging
 
 import functools
@@ -70,7 +71,7 @@ class BotFunctions:
     functions = []
     builtins = []
         
-    def __new__(cls, all=False, load=True, test=True):
+    def __new__(cls, all=False, load=True, test=False):
         """
         Return the list of enabled functions whenever `BotFunctions()` is called,
         making it seem like you are just calling a function that returns a list::
@@ -121,27 +122,33 @@ class BotFunctions:
         return cls.list()
     
     @classmethod
-    def find(cls, name):
+    def find(cls, name, functions=None):
         """
         Find a function by name, or return None if not found
         """
-        for function in cls.functions:
+        if functions is None:
+            functions = cls.functions
+            
+        for function in functions:
             if function.name == name:
                 return function
     
     @classmethod
-    def generate_docs(cls, prologue=True, epilogue=True, style='python'):
+    def generate_docs(cls, prologue=True, epilogue=True, style='python', functions=None):
         """
         Collate the documentation strings from all the enabled functions
         """
+        if functions is None:
+            functions = BotFunctions()
+            
         if not isinstance(prologue, str):
             if prologue is None or prologue == False:
                 prologue = ''
             elif prologue == True:
                 if style == 'python':
                     prologue = "You are able to call the Python functions defined below, and the returned values will be added to the chat:\n\n"
-                elif style == 'openai':
-                    prologue = "Here are the available tools: <tools> "
+                else:
+                    prologue = ''
                     
         if not isinstance(epilogue, str):
             if epilogue is None or epilogue == False:
@@ -150,23 +157,12 @@ class BotFunctions:
                 if style == 'python':
                     epilogue = "\n\nFor example, if the user asks for the temperature, call the WEATHER() function."
                 else:
-                    epilogue = '\n'.join([
-                        " </tools> Make sure that the json object above with code markdown block is parseable with json.loads() and the XML block with XML ElementTree. Use the following pydantic model json schema for each tool call you will make: {'properties': {'arguments': {'title': 'Arguments', 'type': 'object'}, 'name': {'title': 'Name', 'type': 'string'}}, 'required': ['arguments', 'name'], 'title': 'FunctionCall', 'type': 'object'} At the very first turn you don't have <tool_results> so you shouldn't not make up the results.",
-                        "If the user asks something you don't know or for recent information, call the google_search_and_scrape() function.",
-                        "Please keep a running summary with analysis of previous function results and summaries from previous iterations.",
-                        "Do not stop calling functions until the task has been accomplished or you've reached max iteration of 10.",
-                        "Calling multiple functions at once can overload the system and increase cost so call one function at a time please.",
-                        "If you plan to continue with analysis, always call another function.",
-                        "For each function call return a valid json object (using double quotes) with function name and arguments within <tool_call></tool_call> XML tags as follows:",
-                        "<tool_call>",
-                        '{"arguments": <args-dict>, "name": <function-name>}',
-                        "</tool_call>"
-                    ])
-          
+                    epilogue = ''
+                    
         if style == 'python':          
-            docs = '\n'.join(['* ' + x.docs for x in cls.functions if x.enabled])
+            docs = '\n'.join(['* ' + x.docs for x in functions if x.style == 'python'])
         elif style == 'openai':
-            docs = str([x.docs for x in cls.functions if x.enabled and x.style == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
+            docs = str([x.docs for x in functions if x.style == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
             
         if prologue:
             docs = prologue + docs
@@ -244,7 +240,75 @@ class BotFunctions:
         func._bot_function = wrapper
         
         return func
+    
+    @classmethod
+    def run(cls, text, template=None, functions=None):
+        """
+        Invoke any function calls in the output text and return the results.
+        """
+        if not text:
+            return None
+            
+        if functions is None:
+            functions = BotFunctions()
+            
+        if template is None:
+            # inline-style python/JSON
+            function_text = ''
+            for function in functions:
+                output = function(text)
+                if not output:
+                    continue
+                function_text = ' ' + output
+            return function_text if function_text else None
+
+        if 'tool_call' in template and 'tool_response' in template:
+            style = 'openai'
+        else:
+            raise RuntimeError("to run tools, the chat template needs to have keys for 'tool_call' and 'tool_response'")
+         
+        if 'tool_regex' not in template:
+            template.tool_regex = re.compile(template.tool_call, flags=re.DOTALL) # allow for newlines in matches
+                  
+        def parse_tools(text):
+            try:
+                for match in template.tool_regex.finditer(text):
+                    return json.loads(match.group(1)) # extract what is inside any prefix/postfix tags
+            except Exception as error:
+                logging.warning(f"Exception occurred trying to parse tool calls from bot reply:\n\n```{text}```\n\n{traceback.format_exc()}")             
+
+        call = parse_tools(text)
         
+        if call is None:
+            return None
+             
+        logging.debug(f'invoking tool call {call}')
+               
+        if style == 'openai':
+            func_name = call['name']
+            func_args = call.get('arguments', {})
+        else:
+            raise ValueError("Tool calling is only currently supported with openai format")
+         
+        func = cls.find(func_name, functions=functions)
+            
+        if not func or not func.enabled:
+            error = f"Error: could not find tool named '{func_name}'"
+            logging.error(error)
+            return error
+                
+        try:
+            response = func.function(**func_args)
+        except Exception as error:
+            error = f"Exception occurred running tool {func_name}({func_args})\n\n{traceback.format_exc()}"
+            logging.error(error)
+            return error
+                
+        if style == 'openai':  
+            response = json.dumps({"name": func_name, "content": response})
+
+        return response
+            
     @classmethod
     def load(cls, test=True):
         """
@@ -257,6 +321,7 @@ class BotFunctions:
         from . import clock
         from . import location
         from . import weather
+        from . import home_assistant
         
         assert(cls.functions)
         cls.builtins = True

@@ -13,8 +13,8 @@ def LOCATION(return_type='str'):
     return response.to(return_type, text)
 
 
-@bot_function(docs='openai')
-def current_location():
+@bot_function(docs='openai', enabled=False)
+def get_current_location():
     """
     Returns the current location, like the name of the city.
     This function takes no arguments.
