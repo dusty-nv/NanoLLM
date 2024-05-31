@@ -3,12 +3,13 @@ import time
 import queue
 import threading
 import logging
+import numpy as np
 
 import riva.client
 import riva.client.audio_io
 
-from .auto_asr import AutoASR
-from nano_llm.utils import audio_silent
+from nano_llm.plugins import AutoASR
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio
 
 
 class RivaASR(AutoASR):
@@ -27,10 +28,10 @@ class RivaASR(AutoASR):
     """
     def __init__(self, riva_server='localhost:50051',
                  language_code='en-US', sample_rate_hz=48000, 
-                 asr_confidence=-2.5, asr_silence=-1.0, asr_chunk=1600,
+                 asr_confidence=-2.5, asr_chunk=1600,
                  automatic_punctuation=True, inverse_text_normalization=False, 
                  profanity_filter=False, boosted_lm_words=None, boosted_lm_score=4.0, 
-                 audio_input_device=None, audio_input_channels=1, **kwargs):
+                 **kwargs):
         """
         Parameters:
         
@@ -48,15 +49,19 @@ class RivaASR(AutoASR):
 
         self.audio_queue = AudioQueue(self)
         self.audio_chunk = asr_chunk
-        self.input_device = audio_input_device
+        self.input_device = None #audio_input_device
         self.language_code = language_code
-        self.sample_rate = sample_rate_hz
         self.confidence_threshold = asr_confidence
-        self.silence_threshold = asr_silence
         self.keep_alive_timeout = 5  # requests timeout after 1000 seconds
         
-        self.asr_service = riva.client.ASRService(self.auth)
+        if sample_rate_hz is None:
+            sample_rate_hz = 16000
+            
+        self.sample_rate = sample_rate_hz
         
+        self.asr_service = riva.client.ASRService(self.auth)
+        self.asr_request = None
+
         self.asr_config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
                 encoding=riva.client.AudioEncoding.LINEAR_PCM,
@@ -66,7 +71,7 @@ class RivaASR(AutoASR):
                 enable_automatic_punctuation=automatic_punctuation,
                 verbatim_transcripts=not inverse_text_normalization,
                 sample_rate_hertz=sample_rate_hz,
-                audio_channel_count=audio_input_channels,
+                audio_channel_count=1,
             ),
             interim_results=True,
         )
@@ -89,26 +94,27 @@ class RivaASR(AutoASR):
         ))
         
     def generate(self, audio_generator):
-        with audio_generator:
-            responses = self.asr_service.streaming_response_generator(
-                audio_chunks=audio_generator, streaming_config=self.asr_config
-            )
-        
-            for response in responses:
-                if not response.results:
-                    continue
+        while True:
+            with audio_generator:
+                responses = self.asr_service.streaming_response_generator(
+                    audio_chunks=audio_generator, streaming_config=self.asr_config
+                )
+            
+                for response in responses:
+                    if not response.results:
+                        continue
 
-                for result in response.results:
-                    transcript = result.alternatives[0].transcript.strip()
-                    if result.is_final:
-                        score = result.alternatives[0].confidence
-                        if score >= self.confidence_threshold:
-                            logging.debug(f"submitting ASR transcript (confidence={score:.3f}) -> '{transcript}'")
-                            self.output(self.add_punctuation(transcript), AutoASR.OutputFinal)
+                    for result in response.results:
+                        transcript = result.alternatives[0].transcript.strip()
+                        if result.is_final:
+                            score = result.alternatives[0].confidence
+                            if score >= self.confidence_threshold:
+                                logging.debug(f"Riva submitting ASR transcript (confidence={score:.3f}) -> '{transcript}'")
+                                self.output(self.add_punctuation(transcript), AutoASR.OutputFinal)
+                            else:
+                                logging.warning(f"Riva dropping ASR transcript (confidence={score:.3f} < {self.confidence_threshold:.3f}) -> '{transcript}'")
                         else:
-                            logging.warning(f"dropping ASR transcript (confidence={score:.3f} < {self.confidence_threshold:.3f}) -> '{transcript}'")
-                    else:
-                        self.output(transcript, AutoASR.OutputPartial)
+                            self.output(transcript, AutoASR.OutputPartial)
         
 
 class AudioQueue:
@@ -133,56 +139,25 @@ class AudioQueue:
         
         while size <= chunk_size:  
             try:
-                input, _ = self.asr.input_queue.get(timeout=self.asr.keep_alive_timeout) 
+                samples, kwargs = self.asr.input_queue.get(timeout=self.asr.keep_alive_timeout) 
             except queue.Empty:
                 logging.debug(f"sending ASR keep-alive silence (idle for {self.asr.keep_alive_timeout} seconds)")
                 return bytes(chunk_size)
 
-            if audio_silent(input, self.asr.silence_threshold):
-                if time.perf_counter() - time_begin >= self.asr.keep_alive_timeout:
-                    return bytes(chunk_size)
-                else: # drop the previous audio, so it doesn't get included later
-                    data = []
-                    size = 0
-                    continue
-                    
-            data.append(input)
-            size += len(data[-1])
-        
-        """
-        while True:
-            try:
-                data.append(self.queue.get(block=False))
-            except queue.Empty:
-                break
-        """
+            if samples is None:
+                raise StopIteration
+                
+            sample_rate = kwargs.get('sample_rate')
+            
+            if sample_rate is not None and sample_rate != self.asr.sample_rate:
+                samples = resample_audio(samples, sample_rate, self.asr.sample_rate, warn=self)
+
+            data.append(convert_audio(samples, dtype=np.int16).tobytes())
+            size += len(samples)
 
         return b''.join(data)
     
     def __iter__(self):
         return self
 
- 
-if __name__ == "__main__":
-    from nano_llm.utils import ArgParser
-    from nano_llm.plugins import PrintStream
-    
-    from termcolor import cprint
-    
-    args = ArgParser(extras=['asr', 'log']).parse_args()
-    
-    def print_prompt():
-        cprint('>> PROMPT: ', 'blue', end='', flush=True)
-            
-    #def on_audio(samples, **kwargs):
-    #    logging.info(f"recieved TTS audio samples {type(samples)}  shape={samples.shape}  dtype={samples.dtype}")
-    #    print_prompt()
-        
-    asr = RivaASR(**vars(args))
-    
-    asr.add(PrintStream(partial=False, prefix='## ', color='green'), AutoASR.OutputFinal)
-    asr.add(PrintStream(partial=False, prefix='>> ', color='blue'), AutoASR.OutputPartial)
-    
-    asr.start()
-    asr.join()
     

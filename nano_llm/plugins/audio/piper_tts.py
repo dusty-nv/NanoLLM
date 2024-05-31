@@ -8,7 +8,7 @@ import torch
 import torchaudio
 
 from .auto_tts import AutoTTS
-from nano_llm.utils import convert_audio, convert_tensor
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio
 
 from piper import PiperVoice
 from piper.download import ensure_voice_exists, find_voice, get_voices
@@ -79,11 +79,6 @@ class PiperTTS(AutoTTS):
             self._speaker_id_map = {'Default': 0}
         
         self.speaker = self.speakers[0]
-        
-        if self.sample_rate != self.model_sample_rate:
-            self.resampler = torchaudio.transforms.Resample(self.model_sample_rate, self.sample_rate).cuda()
-        else:
-            self.resampler = None 
 
     @property
     def speakers(self):
@@ -150,14 +145,9 @@ class PiperTTS(AutoTTS):
             
             samples = convert_audio(samples, dtype=np.int16)
             
-            if self.resampler:
-                #samples = convert_audio(samples, dtype=np.float32)
-                samples = convert_tensor(samples, return_tensors='pt', device='cuda')
-                samples = convert_audio(samples, dtype=torch.float32)
-                samples = self.resampler(samples)
-                samples = convert_audio(samples, dtype=torch.int16)
-                samples = samples.detach().cpu().numpy()
- 
+            if self.sample_rate != self.model_sample_rate:
+                samples = resample_audio(samples, self.model_sample_rate, self.sample_rate)
+
             num_samples += len(samples)
             self.output(samples)
 

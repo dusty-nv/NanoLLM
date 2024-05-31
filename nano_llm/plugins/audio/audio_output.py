@@ -124,7 +124,7 @@ class AudioOutputFile(Plugin):
     Expects to recieve audio samples as input, np.ndarray with dtype=float or int16
     TODO:  this doesn't fill in gaps for "realtime playback"
     """
-    def __init__(self, audio_output_file='output.wav', audio_output_channels=1, sample_rate_hz=48000, **kwargs):
+    def __init__(self, audio_output_file='output.wav', audio_output_channels=1, sample_rate_hz=None, **kwargs):
         """
         Parameters:
         
@@ -141,23 +141,35 @@ class AudioOutputFile(Plugin):
         
         self.sample_type = np.int16
         self.sample_width = np.dtype(self.sample_type).itemsize
-        self.sample_clip = float(int((2 ** (self.sample_width * 8)) / 2) - 1)  # 32767 for 16-bit
         self.sample_rate = sample_rate_hz
         
         self.wav = wave.open(self.output_file, 'wb')
         
         self.wav.setnchannels(self.channels)
         self.wav.setsampwidth(self.sample_width)
-        self.wav.setframerate(self.sample_rate)
+        
+        if self.sample_rate is not None:
+            self.wav.setframerate(self.sample_rate)
+        
+        logging.success(f"opened audio output file {self.output_file} (sample_rate={self.sample_rate}, channels={self.channels})")
     
-    def process(self, input, **kwargs):
+    def process(self, samples, sample_rate=None, **kwargs):
         """
-        Save float or int16 audio samples to wav file
+        Save float or int16 audio samples to wav file.
         TODO: append silence before the last number of samples written is less in duration
               than the time since process() was last called
         """
-        input = convert_audio(input, dtype=self.sample_type)
-        self.wav.writeframes(input)
+        if self.sample_rate is None:
+            if sample_rate is None:
+                logging.warning(f"unknown audio output sample rate for {self.output_file} (set sample_rate_hz)")
+            else:
+                logging.info(f"setting audio output file sample_rate={sample_rate} for {self.output_file}")
+                self.wav.setframerate(sample_rate)
+                self.sample_rate = sample_rate
+        elif sample_rate is not None and sample_rate != self.sample_rate:
+            logging.warning(f"trying to save audio with sample_rate={sample_rate} to wav file {self.output_file} already opened with sample_rate={self.sample_rate}")
+
+        self.wav.writeframes(convert_audio(samples, dtype=self.sample_type))
         
         
 if __name__ == "__main__":

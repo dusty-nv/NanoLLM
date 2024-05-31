@@ -149,8 +149,8 @@ class Plugin(threading.Thread):
         """
         Output data to the next plugin(s) on the specified channel (-1 for all channels)
         """
-        if output is None:
-            return
+        #if output is None:
+        #    return
             
         if channel >= 0:
             for output_plugin in self.outputs[channel]:
@@ -216,7 +216,8 @@ class Plugin(threading.Thread):
         outputs = self.process(input, **kwargs)
         self.processing = False
 
-        self.output(outputs)
+        if outputs is not None:
+            self.output(outputs)
         
         if self.relay:
             self.output(input)

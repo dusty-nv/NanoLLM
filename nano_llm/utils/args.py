@@ -96,7 +96,7 @@ class ArgParser(argparse.ArgumentParser):
             self.add_argument("--list-audio-devices", action="store_true", help="List output audio devices indices.")
          
         if any(x in extras for x in ('audio_input', 'audio_output', 'asr', 'tts')):       
-            self.add_argument("--sample-rate-hz", type=int, default=48000, help="the audio sample rate in Hz")
+            self.add_argument("--sample-rate-hz", type=int, default=None, help="the audio sample rate in Hz")
             
         # ASR/TTS
         if 'asr' in extras or 'tts' in extras:
@@ -114,7 +114,7 @@ class ArgParser(argparse.ArgumentParser):
             #self.add_argument("--voice-min-words", type=int, default=4, help="the minimum number of words the TTS should wait to speak")
             
         if 'asr' in extras:
-            self.add_argument("--asr", type=str, default=None, help="name or path of the ASR model to use (e.g. 'riva', 'none', 'disabled')")
+            self.add_argument("--asr", type=str, default=None, help="name or path of the ASR model to use (e.g. 'riva', 'whisper_tiny', 'whisper_base', 'whisper_small', 'none', 'disabled')")
             self.add_argument("--asr-confidence", type=float, default=-2.5, help="minimum ASR confidence (only applies to 'final' transcripts)")
             self.add_argument("--asr-silence", type=float, default=-1.0, help="audio with RMS equal to or below this amount will be considered silent (negative will disable silence detection)")
             self.add_argument("--asr-chunk", type=int, default=1600, help="the number of audio samples to buffer as input to ASR")
@@ -123,7 +123,7 @@ class ArgParser(argparse.ArgumentParser):
             self.add_argument("--profanity-filter", action='store_true', help="enable profanity filtering in ASR transcripts")
             self.add_argument("--inverse-text-normalization", action='store_true', help="apply Inverse Text Normalization to convert numbers to digits/ect")
             self.add_argument("--no-automatic-punctuation", dest='automatic_punctuation', action='store_false', help="disable punctuation in the ASR transcripts")
-            
+            self.add_argument("--partial-transcripts", type=float, default=0.25, help="the update rate (in seconds) for the partial ASR transcripts (0 to disable)")
         # NANODB
         if 'nanodb' in extras:
             self.add_argument('--nanodb', type=str, default=None, help="path to load or create the database")
@@ -164,8 +164,8 @@ class ArgParser(argparse.ArgumentParser):
             LogFormatter.config(level=args.log_level)
             
         if hasattr(args, 'list_audio_devices') and args.list_audio_devices:
-            import riva.client
-            riva.client.audio_io.list_output_devices()
+            from nano_llm.utils import list_audio_devices
+            list_audio_devices()
             sys.exit(0)
             
         logging.debug(f"{args}")

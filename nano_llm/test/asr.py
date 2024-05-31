@@ -12,13 +12,19 @@
 #
 #    python3 -m nano_llm.test.asr --list-audio-devices
 #
-from nano_llm.plugins import AutoASR, PrintStream
+from nano_llm.plugins import AutoASR, VADFilter, AudioInputDevice, PrintStream
 from nano_llm.utils import ArgParser
 
 args = ArgParser(extras=['asr', 'audio_input', 'log']).parse_args()
+
+audio_input = AudioInputDevice(**vars(args))
+
+vad = VADFilter(**vars(args))
 asr = AutoASR.from_pretrained(**vars(args))
+
+audio_input.add(vad.add(asr))
 
 asr.add(PrintStream(partial=False, prefix='## ', color='green'), AutoASR.OutputFinal)
 asr.add(PrintStream(partial=False, prefix='>> ', color='blue'), AutoASR.OutputPartial)
 
-asr.start().join()
+audio_input.start().join()

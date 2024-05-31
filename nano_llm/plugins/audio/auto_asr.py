@@ -4,9 +4,6 @@ import queue
 import threading
 import logging
 
-import riva.client
-import riva.client.audio_io
-
 from nano_llm import Plugin
 from nano_llm.utils import audio_silent
 
@@ -25,8 +22,6 @@ class AutoASR(Plugin):
         The `tts` param should either be 'riva' or 'xtts' (or name/path of XTTS model)
         The kwargs are forwarded to the TTS plugin implementing the model.
         """
-        from nano_llm.plugins.audio.riva_asr import RivaASR
-        
         if not asr:
             return None
             
@@ -36,7 +31,11 @@ class AutoASR(Plugin):
             return None
         
         if asrl.startswith('riva'):
+            from nano_llm.plugins.audio.riva_asr import RivaASR
             return RivaASR(**kwargs)
+        elif asrl.startswith('whisper'):
+            from nano_llm.plugins.audio.whisper_asr import WhisperASR
+            return WhisperASR(**{**kwargs, 'model' : asr})
         else:
             raise ValueError(f"ASR model type should be 'riva'")
     
