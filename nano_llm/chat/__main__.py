@@ -43,7 +43,7 @@ model = NanoLLM.from_pretrained(
 chat_history = ChatHistory(model, args.chat_template, args.system_prompt)
 
 while True: 
-    if chat_history[-1].role == 'bot':
+    if chat_history.turn('user'):
         # when it's the user's turn to prompt, get the next input
         if isinstance(prompts, list):
             if len(prompts) > 0:

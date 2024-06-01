@@ -17,7 +17,7 @@ class AudioInputDevice(Plugin):
     Capture audio from a microphone or soundcard device attached to the machine.
     Outputs audio samples as an np.ndarray with dtype=int16
     """
-    def __init__(self, audio_input_device=None, audio_input_channels=1, sample_rate_hz=None, chunk_duration=0.1, **kwargs):
+    def __init__(self, audio_input_device=None, audio_input_channels=1, sample_rate_hz=None, audio_chunk=0.1, **kwargs):
         """
         Parameters:
         
@@ -34,17 +34,22 @@ class AudioInputDevice(Plugin):
         self.device_info = find_audio_device(audio_input_device, self.pa)
         self.device_id = self.device_info['index']
 
-        if sample_rate_hz is None:
-            sample_rate_hz = int(self.device_info['defaultSampleRate'])
-            
-        self.device_sample_rate = sample_rate_hz
-        self.device_chunk_size = int(sample_rate_hz * chunk_duration)
-        
-        self.sample_rate = sample_rate_hz
-        self.chunk_size = self.device_chunk_size
         self.channels = audio_input_channels
         self.format = pyaudio.paFloat32 #pyaudio.paInt16
         
+        if sample_rate_hz is None:
+            self.sample_rate = int(self.device_info['defaultSampleRate'])
+        else:
+            self.sample_rate = sample_rate_hz
+            
+        if audio_chunk < 16:
+            self.chunk_size = int(audio_chunk * self.sample_rate)
+        else:
+            self.chunk_size = int(audio_chunk)
+            
+        self.device_sample_rate = self.sample_rate
+        self.device_chunk_size = self.chunk_size
+
     def __del__(self):
         self.close()
         self.pa.terminate()

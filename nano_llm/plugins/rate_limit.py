@@ -29,7 +29,7 @@ class RateLimit(Plugin):
         self.chunk = chunk
         self.paused = -1
         
-    def process(self, input, **kwargs):
+    def process(self, input, sample_rate=None, **kwargs):
         """
         First, wait for any pauses that were requested in the output.
         If chunking enabled, chunk the input down until it's gone.
@@ -46,21 +46,26 @@ class RateLimit(Plugin):
                 #logging.debug(f"RateLimit pausing for {pause_duration} seconds (input={len(input)})")
                 time.sleep(pause_duration)
                 continue
-               
+            
+            if isinstance(self.rate, float) and sample_rate is not None:
+                rate = self.rate * sample_rate
+            else:
+                rate = self.rate
+                       
             if self.chunk > 0:
                 #logging.debug(f"RateLimit chunk {len(input)}  {self.chunk}  {time.perf_counter()}")
                 if len(input) > self.chunk:
-                    self.output(input[:self.chunk])
+                    self.output(input[:self.chunk], sample_rate=sample_rate, **kwargs)
                     input = input[self.chunk:]
-                    time.sleep(self.chunk/self.rate*0.95)
+                    time.sleep(self.chunk/rate*0.95)
                     new=False
                     continue
                 else:
-                    self.output(input)
-                    time.sleep(len(input)/self.rate*0.95)
+                    self.output(input, sample_rate=sample_rate, **kwargs)
+                    time.sleep(len(input)/rate*0.95)
                     return
             else:
-                self.output(input)
+                self.output(input, sample_rate=sample_rate, **kwargs)
                 if self.rate > 0:
                     time.sleep(1.0/self.rate)
                 return

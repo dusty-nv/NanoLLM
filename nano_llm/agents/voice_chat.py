@@ -4,8 +4,8 @@ from nano_llm.utils import ArgParser, print_table
 
 from nano_llm.plugins import (
     UserPrompt, ChatQuery, PrintStream, 
-    AutoASR, AutoTTS, RateLimit, ProcessProxy, 
-    AudioOutputDevice, AudioOutputFile
+    AutoASR, AutoTTS, VADFilter, RateLimit,
+    ProcessProxy, AudioOutputDevice, AudioOutputFile
 )
 
 
@@ -39,6 +39,8 @@ class VoiceChat(Agent):
         else:
             self.asr = asr
             
+        self.vad = VADFilter(**kwargs).add(self.asr) if self.asr else None
+        
         if self.asr:
             self.asr.add(PrintStream(partial=False, prefix='## ', color='blue'), AutoASR.OutputFinal)
             self.asr.add(PrintStream(partial=False, prefix='>> ', color='magenta'), AutoASR.OutputPartial)
@@ -56,7 +58,7 @@ class VoiceChat(Agent):
             self.tts = tts
             
         if self.tts:
-            self.tts_output = RateLimit(kwargs['sample_rate_hz'], chunk=9600) # slow down TTS to realtime and be able to pause it
+            self.tts_output = RateLimit(rate=1.0, chunk=9600) # slow down TTS to realtime and be able to pause it
             self.tts.add(self.tts_output)
             self.llm.add(self.tts, ChatQuery.OutputWords)
 
@@ -78,8 +80,8 @@ class VoiceChat(Agent):
         # setup pipeline with two entry nodes
         self.pipeline = [self.prompt]
 
-        if self.asr:
-            self.pipeline.append(self.asr)
+        if self.vad:
+            self.pipeline.append(self.vad)
             
     def asr_partial(self, text):
         """

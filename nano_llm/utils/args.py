@@ -96,7 +96,8 @@ class ArgParser(argparse.ArgumentParser):
             self.add_argument("--list-audio-devices", action="store_true", help="List output audio devices indices.")
          
         if any(x in extras for x in ('audio_input', 'audio_output', 'asr', 'tts')):       
-            self.add_argument("--sample-rate-hz", type=int, default=None, help="the audio sample rate in Hz")
+            self.add_argument("--sample-rate-hz", type=int, default=None, help="the audio sample rate in Hz (by default, will use input's rate")
+            self.add_argument("--audio-chunk", type=float, default=0.1, help="the duration of time or number of samples for buffering audio")
             
         # ASR/TTS
         if 'asr' in extras or 'tts' in extras:
@@ -115,15 +116,16 @@ class ArgParser(argparse.ArgumentParser):
             
         if 'asr' in extras:
             self.add_argument("--asr", type=str, default=None, help="name or path of the ASR model to use (e.g. 'riva', 'whisper_tiny', 'whisper_base', 'whisper_small', 'none', 'disabled')")
-            self.add_argument("--asr-confidence", type=float, default=-2.5, help="minimum ASR confidence (only applies to 'final' transcripts)")
-            self.add_argument("--asr-silence", type=float, default=-1.0, help="audio with RMS equal to or below this amount will be considered silent (negative will disable silence detection)")
-            self.add_argument("--asr-chunk", type=int, default=1600, help="the number of audio samples to buffer as input to ASR")
-            self.add_argument("--boosted-lm-words", action='append', help="Words to boost when decoding.")
-            self.add_argument("--boosted-lm-score", type=float, default=4.0, help="Value by which to boost words when decoding.")
-            self.add_argument("--profanity-filter", action='store_true', help="enable profanity filtering in ASR transcripts")
-            self.add_argument("--inverse-text-normalization", action='store_true', help="apply Inverse Text Normalization to convert numbers to digits/ect")
-            self.add_argument("--no-automatic-punctuation", dest='automatic_punctuation', action='store_false', help="disable punctuation in the ASR transcripts")
+            self.add_argument("--asr-threshold", type=float, default=-2.5, help="minimum ASR confidence (only applies to 'final' transcripts)")
+            self.add_argument("--vad-threshold", type=float, default=0.5, help="minimum VAD confidence to begin speaking sequence and enable ASR")
+            self.add_argument("--vad-window", type=float, default=0.5, help="duration of time (in seconds) that the VAD filter considers")
+            self.add_argument("--boosted-lm-words", action='append', help="Words to boost when decoding (Riva only)")
+            self.add_argument("--boosted-lm-score", type=float, default=4.0, help="Value by which to boost words when decoding (Riva only)")
+            self.add_argument("--profanity-filter", action='store_true', help="enable profanity filtering in ASR transcripts (Riva only)")
+            self.add_argument("--inverse-text-normalization", action='store_true', help="apply Inverse Text Normalization to convert numbers to digits/ect (Riva only)")
+            self.add_argument("--no-automatic-punctuation", dest='automatic_punctuation', action='store_false', help="disable punctuation in the ASR transcripts (Riva only)")
             self.add_argument("--partial-transcripts", type=float, default=0.25, help="the update rate (in seconds) for the partial ASR transcripts (0 to disable)")
+            
         # NANODB
         if 'nanodb' in extras:
             self.add_argument('--nanodb', type=str, default=None, help="path to load or create the database")

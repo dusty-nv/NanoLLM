@@ -8,7 +8,7 @@ import numpy as np
 
 from nano_llm import StopTokens, BotFunctions, bot_function
 from nano_llm.web import WebServer
-from nano_llm.utils import ArgParser, KeyboardInterrupt, code_tags
+from nano_llm.utils import ArgParser, KeyboardInterrupt, code_tags, resample_audio
 from nano_llm.plugins import AutoASR
 
 from .voice_chat import VoiceChat
@@ -144,8 +144,8 @@ class WebChat(VoiceChat):
             self.on_interrupt()
             self.prompt(msg.strip('"'))
         elif msg_type == WebServer.MESSAGE_AUDIO:  # web audio (mic)
-            if self.asr:
-                self.asr(msg)
+            if self.vad:
+                self.vad(msg, sample_rate=48000)
         elif msg_type == WebServer.MESSAGE_IMAGE:
             logging.info(f"recieved {metadata} image message {msg.size} -> {msg.filename}")
             self.llm(['/reset', msg.filename])
@@ -242,10 +242,15 @@ class WebChat(VoiceChat):
         """
         self.send_chat_history()
         
-    def on_tts_samples(self, audio):
+    def on_tts_samples(self, audio, sample_rate=None, **kwargs):
         """
         Send audio samples to the client when they arrive.
         """
+        webaudio_rate = 48000
+        
+        if sample_rate is not None and sample_rate != webaudio_rate:
+            audio = resample_audio(audio, sample_rate, webaudio_rate, warn=self)
+            
         self.server.send_message(audio, type=WebServer.MESSAGE_AUDIO)
         
     def send_chat_history(self):

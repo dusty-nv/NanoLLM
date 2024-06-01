@@ -69,9 +69,13 @@ class PiperTTS(AutoTTS):
             model_path, config_path = find_voice(voice, [self.cache_path])
             
         logging.info(f"loading Piper TTS model from {model_path}")
+        
         self.model = PiperVoice.load(model_path, config_path=config_path, use_cuda=True)
         self.model_sample_rate = self.model.config.sample_rate
         
+        if self.sample_rate is None:
+            self.sample_rate = self.model_sample_rate
+            
         self._voice = voice
         self._speaker_id_map = self.voices_info[self._voice]['speaker_id_map']
         
@@ -146,10 +150,10 @@ class PiperTTS(AutoTTS):
             samples = convert_audio(samples, dtype=np.int16)
             
             if self.sample_rate != self.model_sample_rate:
-                samples = resample_audio(samples, self.model_sample_rate, self.sample_rate)
+                samples = resample_audio(samples, self.model_sample_rate, self.sample_rate, warn=self)
 
             num_samples += len(samples)
-            self.output(samples)
+            self.output(samples, sample_rate=self.sample_rate)
 
         time_elapsed = time.perf_counter() - time_begin
         logging.debug(f"finished TTS request, streamed {num_samples} samples at {self.sample_rate/1000:.1f}KHz - {num_samples/self.sample_rate:.2f} sec of audio in {time_elapsed:.2f} sec (RTFX={num_samples/self.sample_rate/time_elapsed:.4f})")

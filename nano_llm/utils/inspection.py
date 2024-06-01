@@ -154,3 +154,9 @@ def get_class_that_defined_method(meth):
             return cls
     return None  # not required since None would have been implicitly returned anyway
     
+def function_has_kwargs(func):
+    """
+    Return true if the function accepts kwargs, otherwise false.
+    """
+    return 'kwargs' in inspect.signature(func).parameters
+    

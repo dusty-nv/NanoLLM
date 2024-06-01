@@ -243,6 +243,27 @@ class ChatHistory():
         if add_system_prompt:
             self.add_system_prompt(use_cache=use_cache)
 
+    def turn(self, role='user'):
+        """
+        Returns true if it's the given role's turn in the chat, otherwise false.
+        """
+        n = len(self.messages)
+        prev_role = self.messages[n-1].role if n > 0 else None
+        
+        if role == 'system':
+            return (n == 0)
+        elif role == 'user':
+            if n == 0:
+                return ('system' not in self.template)
+            else:
+                return (prev_role != 'tool_response')
+        elif role == 'bot':
+            return (prev_role == 'user' or prev_role == 'tool_response')
+        else:
+            logging.warning(f"unrecognized role in ChatHistory.turn() (role={role})")
+            
+        return True
+        
     def to_list(self):
         """
         Serialize the history to a list of dicts, where each dict is a chat entry

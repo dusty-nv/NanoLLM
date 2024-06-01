@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+import time
+import logging
+
 import torch
 import numpy as np
-
-import logging
 
 from nano_llm import Plugin
 from nano_llm.utils import convert_tensor, convert_audio, resample_audio
@@ -18,7 +19,7 @@ class VADFilter(Plugin):
     Inputs:  incoming audio samples (prefer @ 16KHz)
     Output:  audio samples that have voice activity
     """
-    def __init__(self, vad_threshold=0.5, vad_window=0.5, **kwargs):
+    def __init__(self, vad_threshold=0.5, vad_window=0.5, audio_chunk=0.1, **kwargs):
         """
         Parameters:
         
@@ -37,8 +38,17 @@ class VADFilter(Plugin):
         self.vad_window = vad_window
         self.vad_filter = []
         
+        self.speaking = False     # true when voice is detected
+        self.speaking_start = 0   # time when voice first detected
         self.sample_rate = 16000  # what the Silero VAD model uses
-        self.speaking = False     # True when voice is detected
+
+        if audio_chunk < 16:
+            self.audio_chunk = int(audio_chunk * self.sample_rate)
+        else:
+            self.audio_chunk = int(audio_chunk)
+        
+        self.buffers = []
+        self.buffered_samples = 0
         
     def process(self, samples, sample_rate=None, **kwargs):
         """
@@ -47,13 +57,23 @@ class VADFilter(Plugin):
         """
         if self.vad_threshold <= 0:
             self.output(samples, sample_rate=sample_rate)
-         
-        samples = convert_tensor(samples, return_tensors='pt')
+
         samples = convert_audio(samples, dtype=torch.float32)
            
         if sample_rate is not None and sample_rate != self.sample_rate:
             samples = resample_audio(samples, sample_rate, self.sample_rate, warn=self)
 
+        self.buffers.append(samples)
+        self.buffered_samples += len(samples)
+        
+        if self.buffered_samples < self.audio_chunk:
+            return
+            
+        samples = torch.cat(self.buffers)
+        
+        self.buffers = []
+        self.buffered_samples = 0
+        
         vad_prob = float(self.vad(samples.cpu(), self.sample_rate).flatten()[0])
         
         if len(samples) / self.sample_rate * len(self.vad_filter) < self.vad_window:
@@ -65,15 +85,14 @@ class VADFilter(Plugin):
         speaking = any(x > self.vad_threshold for x in self.vad_filter)
             
         if speaking and not self.speaking:
-            logging.info(f"voice activity detected ({self.vad_filter[-1]:.3f})")
-            
-        #print('VAD', vad_prob, 'SPEAKING', speaking)
-        
+            logging.info(f"voice activity detected (conf={self.vad_filter[-1]:.3f})")
+            self.speaking_start = time.perf_counter()
+
         if speaking:
             self.output(samples, sample_rate=self.sample_rate, vad_confidence=vad_prob)
         elif self.speaking:
             self.output(None, vad_confidence=vad_prob) # EOS   
-            logging.info(f"voice activity ended ({self.vad_filter[-1]:.3f})")
+            logging.info(f"voice activity ended (duration={time.perf_counter()-self.speaking_start:.2f}s, conf={self.vad_filter[-1]:.3f})")
             
         self.speaking = speaking
          

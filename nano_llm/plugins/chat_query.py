@@ -26,7 +26,7 @@ class ChatQuery(Plugin):
     OutputStream = 3
     OutputImageEmbedding = 4
     
-    def __init__(self, model="meta-llama/Llama-2-7b-chat-hf", functions=None, warmup=False, **kwargs):
+    def __init__(self, model="meta-llama/Llama-2-7b-chat-hf", functions=None, warmup=True, **kwargs):
         """
         Parameters:
         

@@ -28,7 +28,7 @@ class RivaASR(AutoASR):
     """
     def __init__(self, riva_server='localhost:50051',
                  language_code='en-US', sample_rate_hz=48000, 
-                 asr_confidence=-2.5, asr_chunk=1600,
+                 asr_threshold=-2.5, audio_chunk=0.1,
                  automatic_punctuation=True, inverse_text_normalization=False, 
                  profanity_filter=False, boosted_lm_words=None, boosted_lm_score=4.0, 
                  **kwargs):
@@ -48,16 +48,20 @@ class RivaASR(AutoASR):
         self.auth = riva.client.Auth(uri=riva_server)
 
         self.audio_queue = AudioQueue(self)
-        self.audio_chunk = asr_chunk
         self.input_device = None #audio_input_device
         self.language_code = language_code
-        self.confidence_threshold = asr_confidence
+        self.confidence_threshold = asr_threshold
         self.keep_alive_timeout = 5  # requests timeout after 1000 seconds
         
         if sample_rate_hz is None:
-            sample_rate_hz = 16000
-            
-        self.sample_rate = sample_rate_hz
+            self.sample_rate = 16000
+        else:
+            self.sample_rate = sample_rate_hz    
+
+        if audio_chunk < 16:
+            self.audio_chunk = int(audio_chunk * self.sample_rate)
+        else:
+            self.audio_chunk = int(audio_chunk)
         
         self.asr_service = riva.client.ASRService(self.auth)
         self.asr_request = None
@@ -70,7 +74,7 @@ class RivaASR(AutoASR):
                 profanity_filter=profanity_filter,
                 enable_automatic_punctuation=automatic_punctuation,
                 verbatim_transcripts=not inverse_text_normalization,
-                sample_rate_hertz=sample_rate_hz,
+                sample_rate_hertz=self.sample_rate,
                 audio_channel_count=1,
             ),
             interim_results=True,
@@ -114,7 +118,7 @@ class RivaASR(AutoASR):
                             else:
                                 logging.warning(f"Riva dropping ASR transcript (confidence={score:.3f} < {self.confidence_threshold:.3f}) -> '{transcript}'")
                         else:
-                            self.output(transcript, AutoASR.OutputPartial)
+                            self.output(transcript, AutoASR.OutputPartial, partial=True)
         
 
 class AudioQueue:
@@ -153,7 +157,7 @@ class AudioQueue:
                 samples = resample_audio(samples, sample_rate, self.asr.sample_rate, warn=self)
 
             data.append(convert_audio(samples, dtype=np.int16).tobytes())
-            size += len(samples)
+            size += len(data[-1])
 
         return b''.join(data)
     

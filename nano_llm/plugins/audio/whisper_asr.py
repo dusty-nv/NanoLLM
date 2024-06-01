@@ -39,7 +39,7 @@ class WhisperASR(AutoASR):
         model = model.lower().replace('-', '_').replace('whisper_', '')
         
         if model == 'whisper':
-            model = 'small'
+            model = 'base'
             
         self.model_name = f"{model}.{self.language}"
         self.sample_rate = 16000  # what the Whisper models use
@@ -86,7 +86,6 @@ class WhisperASR(AutoASR):
             self.chunks = []
             return
         
-        samples = convert_tensor(samples, return_tensors='pt')
         samples = convert_audio(samples, dtype=torch.float32)
             
         if sample_rate is not None and sample_rate != self.sample_rate:
@@ -104,6 +103,6 @@ class WhisperASR(AutoASR):
             partial_transcript = self.transcribe(self.chunks)
             
             if partial_transcript:
-                self.output(partial_transcript, channel=AutoASR.OutputPartial)
+                self.output(partial_transcript, channel=AutoASR.OutputPartial, partial=True)
                 
 

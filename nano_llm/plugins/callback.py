@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from nano_llm import Plugin
+from nano_llm.utils import function_has_kwargs
 
 class Callback(Plugin):
     """
@@ -14,7 +15,12 @@ class Callback(Plugin):
           function (callable) -- function for processing data like Plugin.process() would
         """
         super().__init__(threaded=threaded, **kwargs)
+        
         self.function = function
+        self.has_kwargs = function_has_kwargs(function)
         
     def process(self, input, **kwargs):
-        return self.function(input, **kwargs)
+        if self.has_kwargs:
+            self.function(input, **kwargs)
+        else:
+            self.function(input)
