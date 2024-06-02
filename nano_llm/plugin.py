@@ -27,12 +27,14 @@ class Plugin(threading.Thread):
       drop_inputs (bool): if true, only the most recent input in the queue will be used
       threaded (bool): if true, will spawn independent thread for processing the queue.
     """
-    def __init__(self, output_channels=1, relay=False, drop_inputs=False, threaded=True, **kwargs):
+    def __init__(self, name=None, input_channels=1, output_channels=1, 
+                 relay=False, drop_inputs=False, threaded=True, **kwargs):
         """
         Initialize plugin
         """
         super().__init__(daemon=True)
 
+        self.name = name if name else self.__class__.__name__
         self.relay = relay
         self.drop_inputs = drop_inputs
         self.threaded = threaded
@@ -41,6 +43,7 @@ class Plugin(threading.Thread):
         
         self.outputs = [[] for i in range(output_channels)]
         self.output_channels = output_channels
+        self.input_channels = input_channels
         
         if threaded:
             self.input_queue = queue.Queue()
@@ -88,9 +91,9 @@ class Plugin(threading.Thread):
         self.outputs[channel].append(plugin)
         
         if isinstance(plugin, Callback):
-            logging.debug(f"connected {type(self).__name__} to {plugin.function.__name__} on channel={channel}")  # TODO https://stackoverflow.com/a/25959545
+            logging.debug(f"connected {self.name} to {plugin.function.__name__} on channel={channel}")  # TODO https://stackoverflow.com/a/25959545
         else:
-            logging.debug(f"connected {type(self).__name__} to {type(plugin).__name__} on channel={channel}")
+            logging.debug(f"connected {self.name} to {plugin.name} on channel={channel}")
             
         return self
     
@@ -288,10 +291,54 @@ class Plugin(threading.Thread):
             
         return None
     
-    '''
-    def __getitem__(self, type):
+    def state_dict(self, **kwargs):
         """
-        Subscript indexing [] operator alias for find()
+        Return a configuration dict with plugin state that gets shared with clients. 
+        Subclasses can reimplement this to add custom state for each type of plugin.
         """
-        return self.find(type)
-    '''       
+        connections = []
+        
+        for c, output_channel in enumerate(self.outputs):
+            for output in output_channel:
+                connections.append({
+                    'to': output.name,
+                    'input': 0,
+                    'output': c
+                 })
+   
+        return {
+            'name': self.name,
+            'type': self.__class__.__name__,
+            'inputs': [x for x in range(self.input_channels)],
+            'outputs': [x for x in range(self.output_channels)],
+            'connections': connections,
+        } 
+        
+    def send_state(self, state_dict=None, **kwargs):
+        """
+        Send the state dict message over the websocket.
+        """
+        from nano_llm.web import WebServer
+        
+        if not WebServer.Instance or not WebServer.Instance.connected:
+            logging.warning(f"plugin {self.name} had no webserver or connected clients to send state_dict")
+            return
+            
+        if state_dict is None:
+            state_dict = self.state_dict(**kwargs)
+            
+        WebServer.Instance.send_message({
+            'state_dict': {self.name: state_dict}
+        })
+        
+    def send_alert(self, message, **kwargs):
+        """
+        Send an alert message to the webserver (see WebServer.send_alert() for kwargs)
+        """
+        from nano_llm.web import WebServer
+        
+        if not WebServer.Instance or not WebServer.Instance.connected:
+            return
+            
+        return WebServer.Instance.send_alert(message, **kwargs)
+        

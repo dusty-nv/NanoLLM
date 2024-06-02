@@ -3,19 +3,19 @@ from pprint import pprint
 
 from nano_llm import Agent, Plugin
 from nano_llm.web import WebServer
-from nano_llm.plugins import ChatSession, VideoSource, VideoOutput
+from nano_llm.plugins import ChatSession, VideoSource, VideoOutput, UserPrompt
 from nano_llm.utils import ArgParser, inspect_function
 
 
 
 class DynamicPlugin(Plugin):
-    types = {}
-    type_info = {}
-    
+    Types = {}
+    TypeInfo = {}
+
     def __new__(cls, plugin, *args, **kwargs):
         if isinstance(plugin, str):
-            if plugin in cls.types:
-                plugin = cls.types[plugin]
+            if plugin in cls.Types:
+                plugin = cls.Types[plugin]
             else:
                 raise ValueError(f"unregistered plugin type: {plugin}")
         return plugin(*args, **kwargs)
@@ -23,7 +23,7 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register(cls, plugin, **kwargs):
         info = {
-            'name': plugin.__name__,
+            'name': plugin.__name__, # __class__ type
             'flags': kwargs,
             'init': inspect_function(plugin.__init__),
         }
@@ -31,36 +31,16 @@ class DynamicPlugin(Plugin):
         if hasattr(plugin, 'apply_config'):
             info['config'] = inspect_function(plugin.apply_config)
 
-        cls.type_info[info['name']] = info
-        cls.types[info['name']] = plugin
-    
-    @classmethod
-    def state_dict(cls, plugin):
-        links = []
-        
-        for c, output_channel in enumerate(plugin.outputs):
-            for output in output_channel:
-                links.append({
-                    'to': output.__class__.__name__,
-                    'input': 0,
-                    'output': c
-                 })
-        
-        flags = cls.type_info[plugin.__class__.__name__]['flags']
-              
-        return {
-            'name': plugin.__class__.__name__,
-            'type': plugin.__class__.__name__,
-            'inputs': [] if 'source' in flags else [0],
-            'outputs': [] if 'sink' in flags else [x for x in range(plugin.output_channels)],
-            'links': links,
-        }   
-   
-DynamicPlugin.register(ChatSession)     
-DynamicPlugin.register(VideoSource, source=True)
-DynamicPlugin.register(VideoOutput, sink=True)
+        cls.TypeInfo[info['name']] = info
+        cls.Types[info['name']] = plugin
 
-pprint(DynamicPlugin.type_info)
+   
+DynamicPlugin.register(ChatSession)   
+DynamicPlugin.register(UserPrompt)  
+DynamicPlugin.register(VideoSource)
+DynamicPlugin.register(VideoOutput)
+
+pprint(DynamicPlugin.TypeInfo)
  
  
 class DynamicAgent(Agent):
@@ -73,16 +53,26 @@ class DynamicAgent(Agent):
     def add(self, plugin, **kwargs):
         if not isinstance(plugin, Plugin):
             plugin = DynamicPlugin(plugin, **kwargs)
+            
+        plugin_name = plugin.name
+        plugin_idx = 1
+        
+        while any([x.name == plugin.name for x in self.plugins]):
+            plugin.name = f"{plugin_name}_{plugin_idx}"
+            plugin_idx += 1
+             
         plugin.start()
+        
         self.plugins.append(plugin)
         self.webserver.send_message({
             'plugin_added': [DynamicPlugin.state_dict(plugin)],
         })
+        
         return plugin
     
     def find(self, name):
         for plugin in self.plugins:
-            if name == plugin.__class__.__name__:
+            if name == plugin.name:
                 return plugin
    
     def on_websocket(self, msg, msg_type=0, metadata='', **kwargs): 
@@ -91,11 +81,11 @@ class DynamicAgent(Agent):
             if 'client_state' in msg:
                 if msg['client_state'] == 'connected':
                     init_msg = {
-                        'plugin_types': DynamicPlugin.type_info,
+                        'plugin_types': DynamicPlugin.TypeInfo,
                     }
                     
                     if self.plugins:
-                        init_msg['plugin_added'] = [DynamicPlugin.state_dict(plugin) for plugin in self.plugins]
+                        init_msg['plugin_added'] = [plugin.state_dict() for plugin in self.plugins]
                         
                     self.webserver.send_message(init_msg)
                     
@@ -125,28 +115,6 @@ class DynamicAgent(Agent):
         self.start()
         self.webserver.web_thread.join(timeout)
         return self           
-
-
-
-
-'''
-def get_plugin_types():
-    plugins = [VideoSource]
-    types = {}
-    
-    for cls in plugins:
-        desc = inspect_function(cls.__init__)
-        desc['name'] = cls.__name__
-        
-        for param_name, param in desc['parameters'].items():
-            param['display_name'] = param_name.replace('_', ' ').title()
-            
-        types[desc['name']] = desc
-        
-    pprint(types)
-    return types
-'''    
-    
 
 
 if __name__ == "__main__":

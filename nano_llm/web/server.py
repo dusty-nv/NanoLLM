@@ -27,6 +27,9 @@ class WebServer():
     MESSAGE_AUDIO = 4    #: Audio samples (bytes, int16)
     MESSAGE_IMAGE = 5    #: Image message (PIL.Image)
 
+    Instance = None      #: Singleton instance
+    MessageHandlers = [] #: Message handlers
+    
     def __init__(self, web_host='0.0.0.0', web_port=8050, ws_port=49000,
                  ssl_cert=None, ssl_key=None, root=None, index='index.html',
                  mounts={'/tmp/uploads':'/uploads'}, msg_callback=None, web_trace=False,
@@ -53,6 +56,8 @@ class WebServer():
           
         The kwargs are passed as variables to the Jinja render_template() used in the index file.
         """
+        WebServer.Instance = self
+        
         self.host = web_host
         self.port = web_port
         self.root = root
@@ -69,10 +74,8 @@ class WebServer():
             
         self.msg_count_rx = 0
         self.msg_count_tx = 0
-        self.msg_callback = msg_callback
 
-        if self.msg_callback and not isinstance(self.msg_callback, list):
-            self.msg_callback = [self.msg_callback]
+        self.add_message_handler(msg_callback)
             
         # flask server
         self.app = flask.Flask(__name__, 
@@ -126,15 +129,43 @@ class WebServer():
         It will start new worker threads and then return control to the user.
         """
         logging.info(f"starting webserver @ {self.web_protocol}://{self.host}:{self.port}")
+        
         self.ws_thread.start()
         self.web_thread.start()
 
-    def add_message_handler(self, callback):
+    @property
+    def connected(self):
+        """
+        Returns true if the server is connected to any clients, otherwise false.
+        """
+        return (self.num_clients > 0)
+        
+    @property
+    def num_clients(self):
+        """
+        Returns the number of actively connected clients.
+        """
+        return 0 if self.websocket is None else 1
+        
+    @classmethod 
+    def add_listener(cls, callback):
         """
         Register a message handler that will be called when new websocket messages are recieved.
         """
-        if callback:
-            self.msg_callback.append(callback)
+        cls.add_message_handler(callback)
+        
+    @classmethod 
+    def add_message_handler(cls, callback):
+        """
+        Register a message handler that will be called when new websocket messages are recieved.
+        """
+        if callback is None:
+            return
+            
+        if not isinstance(callback, list):
+            callback = [callback]
+            
+        cls.MessageHandlers += callback
             
     def on_message(self, payload, payload_size=None, msg_type=MESSAGE_JSON, msg_id=None, metadata=None, timestamp=None, path=None, **kwargs):
         """
@@ -154,8 +185,8 @@ class WebServer():
           timestamp (int): time that the message was sent
           path (str): if this is a file or image upload, the file path on the server
         """
-        if self.msg_callback:
-            for callback in self.msg_callback:
+        if self.MessageHandlers:
+            for callback in WebServer.MessageHandlers:
                 try:
                     callback(payload, payload_size=payload_size, msg_type=msg_type, msg_id=msg_id, 
                              metadata=metadata, timestamp=timestamp, path=path, **kwargs)
@@ -259,9 +290,9 @@ class WebServer():
                 break
         '''
         
-        if self.msg_callback:
-            for callback in self.msg_callback:
-                callback({'client_state': 'connected'}, 0, int(time.time()*1000))
+        if self.MessageHandlers:
+            for callback in WebServer.MessageHandlers:
+                callback({'client_state': 'connected'}, msg_type=WebServer.MESSAGE_JSON, timestamp=int(time.time()*1000))
             
         #listener_thread = threading.Thread(target=self.websocket_listener, args=[websocket], daemon=True)
         #listener_thread.start()

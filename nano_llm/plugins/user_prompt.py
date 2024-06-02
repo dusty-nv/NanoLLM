@@ -5,6 +5,7 @@ import threading
 from termcolor import cprint
 
 from nano_llm import Plugin
+from nano_llm.web import WebServer
 from nano_llm.utils import load_prompts
 
 
@@ -22,7 +23,7 @@ class UserPrompt(Plugin):
           interactive (bool) -- read user input from stdin (todo file descriptors)
           prefix (str) -- when in interactive mode, the prompt for user input
         """
-        super().__init__(**kwargs)
+        super().__init__(input_channels=0, **kwargs)
         
         self.prefix = prefix
         self.interactive = interactive
@@ -33,6 +34,8 @@ class UserPrompt(Plugin):
            
         if prompt:
             self.input(prompt)
+            
+        WebServer.add_listener(self.on_websocket)
             
     def process(self, input, **kwargs):
         if isinstance(input, list):
@@ -54,3 +57,13 @@ class UserPrompt(Plugin):
                 cprint(self.prefix, 'blue', end='', flush=True)
             self.output(sys.stdin.readline().strip())
             
+    def on_websocket(self, msg, msg_type=0, **kwargs): 
+        print('UserPrompt.on_websocket()', msg)
+        
+        if msg_type != WebServer.MESSAGE_JSON or self.name not in msg:
+            return
+            
+        msg = msg[self.name]
+        
+        if 'input' in msg:
+            self.input(msg['input'])

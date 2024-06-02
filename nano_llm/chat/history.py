@@ -9,8 +9,8 @@ import numpy as np
 
 from .message import ChatMessage
 from .stream import StreamingResponse
-from .templates import ChatTemplate, ChatTemplates
-from ..utils import AttributeDict
+from .templates import ChatTemplate, ChatTemplates, StopTokens
+from ..utils import AttributeDict, code_tags
                         
 class ChatHistory():
     """
@@ -96,6 +96,11 @@ class ChatHistory():
 
         self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
         self.tool_style = 'openai' if 'tool_call' in self.template else 'python'
+        
+        self.web_regex = [
+            (re.compile(r'`(.*?)`'), r'<code>\1</code>'),  # code blocks
+            (re.compile(r'\*(.*?)\*'), r'*<i>\1</i>*'),    # emotives inside asterisks
+        ]
         
         self.reset()
 
@@ -264,12 +269,21 @@ class ChatHistory():
             
         return True
         
-    def to_list(self):
+    def to_list(self, messages=None, html=False):
         """
         Serialize the history to a list of dicts, where each dict is a chat entry
         with the non-critical keys removed (suitable for web transport, ect)
         """
-        return [{'role' : msg.role, msg.type : msg.content} for msg in self.messages]
+        if messages is None:
+            messages = self.messages
+        
+        if messages and isinstance(messages[0], ChatMessage):    
+            messages = [{'role' : msg.role, msg.type : msg.content} for msg in messages]
+        
+        if html:
+            messages = self.to_html(messages)
+            
+        return messages
 
     def add_system_prompt(self, use_cache=True):
         """
@@ -391,4 +405,55 @@ class ChatHistory():
                 for i in range(n+1, len(self.messages)):
                     if self.messages[i].role == 'user':
                         return i
+     
+    def to_html(self, messages=None):
+        """
+        Sanitize message contents to HTML representation, apply code formatting, ect.       
+        """
+        messages = self.to_list(messages, html=False)
+        
+        def web_text(text):
+            for stop_token in StopTokens:
+                text = text.replace(stop_token, '')
+               
+            text = text.strip()
+            text = text.strip('\n')
+             
+            if text.find('<tool_call>') == 0:
+                text = text.replace('\n', '')
+
+            text = text.replace('<s>', '')
+            text = text.replace('&', '&amp;')
+            text = text.replace('<', '&lt;')
+            text = text.replace('>', '&gt;')
+            text = text.replace('\\n', '\n')
+            text = text.replace('\n', '<br/>')
+            text = text.replace('\\"', '\"')
+            text = text.replace("\\'", "\'")
             
+            for regex, replace in self.web_regex:
+                text = regex.sub(replace, text)
+
+            return code_tags(text)
+          
+        def web_image(image):
+            from nano_llm.web import WebServer
+            
+            if not isinstance(image, str):
+                if not hasattr(image, 'filename'):
+                    return None
+                image = image.filename
+                
+            if WebServer.Instance:
+                return os.path.join(self.server.mounts.get(os.path.dirname(image), ''), os.path.basename(image))
+            else:
+                return image
+                
+        for entry in messages:
+            if 'text' in entry:
+                entry['text'] = web_text(entry['text'])
+            if 'image' in entry:
+                entry['image'] = web_image(entry['image'])
+                
+        return messages
+                

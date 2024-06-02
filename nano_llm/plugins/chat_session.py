@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import time
 import logging
 
 from nano_llm import Plugin, NanoLLM, ChatHistory 
+from nano_llm.web import WebServer
 from nano_llm.utils import ImageTypes, print_table, update_default
 
 
@@ -42,6 +44,8 @@ class ChatSession(Plugin):
         """
         super().__init__(output_channels=5, **kwargs)
 
+        load_time = time.perf_counter()
+        
         if isinstance(model, str):
             self.model_name = model
             self.model = NanoLLM.from_pretrained(
@@ -54,6 +58,8 @@ class ChatSession(Plugin):
             self.model = model
             self.model_name = self.config.name
 
+        load_time = time.perf_counter() - load_time
+        
         self.history = ChatHistory(self.model, chat_template=chat_template, **kwargs)
         self.functions = None
         self.stream = None
@@ -78,6 +84,9 @@ class ChatSession(Plugin):
             logging.info(f"Warming up LLM with query '{warmup}'")
             logging.info(f"Warmup response:  '{self.model.generate(self.history.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
             self.history.reset()
+
+        if load_time > 1:  # don't show if model was cached
+            self.send_alert(f"Loaded {self.model_name} in {load_time:.1f} seconds", level='success')
     
     def apply_config(self, system_prompt : str = None, 
                      max_new_tokens : int = None, min_new_tokens : int = None,
@@ -100,22 +109,26 @@ class ChatSession(Plugin):
         if system_prompt is not None:
             self.history.system_prompt = system_prompt
 
-        self.max_new_tokens = int(update_default(max_new_tokens, self.max_new_tokens))
-        self.min_new_tokens = int(update_default(min_new_tokens, self.min_new_tokens))
-        self.do_sample = bool(update_default(do_sample, self.do_sample))
-        self.temperature = float(update_default(temperature, self.temperature))
-        self.top_p = float(update_default(top_p, self.top_p))
+        self.max_new_tokens = update_default(max_new_tokens, self.max_new_tokens, int)
+        self.min_new_tokens = update_default(min_new_tokens, self.min_new_tokens, int)
+        self.do_sample = update_default(do_sample, self.do_sample, bool)
+        self.temperature = update_default(temperature, self.temperature, float)
+        self.top_p = update_default(top_p, self.top_p, float)
 
-    def state_dict(self):
+    def state_dict(self, html=True, **kwargs):
         return {
+            **super().state_dict(),
             'model': self.model_name,
-            'system_prompt': self.system_prompt,
+            'history': self.history.to_list(html=html),
+            'num_tokens': self.history.num_tokens,
+            'max_context_len': self.max_context_len,
             'max_new_tokens': self.max_new_tokens,
             'min_new_tokens': self.min_new_tokens,
             'do_sample': self.do_sample,
             'temperature': self.temperature,
             'top_p': self.top_p,
             'repetition_penalty': self.repetition_penalty,
+            'system_prompt': self.history.system_prompt,
        }
                       
     @property
@@ -175,7 +188,7 @@ class ChatSession(Plugin):
         elif isinstance(input, ChatHistory):
             chat_history = input  # TODO also recieve chat history as list for cross-process
         else:
-            raise TypeError(f"ChatQuery plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
+            raise TypeError(f"ChatSession plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
 
         # images should be followed by text prompts
         if chat_history[-1].is_type('image'):
@@ -200,7 +213,7 @@ class ChatSession(Plugin):
             
             # output vision features
             if chat_history.image_embedding is not None:
-                self.output(chat_history.image_embedding, ChatQuery.OutputImageEmbedding)
+                self.output(chat_history.image_embedding, ChatSession.OutputImageEmbedding)
                 
             # start generating output
             self.stream = self.model.generate(
@@ -220,7 +233,7 @@ class ChatSession(Plugin):
             )
             
             # output the stream iterator on channel 3
-            self.output(self.stream, ChatQuery.OutputStream)
+            self.output(self.stream, ChatSession.OutputStream)
 
             # output the generated tokens on channel 0
             bot_reply = chat_history.append(role='bot', text='', cached=True)
@@ -237,21 +250,22 @@ class ChatSession(Plugin):
                 bot_reply.tokens = self.stream.tokens
                 
                 # output stream of raw tokens
-                self.output(token, ChatQuery.OutputToken)
+                self.output(token, ChatSession.OutputToken)
+                self.send_state()
                 
                 # if a space was added, emit new word(s)
                 words += token
                 last_space = words.rfind(' ')
                 
                 if last_space >= 0:
-                    self.output(words[:last_space+1], ChatQuery.OutputWords)
+                    self.output(words[:last_space+1], ChatSession.OutputWords)
                     if last_space < len(words) - 1:
                         words = words[last_space+1:]
                     else:
                         words = ''
                 
             if len(words) > 0:
-                self.output(words, ChatQuery.OutputWords)
+                self.output(words, ChatSession.OutputWords)
                 
             bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens
@@ -259,8 +273,9 @@ class ChatSession(Plugin):
             self.stream = None
             
             # output the final generated text on channel 2
-            self.output(bot_reply.content, ChatQuery.OutputFinal)
-        
+            self.output(bot_reply.content, ChatSession.OutputFinal)
+            self.send_state()
+            
             if self.print_stats:
                 print_table(self.model.stats)
                 

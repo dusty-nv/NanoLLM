@@ -39,6 +39,10 @@
           if( 'state_dict' in payload ) {
             setStateDict(payload['state_dict']);
           }
+          
+          if( 'alert' in payload ) {
+            addAlert(payload['alert']);
+          }
         }
       }
       
@@ -56,29 +60,12 @@
         //window.setInterval(generateAudio, 100);
         //window.setInterval(testWebsocketSend, 500);
         addGrid();
-        
-        addDialog('test_dialog', 'Test Dialog', `<div>ABC123</div>`, onTestDialogSubmit);
-        
-        
-        
-        /*var html = `
-        <div>ABC123</div>
-        `;
-        var data = { "name": 'abc123' };
 
-        drawflow.addNode('github', 0, 1, 150, 300, 'github', data, html);
-        
-        html= `
-        <div>DEF456</div>
-        `;
-        var data = { "name": 'def456' };
-        
-        drawflow.addNode('github2', 2, 2, 450, 100, 'github2', data, html);*/
       }
       </script>
       <style>
           #alert_container {
-            z-index: 10;
+            z-index: 999;
             position: fixed;
             max-width: fit-content;
             height:50px;
@@ -93,9 +80,9 @@
       </style>
 	</head>
 	<!-- bg-medium-gray -->
-	<body class="bg-dark-gray" data-bs-theme="dark">
+	<body class="bg-dark-gray" data-bs-theme="dark" height="100%">
     <!-- Navbar + main body -->
-    <div class="d-flex flex-column h-100">
+    <div class="d-flex flex-column">
       <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green"> <!-- fixed-top will let rest of body scroll -->
         <div class="container-fluid">
           <div class="d-flex flex-grow-1">
@@ -138,22 +125,9 @@
           </span>
         </div>
       </nav>
-      
-      <div id="chat-history-container" class="flex-grow-1 p-1 m-1">
-        <!--<h3>Conversation</h3>-->
-        <!--<div id="drawflow"></div>-->
-
-        <div class="grid-stack"></div>
-      </div>
-
-      <div class="mx-3 mb-3">
-        <div class="input-group">
-          <textarea id="chat-message-input" class="form-control" rows="3" placeholder="Enter to send (Shift+Enter for newline)" onkeydown="onChatMessageKey(event)"></textarea>
-          <span class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;" onclick="onChatMessageSubmit()"></span>
-        </div>
-      </div>
     </div>
-
+    <div class="grid-stack"></div>
+    
     <!-- Alert Messages -->
     <div id="alert_container" class="container"> <!--class="fixed-top"-->
       <div id="alert_window" class="alert mb-0" style="background-color: rgba(48,48,48,1.0); display: none">
