@@ -12,6 +12,7 @@ import pprint
 import logging
 import datetime
 import threading
+import traceback
 
 from nano_llm.utils import ArgParser
 
@@ -155,8 +156,11 @@ class WebServer():
         """
         if self.msg_callback:
             for callback in self.msg_callback:
-                callback(payload, payload_size=payload_size, msg_type=msg_type, msg_id=msg_id, 
-                         metadata=metadata, timestamp=timestamp, path=path, **kwargs)
+                try:
+                    callback(payload, payload_size=payload_size, msg_type=msg_type, msg_id=msg_id, 
+                             metadata=metadata, timestamp=timestamp, path=path, **kwargs)
+                except Exception as error:
+                    logging.error(f"Exception occurred handling websocket message:\n\n{pprint.pformat(payload, indent=2) if msg_type==WebServer.MESSAGE_JSON else ''}\n{traceback.format_exc()}")
         else:
             raise NotImplementedError(f"{type(self)} did not implement on_message or have a msg_callback provided")
      
@@ -378,3 +382,17 @@ class SendFromDirectory():
     def send(self, path):
         return flask.send_from_directory(self.root, path)
         
+        
+if __name__ == "__main__":
+    parser = ArgParser(extras=['web', 'log'])
+    
+    parser.add_argument("--index", "--page", type=str, default="index.html", help="the filename of the site's index html page (should be under web/templates)") 
+    parser.add_argument("--root", type=str, default=None, help="the root directory for serving site files (should have static/ and template/")
+    
+    args = parser.parse_args()
+
+    webserver = WebServer(**vars(args))
+        
+    webserver.start()
+    webserver.web_thread.join()
+    

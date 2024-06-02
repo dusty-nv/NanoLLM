@@ -17,18 +17,19 @@ class VideoSource(Plugin):
     Captures or loads a video/camera stream or sequence of images
     https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
     """
-    def __init__(self, video_input='/dev/video0', 
-                 video_input_width=None, video_input_height=None, 
-                 video_input_codec=None, video_input_framerate=None, 
-                 video_input_save=None, return_tensors='cuda', **kwargs):
+    def __init__(self, video_input : str = '/dev/video0', 
+                 video_input_width : int = None, video_input_height : int = None, 
+                 video_input_codec : str = None, video_input_framerate : float = None, 
+                 video_input_save : str = None, return_tensors : str = 'cuda', **kwargs):
         """
-        Parameters:
+        Creates a video input source from MIPI CSI or V4L2 camera, RTP/RTSP/WebRTC stream, or video file.
         
-          input (str) -- path to video file, directory of images, or stream URL
-          input_width (int) -- the disired width in pixels (default uses stream's resolution)
-          input_height (int) -- the disired height in pixels (default uses stream's resolution)
-          input_codec (str) -- force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
-          return_tensors (str) -- the object datatype of the image to output ('np', 'pt', 'cuda')
+        Args:
+          video_input (str): Path to video file, directory of images, or stream URL.
+          video_input_width (int): The disired width in pixels (by default, uses the stream's native resolution)
+          video_input_height (int): The disired height in pixels (by default, uses the stream's native resolution)
+          video_input_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
+          return_tensors (str): The object datatype of the image to output ('np', 'pt', 'cuda')
         """
         super().__init__(**kwargs)
         
@@ -142,13 +143,16 @@ class VideoOutput(Plugin):
     Saves images to a compressed video or directory of individual images, the display, or a network stream.
     https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
     """
-    def __init__(self, video_output=None, video_output_codec=None, video_output_bitrate=None, video_output_save=None, **kwargs):
+    def __init__(self, video_output : str = "webrtc://@:8554/output", 
+                 video_output_codec : str = None, video_output_bitrate : int = None, 
+                 video_output_save : str = None, **kwargs):
         """
-        Parameters:
+        Output video to a network stream (RTP/RTSP/WebRTC), video file, or display.
         
-          input (str) -- path to video file, directory of images, or stream URL
-          output_codec (str) -- force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
-          output_bitrate (int) -- the desired bitrate in bits per second (default is 4 Mbps)
+        Args:
+          video_output (str): Stream URL, path to video file, directory of images.
+          video_output_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
+          video_output_bitrate (int): The desired bitrate in bits per second (default is 4 Mbps)
         """
         super().__init__(**kwargs)
         

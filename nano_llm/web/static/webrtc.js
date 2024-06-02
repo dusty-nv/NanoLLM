@@ -157,7 +157,10 @@ function getConnectionStats(url, reportType) {
     }); 
 
     var statsElement = (connections[url].type == 'inbound') ? 'connection-stats-play' : 'connection-stats-send'; 
-    document.getElementById(statsElement).innerHTML = statsOutput; 
+    statsElement = document.getElementById(statsElement);
+    
+    if( statsElement != null )
+        statsElement.innerHTML = statsOutput; 
   }); 
 } 
 

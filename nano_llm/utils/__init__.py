@@ -184,4 +184,14 @@ def filter_keys(dictionary, keep=None, remove=None):
     for key in list(dictionary.keys()):
         if (keep and key not in keep) or (remove and key in remove):
             del dictionary[key]
-  
+ 
+ 
+def update_default(value, default=None):
+    """
+    If the value is None, return the default instead.
+    """
+    if isinstance(value, str):
+        return value if value.strip() else default
+    else:
+        return default if value is None else value
+     

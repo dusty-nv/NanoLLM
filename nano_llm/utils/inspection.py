@@ -41,6 +41,7 @@ def _parse_python_function_docstring(function: Callable) -> Tuple[str, dict]:
         args_block = None
         past_descriptors = False
         for block in docstring_blocks:
+            block = block.strip().strip('\n')
             if block.startswith("Args:"):
                 args_block = block
                 break
@@ -61,6 +62,7 @@ def _parse_python_function_docstring(function: Callable) -> Tuple[str, dict]:
         for line in args_block.split("\n")[1:]:
             if ":" in line:
                 arg, desc = line.split(":", maxsplit=1)
+                arg = arg.strip().split(' ')[0]
                 arg_descriptions[arg.strip()] = desc.strip()
             elif arg:
                 arg_descriptions[arg.strip()] += " " + line.strip()
@@ -119,14 +121,16 @@ def _get_python_function_required_args(function: Callable) -> List[str]:
 def convert_to_openai_tool(
     function: Callable,
 ) -> Dict[str, Any]:
-    """Convert a Python function to an OpenAI function-calling API compatible dict.
+    """
+    Convert a Python function to an OpenAI function-calling API compatible dict.
 
     Assumes the Python function has type hints and a docstring with a description. If
         the docstring has Google Python style argument descriptions, these will be
         included as well.
     """
     description, arg_descriptions = _parse_python_function_docstring(function)
-    return {
+    
+    desc = {
         "name": _get_python_function_name(function),
         "description": inspect.getdoc(function), #description, 
         "parameters": {
@@ -135,7 +139,43 @@ def convert_to_openai_tool(
             "required": _get_python_function_required_args(function),
         },
     }
-          
+    
+    if arg_descriptions:
+        desc['description'] = description
+    
+    return desc
+
+def inspect_function(func):
+    """
+    Returns a dict with function name, description, and signature information.
+    """
+    desc = convert_to_openai_tool(func)   
+
+    for param_name, param in desc['parameters']['properties'].items():
+        param['required'] = (param_name in desc['parameters']['required'])
+
+    desc = {
+        'name': desc['name'],
+        'description': desc['description'],
+        'parameters': desc['parameters']['properties'],
+    }
+    
+    sig = inspect.signature(func)
+    
+    for param_name, param in desc['parameters'].items():
+        param['display_name'] = param_name.replace('_', ' ').title()
+        default = sig.parameters[param_name].default
+        if default != inspect.Parameter.empty:
+            param['default'] = default 
+
+    return desc
+    
+def function_has_kwargs(func):
+    """
+    Return true if the function accepts kwargs, otherwise false.
+    """
+    return 'kwargs' in inspect.signature(func).parameters
+
 def get_class_that_defined_method(meth):
     """
     Given a function or method, return the class type it belongs to
@@ -153,10 +193,5 @@ def get_class_that_defined_method(meth):
         if isinstance(cls, type):
             return cls
     return None  # not required since None would have been implicitly returned anyway
-    
-def function_has_kwargs(func):
-    """
-    Return true if the function accepts kwargs, otherwise false.
-    """
-    return 'kwargs' in inspect.signature(func).parameters
+
     

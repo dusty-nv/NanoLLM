@@ -1,0 +1,442 @@
+<!doctype html>
+
+<html>
+	<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
+    
+    <link rel="stylesheet" href="/static/bootstrap.css">
+    <link rel="stylesheet" href="/static/chat.css">
+    
+    <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.min.js"></script>
+    <script type='text/javascript' src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
+    
+    <script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
+    <script type='text/javascript' src='/static/bootstrap.bundle.min.js'></script>
+    <script type='text/javascript' src='/static/webrtc.js'></script>
+    <script type='text/javascript' src='/static/websocket.js'></script>
+    <script type='text/javascript' src='/static/audio.js'></script>
+    <script type='text/javascript' src='/static/grid.js'></script>
+    
+    <script type="text/javascript">
+
+      function onWebsocketMsg(payload, type) {
+        if( type == MESSAGE_JSON ) { 
+          if( 'plugin_types' in payload ) {
+            addPluginTypes(payload['plugin_types']);
+          }
+          
+          if( 'plugin_added' in payload ) {
+            addPlugins(payload['plugin_added']);
+          }
+          
+          if( 'state_dict' in payload ) {
+            setStateDict(payload['state_dict']);
+          }
+        }
+      }
+      
+      function onTestDialogSubmit() {
+        console.log('onTestDialogSubmit()');
+      }
+      
+      window.onload = function() {
+
+        connectWebsocket(onWebsocketMsg, port={{ ws_port }});
+        
+        //enumerateAudioDevices();
+        //openAudioDevices();
+
+        //window.setInterval(generateAudio, 100);
+        //window.setInterval(testWebsocketSend, 500);
+        addGrid();
+        
+        addDialog('test_dialog', 'Test Dialog', `<div>ABC123</div>`, onTestDialogSubmit);
+        
+        
+        
+        /*var html = `
+        <div>ABC123</div>
+        `;
+        var data = { "name": 'abc123' };
+
+        drawflow.addNode('github', 0, 1, 150, 300, 'github', data, html);
+        
+        html= `
+        <div>DEF456</div>
+        `;
+        var data = { "name": 'def456' };
+        
+        drawflow.addNode('github2', 2, 2, 450, 100, 'github2', data, html);*/
+      }
+      </script>
+      <style>
+          #alert_container {
+            z-index: 10;
+            position: fixed;
+            max-width: fit-content;
+            height:50px;
+            left:100%;
+            transform:translateX(-100%);
+            top:60px;
+          }
+          
+          /*.grid-stack-item {
+            background-color: #1FAD32;
+          }*/
+      </style>
+	</head>
+	<!-- bg-medium-gray -->
+	<body class="bg-dark-gray" data-bs-theme="dark">
+    <!-- Navbar + main body -->
+    <div class="d-flex flex-column h-100">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green"> <!-- fixed-top will let rest of body scroll -->
+        <div class="container-fluid">
+          <div class="d-flex flex-grow-1">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand ms-2 mb-0 mt-0" href="#">
+                <div class="mb-0 h4" style="font-family: monospace, monospace;">{{title}}</div>
+            </a>
+            <span class="w-100 d-lg-none d-block">
+              <!-- hidden spacer to center brand on mobile --></span>
+          </div>
+          <div class="collapse navbar-collapse flex-grow-1 text-right" id="navbarToggler">
+            <ul class="navbar-nav ms-auto flex-nowrap"> <!-- me-auto mb-2 mb-lg-0 -->
+              <!--<li class="nav-item">
+                <a class="nav-link" href="#">Agent</a>
+              </li>-->
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#test_dialog">Agent</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#VideoSource_dialog">Audio</a>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarChatHistory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Chat
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="navbarChatHistory">
+                  <li><a class="dropdown-item" href="#" id="chat_length">0 / 4096 tokens</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="onChatHistoryReset()">Reset Chat</a></li>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileDialog">User Profile</a>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#displayDialog">Display Options</a>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <span class="navbar-nav ms-auto flex-row">
+            <button id="audio-input-mute" class="btn btn-primary btn-circle btn-md bi bi-mic-mute-fill ms-1 me-1" type="button" title="Mute/unmute the microphone" onclick="muteAudioInput()"></button>
+            <button id="audio-output-mute" class="btn btn-primary btn-circle btn-md bi bi-volume-up-fill" type="button" title="Mute/unmute the speakers" onclick="muteAudioOutput()"></button>
+          </span>
+        </div>
+      </nav>
+      
+      <div id="chat-history-container" class="flex-grow-1 p-1 m-1">
+        <!--<h3>Conversation</h3>-->
+        <!--<div id="drawflow"></div>-->
+
+        <div class="grid-stack"></div>
+      </div>
+
+      <div class="mx-3 mb-3">
+        <div class="input-group">
+          <textarea id="chat-message-input" class="form-control" rows="3" placeholder="Enter to send (Shift+Enter for newline)" onkeydown="onChatMessageKey(event)"></textarea>
+          <span class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;" onclick="onChatMessageSubmit()"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alert_container" class="container"> <!--class="fixed-top"-->
+      <div id="alert_window" class="alert mb-0" style="background-color: rgba(48,48,48,1.0); display: none">
+        <div id="alert_messages" class="d-inline-block"></div>
+        <button type="button" class="btn-close float-end align-middle d-inline-block" onclick="onHideAlerts()"></button>
+      </div>
+      
+      <script type='text/javascript'>
+        function alertColor(level) {
+          if( level == 'success' ) return 'limegreen';
+          else if( level == 'error' ) return 'orange';
+          else if( level == 'warning' ) return 'orange';
+          else return 'rgb(200,200,200)';
+        
+        }
+        function toTimeString(timestamp) {
+          return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', hour12: true, minute: '2-digit', second: '2-digit' }).slice(0,-3); // remove AM/PM
+        }
+          
+        function onHideAlerts() {
+          $('#alert_window').fadeOut('slow', function() {
+            $(`#alert_messages pre`).remove();
+          });
+        }
+        
+        function removeAlert(id) {
+          $(`#alert_messages #alert-${id}`).remove();
+        }
+        
+        function addAlert(alert) {
+          // supress other messages from the same category that may still be showing
+          if( alert['category'].length > 0 )
+            $(`#alert_messages .alert-category-${alert['category']}`).remove();
+            
+          // add a new element containing the alert message, and show the window if needed
+          $('#alert_messages').append(`<pre id="alert-${alert['id']}" class="align-middle m-0 alert-category-${alert['category']}" style="color: ${alertColor(alert['level'])}">[${alert['time']}] ${alert['message']}\n</pre>`);
+          $('#alert_window:hidden').fadeIn('fast');
+
+          // automatically remove the messages (if this is the last message, hide the window too)
+          if( alert['timeout'] > 0 ) {
+            setTimeout(function() {
+              if( $('#alert_messages pre').length > 1 ) {
+                $(`#alert_messages #alert-${alert['id']}`).remove();
+                console.log('removing alerts due to timeout');
+                console.log(`#alert_messages #alert-${alert['id']}`);
+              }
+              else {
+                onHideAlerts();
+              }
+            }, alert['timeout']);
+          }
+        }
+      </script>
+    </div>
+    <style>
+        #drawflow {
+            position: relative;
+            width: 62vw;
+            height: 475px;
+            /*background: var(--background-color);
+            background-size: 25px 25px;
+            background-image:
+            linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+            linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);*/
+        }
+
+        :root {
+          --dfBackgroundColor: #444444;
+          --dfBackgroundSize: 0px;
+          --dfBackgroundImage: none;
+
+          --dfNodeType: flex;
+          --dfNodeTypeFloat: none;
+          --dfNodeBackgroundColor: #cccccc;
+          --dfNodeTextColor: #000000;
+          --dfNodeBorderSize: 2px;
+          --dfNodeBorderColor: #000000;
+          --dfNodeBorderRadius: 4px;
+          --dfNodeMinHeight: 40px;
+          --dfNodeMinWidth: 160px;
+          --dfNodePaddingTop: 15px;
+          --dfNodePaddingBottom: 15px;
+          --dfNodeBoxShadowHL: 0px;
+          --dfNodeBoxShadowVL: 2px;
+          --dfNodeBoxShadowBR: 15px;
+          --dfNodeBoxShadowS: 2px;
+          --dfNodeBoxShadowColor: #282828;
+
+          --dfNodeHoverBackgroundColor: #eeeeee;
+          --dfNodeHoverTextColor: #000000;
+          --dfNodeHoverBorderSize: 2px;
+          --dfNodeHoverBorderColor: #000000;
+          --dfNodeHoverBorderRadius: 4px;
+
+          --dfNodeHoverBoxShadowHL: 0px;
+          --dfNodeHoverBoxShadowVL: 2px;
+          --dfNodeHoverBoxShadowBR: 15px;
+          --dfNodeHoverBoxShadowS: 2px;
+          --dfNodeHoverBoxShadowColor: #4ea9ff;
+
+          --dfNodeSelectedBackgroundColor: #aaaaaa;
+          --dfNodeSelectedTextColor: #ffffff;
+          --dfNodeSelectedBorderSize: 2px;
+          --dfNodeSelectedBorderColor: #000000;
+          --dfNodeSelectedBorderRadius: 4px;
+
+          --dfNodeSelectedBoxShadowHL: 0px;
+          --dfNodeSelectedBoxShadowVL: 2px;
+          --dfNodeSelectedBoxShadowBR: 15px;
+          --dfNodeSelectedBoxShadowS: 2px;
+          --dfNodeSelectedBoxShadowColor: #4ea9ff;
+
+          --dfInputBackgroundColor: #ffffff;
+          --dfInputBorderSize: 2px;
+          --dfInputBorderColor: #000000;
+          --dfInputBorderRadius: 50px;
+          --dfInputLeft: -27px;
+          --dfInputHeight: 20px;
+          --dfInputWidth: 20px;
+
+          --dfInputHoverBackgroundColor: #ffffff;
+          --dfInputHoverBorderSize: 2px;
+          --dfInputHoverBorderColor: #000000;
+          --dfInputHoverBorderRadius: 50px;
+
+          --dfOutputBackgroundColor: #ffffff;
+          --dfOutputBorderSize: 2px;
+          --dfOutputBorderColor: #000000;
+          --dfOutputBorderRadius: 50px;
+          --dfOutputRight: -3px;
+          --dfOutputHeight: 20px;
+          --dfOutputWidth: 20px;
+
+          --dfOutputHoverBackgroundColor: #ffffff;
+          --dfOutputHoverBorderSize: 2px;
+          --dfOutputHoverBorderColor: #000000;
+          --dfOutputHoverBorderRadius: 50px;
+
+          --dfLineWidth: 5px;
+          --dfLineColor: #4682b4;
+          --dfLineHoverColor: #4682b4;
+          --dfLineSelectedColor: #43b993;
+
+          --dfRerouteBorderWidth: 2px;
+          --dfRerouteBorderColor: #000000;
+          --dfRerouteBackgroundColor: #ffffff;
+
+          --dfRerouteHoverBorderWidth: 2px;
+          --dfRerouteHoverBorderColor: #000000;
+          --dfRerouteHoverBackgroundColor: #ffffff;
+
+          --dfDeleteDisplay: block;
+          --dfDeleteColor: #ffffff;
+          --dfDeleteBackgroundColor: #000000;
+          --dfDeleteBorderSize: 2px;
+          --dfDeleteBorderColor: #ffffff;
+          --dfDeleteBorderRadius: 50px;
+          --dfDeleteTop: -15px;
+
+          --dfDeleteHoverColor: #000000;
+          --dfDeleteHoverBackgroundColor: #ffffff;
+          --dfDeleteHoverBorderSize: 2px;
+          --dfDeleteHoverBorderColor: #000000;
+          --dfDeleteHoverBorderRadius: 50px;
+
+        }
+
+        #drawflow {
+          background: var(--dfBackgroundColor);
+          background-size: var(--dfBackgroundSize) var(--dfBackgroundSize);
+          background-image: var(--dfBackgroundImage);
+        }
+
+        .drawflow .drawflow-node {
+          display: var(--dfNodeType);
+          background: var(--dfNodeBackgroundColor);
+          color: var(--dfNodeTextColor);
+          border: var(--dfNodeBorderSize)  solid var(--dfNodeBorderColor);
+          border-radius: var(--dfNodeBorderRadius);
+          min-height: var(--dfNodeMinHeight);
+          width: auto;
+          min-width: var(--dfNodeMinWidth);
+          padding-top: var(--dfNodePaddingTop);
+          padding-bottom: var(--dfNodePaddingBottom);
+          -webkit-box-shadow: var(--dfNodeBoxShadowHL) var(--dfNodeBoxShadowVL) var(--dfNodeBoxShadowBR) var(--dfNodeBoxShadowS) var(--dfNodeBoxShadowColor);
+          box-shadow:  var(--dfNodeBoxShadowHL) var(--dfNodeBoxShadowVL) var(--dfNodeBoxShadowBR) var(--dfNodeBoxShadowS) var(--dfNodeBoxShadowColor);
+        }
+
+        .drawflow .drawflow-node:hover {
+          background: var(--dfNodeHoverBackgroundColor);
+          color: var(--dfNodeHoverTextColor);
+          border: var(--dfNodeHoverBorderSize)  solid var(--dfNodeHoverBorderColor);
+          border-radius: var(--dfNodeHoverBorderRadius);
+          -webkit-box-shadow: var(--dfNodeHoverBoxShadowHL) var(--dfNodeHoverBoxShadowVL) var(--dfNodeHoverBoxShadowBR) var(--dfNodeHoverBoxShadowS) var(--dfNodeHoverBoxShadowColor);
+          box-shadow:  var(--dfNodeHoverBoxShadowHL) var(--dfNodeHoverBoxShadowVL) var(--dfNodeHoverBoxShadowBR) var(--dfNodeHoverBoxShadowS) var(--dfNodeHoverBoxShadowColor);
+        }
+
+        .drawflow .drawflow-node.selected {
+          background: var(--dfNodeSelectedBackgroundColor);
+          color: var(--dfNodeSelectedTextColor);
+          border: var(--dfNodeSelectedBorderSize)  solid var(--dfNodeSelectedBorderColor);
+          border-radius: var(--dfNodeSelectedBorderRadius);
+          -webkit-box-shadow: var(--dfNodeSelectedBoxShadowHL) var(--dfNodeSelectedBoxShadowVL) var(--dfNodeSelectedBoxShadowBR) var(--dfNodeSelectedBoxShadowS) var(--dfNodeSelectedBoxShadowColor);
+          box-shadow:  var(--dfNodeSelectedBoxShadowHL) var(--dfNodeSelectedBoxShadowVL) var(--dfNodeSelectedBoxShadowBR) var(--dfNodeSelectedBoxShadowS) var(--dfNodeSelectedBoxShadowColor);
+        }
+
+        .drawflow .drawflow-node .input {
+          left: var(--dfInputLeft);
+          background: var(--dfInputBackgroundColor);
+          border: var(--dfInputBorderSize)  solid var(--dfInputBorderColor);
+          border-radius: var(--dfInputBorderRadius);
+          height: var(--dfInputHeight);
+          width: var(--dfInputWidth);
+        }
+
+        .drawflow .drawflow-node .input:hover {
+          background: var(--dfInputHoverBackgroundColor);
+          border: var(--dfInputHoverBorderSize)  solid var(--dfInputHoverBorderColor);
+          border-radius: var(--dfInputHoverBorderRadius);
+        }
+
+        .drawflow .drawflow-node .outputs {
+          float: var(--dfNodeTypeFloat);
+        }
+
+        .drawflow .drawflow-node .output {
+          right: var(--dfOutputRight);
+          background: var(--dfOutputBackgroundColor);
+          border: var(--dfOutputBorderSize)  solid var(--dfOutputBorderColor);
+          border-radius: var(--dfOutputBorderRadius);
+          height: var(--dfOutputHeight);
+          width: var(--dfOutputWidth);
+        }
+
+        .drawflow .drawflow-node .output:hover {
+          background: var(--dfOutputHoverBackgroundColor);
+          border: var(--dfOutputHoverBorderSize)  solid var(--dfOutputHoverBorderColor);
+          border-radius: var(--dfOutputHoverBorderRadius);
+        }
+
+        .drawflow .connection .main-path {
+          stroke-width: var(--dfLineWidth);
+          stroke: var(--dfLineColor);
+        }
+
+        .drawflow .connection .main-path:hover {
+          stroke: var(--dfLineHoverColor);
+        }
+
+        .drawflow .connection .main-path.selected {
+          stroke: var(--dfLineSelectedColor);
+        }
+
+        .drawflow .connection .point {
+          stroke: var(--dfRerouteBorderColor);
+          stroke-width: var(--dfRerouteBorderWidth);
+          fill: var(--dfRerouteBackgroundColor);
+        }
+
+        .drawflow .connection .point:hover {
+          stroke: var(--dfRerouteHoverBorderColor);
+          stroke-width: var(--dfRerouteHoverBorderWidth);
+          fill: var(--dfRerouteHoverBackgroundColor);
+        }
+
+        .drawflow-delete {
+          display: var(--dfDeleteDisplay);
+          color: var(--dfDeleteColor);
+          background: var(--dfDeleteBackgroundColor);
+          border: var(--dfDeleteBorderSize) solid var(--dfDeleteBorderColor);
+          border-radius: var(--dfDeleteBorderRadius);
+        }
+
+        .parent-node .drawflow-delete {
+          top: var(--dfDeleteTop);
+        }
+
+        .drawflow-delete:hover {
+          color: var(--dfDeleteHoverColor);
+          background: var(--dfDeleteHoverBackgroundColor);
+          border: var(--dfDeleteHoverBorderSize) solid var(--dfDeleteHoverBorderColor);
+          border-radius: var(--dfDeleteHoverBorderRadius);
+        }
+    </style>
+	</body>
+</html>
