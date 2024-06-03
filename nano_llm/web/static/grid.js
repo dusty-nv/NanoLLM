@@ -16,12 +16,12 @@ function addGrid() {
 
   addGraphEditor();
 
-  const html = `
+  /*const html = `
     <div class="bg-success" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;">I'm not a coder but if I understand it correctly when the width of the browser goes below 768x then the CSS gets switched to the one-column-mode and in doing so the added styling is lost. If I wanted to fix this so whenever the CSS changes it will refresh or "call again the liveStreamElement to add the styling back" could you tell me which file of gridstack I would need to edit?</div>
     <div class="bg-light" style="max-height: 50px">SUBMIT BUTTON</div>
   `;
   
-  addGridWidget('test', 'TEST', html);
+  addGridWidget('test', 'TEST', html);*/
 
   drawflow = new Drawflow(document.getElementById("drawflow"));
   drawflow.start();
@@ -229,7 +229,29 @@ function addPlugin(plugin) {
     y = node.offsetTop
   }
 
-  drawflow.addNode(plugin_name, plugin['inputs'].length, plugin['outputs'].length, x, y, plugin_name, {}, `<div>${plugin_name}</div>`);
+  const html = `
+    <div style="position: absolute; top: 5px;">
+      ${plugin_name}
+    </div>
+    <div style="font-size: 80%">ABC123</div>
+  `;
+  
+  drawflow.addNode(plugin_name, plugin['inputs'].length, plugin['outputs'].length, x, y, plugin_name, {}, html);
+  
+  let style = '';
+  
+  for( i in plugin['outputs'] ) {
+    const output = `Output ${i}`;//plugin['outputs'][i].toString();
+    style += `.${plugin_name} .outputs .output:nth-child(${Number(i)+1}):before {`;
+    style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 15}px;} `;
+  }
+    
+  style += `.outputs { margin-top: 20px; } `;
+  
+  var style_el = document.createElement('style');
+  style_el.id = `${plugin_name}_node_io_styles`;
+  style_el.innerHTML = style;
+  document.head.appendChild(style_el);
 
   $(`.${plugin_name}`).on('dblclick', function () {
     console.log(`double-click ${plugin_name}`);
@@ -331,7 +353,25 @@ function addGraphEditor() {
     <div id="drawflow" class="mt-1 flex-grow-1 w-100"></div>
   `;
 
-  return addGridWidget("graph_editor", "Graph Editor", html, titlebar_html, {x: 0, y: 0, w: 8, h: 11, noMove: true});
+  let widget = addGridWidget(
+    "graph_editor", "Graph Editor", 
+     html, titlebar_html, 
+     {x: 0, y: 0, w: 8, h: 11} /*, noMove: true}*/
+  );
+  
+  let drawflow = document.getElementById("drawflow");
+  
+  drawflow.addEventListener('mouseenter', (event) => {
+    console.log('onmouseleave(drawflow) => disabling grid move/resize');
+    grid.disable();
+  });
+  
+  drawflow.addEventListener('mouseleave', (event) => {
+    console.log('onmouseleave(drawflow) => enabling grid move/resize');
+    grid.enable();
+  });
+  
+  return widget;
 }
 
 function addDialog(id, title, html, onsubmit, oncancel) {

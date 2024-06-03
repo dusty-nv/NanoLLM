@@ -70,12 +70,14 @@ html, body {
 .bg-gray-8 {
 	background-color: #888888;
 }
-.bg-sage-green {
+.bg-blue-green {
 	background-color: #577468;
 }
-
+.bg-sage-green {
+	background-color: rgb(99, 140, 101);
+}
 .chat-message-bot {
-	background-color: #465d54;
+	background-color: rgb(102, 128, 103); /*#465d54;*/
 }
 
 .chat-message-system {
