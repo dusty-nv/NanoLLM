@@ -15,7 +15,7 @@
 #
 import time
 
-from nano_llm.plugins import AutoASR, AutoTTS, AudioOutputDevice, AudioOutputFile, PrintStream
+from nano_llm.plugins import AutoASR, AutoTTS, AudioOutputDevice, AudioRecorder, PrintStream
 from nano_llm.utils import ArgParser
 
 args = ArgParser(extras=['asr', 'tts', 'audio_input', 'audio_output', 'log']).parse_args()
@@ -32,7 +32,7 @@ if args.audio_output_device is not None:
     tts.add(AudioOutputDevice(**vars(args)))
 
 if args.audio_output_file is not None:
-    tts.add(AudioOutputFile(**vars(args)))
+    tts.add(AudioRecorder(**vars(args)))
     
 asr.start()
 

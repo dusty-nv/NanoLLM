@@ -9,14 +9,16 @@ class PrintStream(Plugin):
     """
     Output plugin that prints chatbot responses to stdout.
     """
-    def __init__(self, partial=True, prefix=None, color='green', **kwargs):
+    def __init__(self, partial: bool = True, prefix: str = None, color: str = 'green', **kwargs):
         """
-        Parameters:
-          partial (bool) -- if true, print token-by-token (otherwise, end with newline)
-          prefix (str) -- text to print out before incoming text
-          color (str) -- the color to print the output stream (or None for no colors)
+        Prints a text stream to stdout with formatting.
+        
+        Args:
+          partial (bool): If true, print token-by-token (otherwise, end with newline)
+          prefix (str): Text to print out before incoming text.
+          color (str): The color to print the output stream (or None for no colors)
         """
-        super().__init__(**kwargs)
+        super().__init__(output_channels=0, **kwargs)
         
         self.partial = partial
         self.prefix = prefix
@@ -57,3 +59,24 @@ class PrintStream(Plugin):
             print(text, end='', flush=True)
         else:
             print(text)
+            
+    def apply_config(self, partial : bool = None, prefix : str = None, color : str = None, **kwargs):
+        """
+        Prints a text stream to stdout with formatting.
+        
+        Args:
+          partial (bool): If true, print token-by-token (otherwise, end with newline)
+          prefix (str): Text to print out before incoming text.
+          color (str): The color to print the output stream (or None for no colors)
+        """   
+        self.partial = update_default(partial, self.partial, bool)
+        self.prefix = update_default(prefix, self.prefix, str)
+        self.color = update_default(color, self.color, str)
+
+    def state_dict(self):
+        return {
+            **super().state_dict(),
+            'partial': self.partial,
+            'prefix': self.prefix,
+            'color': self.color,
+       }

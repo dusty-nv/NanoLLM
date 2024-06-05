@@ -355,7 +355,7 @@ class WebServer():
             elif msg_type == WebServer.MESSAGE_TEXT:  # text
                 payload = payload.decode('utf-8')
 
-            if self.trace and logging.getLogger().isEnabledFor(logging.DEBUG):
+            if self.trace and msg_type != WebServer.MESSAGE_AUDIO and logging.getLogger().isEnabledFor(logging.DEBUG):
                 logging.debug(f"recieved {WebServer.msg_type_str(msg_type)} websocket message from {websocket.remote_address} (type={msg_type} size={payload_size})")
                 if msg_type <= WebServer.MESSAGE_TEXT:
                     pprint.pprint(payload)

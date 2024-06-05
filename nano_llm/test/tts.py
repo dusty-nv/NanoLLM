@@ -22,7 +22,7 @@ import sys
 import termcolor
 
 from nano_llm.utils import ArgParser, KeyboardInterrupt
-from nano_llm.plugins import AutoTTS, UserPrompt, AudioOutputDevice, AudioOutputFile, Callback
+from nano_llm.plugins import AutoTTS, UserPrompt, AudioOutputDevice, AudioRecorder, Callback
 
 args = ArgParser(extras=['tts', 'audio_output', 'prompt', 'log']).parse_args()
 
@@ -96,7 +96,7 @@ if args.audio_output_device is not None:
     tts.add(AudioOutputDevice(**vars(args)))
 
 if args.audio_output_file is not None:
-    tts.add(AudioOutputFile(**vars(args)))
+    tts.add(AudioRecorder(**vars(args)))
 
 prompt = UserPrompt(interactive=True, **vars(args)).add(
     Callback(commands).add(tts)

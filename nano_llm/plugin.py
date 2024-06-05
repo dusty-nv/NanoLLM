@@ -5,6 +5,8 @@ import threading
 import logging
 import traceback
 
+from nano_llm.utils import inspect_function, json_type, python_type
+
 
 class Plugin(threading.Thread):
     """
@@ -27,8 +29,8 @@ class Plugin(threading.Thread):
       drop_inputs (bool): if true, only the most recent input in the queue will be used
       threaded (bool): if true, will spawn independent thread for processing the queue.
     """
-    def __init__(self, name=None, input_channels=1, output_channels=1, 
-                 relay=False, drop_inputs=False, threaded=True, **kwargs):
+    def __init__(self, name=None, inputs=1, outputs=1, relay=False,
+                 drop_inputs=False, threaded=True, **kwargs):
         """
         Initialize plugin
         """
@@ -40,11 +42,31 @@ class Plugin(threading.Thread):
         self.threaded = threaded
         self.interrupted = False
         self.processing = False
+        self.parameters = {}
         
-        self.outputs = [[] for i in range(output_channels)]
-        self.output_channels = output_channels
-        self.input_channels = input_channels
+        inputs = kwargs.get('input_channels', inputs)
+        outputs = kwargs.get('output_channels', outputs)
         
+        if isinstance(inputs, str):
+            inputs = [inputs]
+            
+        if isinstance(inputs, list):
+            self.input_names = inputs
+            inputs = len(inputs)
+        else:
+            self.input_names = ['0']
+
+        if isinstance(outputs, str):
+            outputs = [outputs]
+            
+        if isinstance(outputs, list):
+            self.output_names = outputs
+            outputs = len(outputs)
+        else:
+            self.output_names = [str(x) for x in range(outputs)]
+ 
+        self.outputs = [[] for i in range(outputs)]
+
         if threaded:
             self.input_queue = queue.Queue()
             self.input_event = threading.Event()
@@ -291,29 +313,112 @@ class Plugin(threading.Thread):
             
         return None
     
-    def state_dict(self, **kwargs):
+    def add_parameter(self, attribute: str, name=None, type=None, const=False,
+                      default=None, help=None, kwarg=None, end=None, **kwargs):
+        """
+        Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
+        """
+        if not kwarg:
+            kwarg = attribute
+            
+        init = inspect_function(self.__init__)['parameters'].get(kwarg, {})
+        
+        #if not hasattr(self, attribute):
+        setattr(self, attribute, default)
+            
+        if name is None:
+            name = attribute.replace('_', ' ').title()
+        
+        if type is None:
+            type = init.get('type')
+        else:
+            type = json_type(type)
+            
+        param = {
+            'display_name': name,
+            'type': type,
+            'const': const,
+        }
+        
+        #if kwarg:
+        #    param['kwarg'] = kwarg
+        
+        if not help:
+            help = init.get('help')
+        
+        if help:
+            param['help'] = help
+            
+        if default:
+            param['default'] = default
+   
+        if end:
+            param['end'] = end
+            
+        param.update(**kwargs)
+        self.parameters[attribute] = param
+        return param
+    
+    def set_parameters(self, **kwargs):
+        """
+        Set a state dict of parameters.
+        """
+        for attr, value in kwargs.items():
+            logging.debug(f"{self.name} setting parameter '{attr}' to {value}")
+            setattr(self, attr, value)
+    
+    def reorder_parameters(self):
+        """
+        Move some parameters to the end for display purposes if end=True
+        """
+        if hasattr(self, '_reordered_parameters') and self._reordered_parameters:
+            return
+            
+        params = self.parameters.copy()
+        
+        for param_name, param in params.items():
+            if 'end' in param:
+                del param['end']
+                del self.parameters[param_name]
+                self.parameters[param_name] = param
+        
+        self._reordered_parameters = True
+                    
+    def state_dict(self, config=False, **kwargs):
         """
         Return a configuration dict with plugin state that gets shared with clients. 
         Subclasses can reimplement this to add custom state for each type of plugin.
         """
-        connections = []
-        
-        for c, output_channel in enumerate(self.outputs):
-            for output in output_channel:
-                connections.append({
-                    'to': output.name,
-                    'input': 0,
-                    'output': c
-                 })
-   
-        return {
+        state = {
             'name': self.name,
             'type': self.__class__.__name__,
-            'inputs': [x for x in range(self.input_channels)],
-            'outputs': [x for x in range(self.output_channels)],
-            'connections': connections,
-        } 
+        }
         
+        if config:
+            connections = []
+            
+            for c, output_channel in enumerate(self.outputs):
+                for output in output_channel:
+                    connections.append({
+                        'to': output.name,
+                        'input': 0,
+                        'output': c
+                     })
+   
+            self.reorder_parameters()
+            
+            state.update({
+                'inputs': self.input_names,
+                'outputs': self.output_names,
+                'connections': connections,
+                'parameters': self.parameters,
+            })
+        
+        for attr, param in self.parameters.items():
+            state[attr] = getattr(self, attr)
+            
+        return state
+               
     def send_state(self, state_dict=None, **kwargs):
         """
         Send the state dict message over the websocket.
@@ -330,7 +435,20 @@ class Plugin(threading.Thread):
         WebServer.Instance.send_message({
             'state_dict': {self.name: state_dict}
         })
+     
+    def send_stats(self, **kwargs):
+        """
+        Send performance stats over the websocket.
+        """
+        from nano_llm.web import WebServer
         
+        if not WebServer.Instance or not WebServer.Instance.connected or not kwargs:
+            return
+
+        WebServer.Instance.send_message({
+            'stats': {self.name: kwargs}
+        })
+           
     def send_alert(self, message, **kwargs):
         """
         Send an alert message to the webserver (see WebServer.send_alert() for kwargs)

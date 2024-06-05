@@ -9,16 +9,22 @@ import riva.client
 import riva.client.audio_io
 
 from nano_llm.plugins import AutoASR
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
 
 class RivaASR(AutoASR):
     """
-    Streaming ASR service using NVIDIA Riva
+    Streaming ASR service using NVIDIA Riva:
     https://docs.nvidia.com/deeplearning/riva/user-guide/docs/asr/asr-overview.html
     
     You need to have the Riva server running first:
     https://catalog.ngc.nvidia.com/orgs/nvidia/teams/riva/resources/riva_quickstart_arm64
+    
+    Riva pre-trained ASR models:
+    https://docs.nvidia.com/deeplearning/riva/user-guide/docs/asr/asr-overview.html#pretrained-asr-models
+    
+    What is Inverse Text Normalization?
+    https://developer.nvidia.com/blog/text-normalization-and-inverse-text-normalization-with-nvidia-nemo/
     
     Inputs:  incoming audio samples coming from another audio plugin
              RivaASR can also open an audio device connected to this machine
@@ -26,21 +32,27 @@ class RivaASR(AutoASR):
     Output:  two channels, the first for word-by-word 'partial' transcript strings
              the second is for the full/final sentences
     """
-    def __init__(self, riva_server='localhost:50051',
-                 language_code='en-US', sample_rate_hz=48000, 
-                 asr_threshold=-2.5, audio_chunk=0.1,
-                 automatic_punctuation=True, inverse_text_normalization=False, 
-                 profanity_filter=False, boosted_lm_words=None, boosted_lm_score=4.0, 
+    def __init__(self, riva_server : str = 'localhost:50051',
+                 language_code : str = 'en-US', asr_threshold : float = -2.5, 
+                 sample_rate_hz : int = 16000, audio_chunk : float = 0.1,
+                 automatic_punctuation : bool = True, inverse_text_normalization : bool = False, 
+                 profanity_filter : bool = False, boosted_words : str = None, boosted_score : float = 4.0, 
                  **kwargs):
         """
-        Parameters:
+        Streaming ASR using NVIDIA Riva. You need to have the Riva container running first:
+        https://catalog.ngc.nvidia.com/orgs/nvidia/teams/riva/resources/riva_quickstart_arm64
         
-          riva_server (str) -- URL of the Riva GRPC server that should be running
-          audio_input (int) -- audio input device number for locally-connected microphone
-          sample_rate_hz (int) -- sample rate of any incoming audio or device (typically 16000, 44100, 48000)
-          audio_chunk (int) -- the audio input buffer length (in samples) to use for input devices
-          audio_input_channels (int) -- 1 for mono, 2 for stereo
-          inverse_text_normalization (bool) -- https://developer.nvidia.com/blog/text-normalization-and-inverse-text-normalization-with-nvidia-nemo/
+        Args:
+          riva_server (str): URL and port of the Riva GRPC server that should be running.
+          language_code (str): The language to use (see Riva docs for multilingual models)
+          asr_threshold (float): Minimum confidence for the output to be kept (only applies to 'final' transcripts)
+          sample_rate_hz (int): Sample rate of the incoming audio (typically 16000, 44100, 48000)
+          audio_chunk (int): The duration of time or number of audio samples captured per batch.
+          automatic_punctuation (bool): Enable periods, question marks, and exclamations added at the end of sentences.
+          inverse_text_normalization (bool): Convert numbers and symbols to words instead of digits.
+          profanity_filter (bool): Remove derogatory language from the transcripts.
+          boosted_words (str): Words to boost when decoding the transcript (hotword, wakeword)
+          boosted_score (float): The amount by which to boost the scores of the words above.  
         """
         super().__init__(output_channels=2, **kwargs)
         
@@ -80,8 +92,23 @@ class RivaASR(AutoASR):
             interim_results=True,
         )
         
-        riva.client.add_word_boosting_to_config(self.asr_config, boosted_lm_words, boosted_lm_score)
+        riva.client.add_word_boosting_to_config(self.asr_config, boosted_words, boosted_score)
 
+    def apply_config(self, asr_threshold : float = None, **kwargs):
+        """
+        Streaming ASR using NVIDIA Riva.
+        
+        Args:
+          asr_threshold (float): Minimum confidence for the output to be kept (only applies to 'final' transcripts)
+        """   
+        self.confidence_threshold = update_default(asr_threshold, self.confidence_threshold, float)
+
+    def state_dict(self):
+        return {
+            **super().state_dict(),
+            'asr_confidence': self.confidence_threshold,
+       }
+       
     def run(self):
         if self.input_device is not None:
             self.mic_thread = threading.Thread(target=self.run_mic, daemon=True)

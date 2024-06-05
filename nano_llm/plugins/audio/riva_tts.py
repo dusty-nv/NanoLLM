@@ -8,6 +8,7 @@ import riva.client
 import riva.client.audio_io
 
 from .auto_tts import AutoTTS
+from nano_llm.utils import update_default
 
 
 class RivaTTS(AutoTTS):
@@ -18,21 +19,35 @@ class RivaTTS(AutoTTS):
     You need to have the Riva server running first:
     https://catalog.ngc.nvidia.com/orgs/nvidia/teams/riva/resources/riva_quickstart_arm64
     
+    The available voices are from:
+          https://docs.nvidia.com/deeplearning/riva/user-guide/docs/tts/tts-overview.html#voices
+        
+    Rate, pitch, and volume are dynamic SSML tags from:
+      https://docs.nvidia.com/deeplearning/riva/user-guide/docs/tutorials/tts-basics-customize-ssml.html#customizing-rate-pitch-and-volume-with-the-prosody-tag
+      
     Inputs:  words to speak (str)
     Output:  audio samples (np.ndarray, int16)
     """
-    def __init__(self, riva_server='localhost:50051', 
-                 voice='English-US.Female-1', language_code='en-US', sample_rate_hz=48000, 
-                 voice_rate='default', voice_pitch='default', voice_volume='default',
+    def __init__(self, riva_server: str = 'localhost:50051', voice: str = 'English-US.Female-1', 
+                 language_code: str = 'en-US', sample_rate_hz: int = 48000, 
+                 voice_rate: str = '100%', voice_pitch='default', voice_volume='default',
+                 tts_buffering : str = 'punctuation',
                  **kwargs):
         """
-        The available voices are from:
-          https://docs.nvidia.com/deeplearning/riva/user-guide/docs/tts/tts-overview.html#voices
+        Streaming TTS using NVIDIA Riva. You need to have the Riva container running first:
+        https://catalog.ngc.nvidia.com/orgs/nvidia/teams/riva/resources/riva_quickstart_arm64
         
-        rate, pitch, and volume are dynamic SSML tags from:
-          https://docs.nvidia.com/deeplearning/riva/user-guide/docs/tutorials/tts-basics-customize-ssml.html#customizing-rate-pitch-and-volume-with-the-prosody-tag
+        Args:
+          riva_server (str): URL and port of the Riva GRPC server that should be running.
+          voice (str):  Name of the voice to use (e.g. 'English-US.Female-1', 'English-US.Male-1')
+          language_code (str): The language to use (see Riva docs for models in other languages)
+          sample_rate_hz (int):  The desired sample rate to generate audio in (defaults to 48KHz)
+          voice_rate (str):  The speed of the voice (between '25%' and '250%')
+          voice_pitch (str): Pitch shift to apply (between [-3,3] or [-150Hz, 150Hz])
+          voice_volume (str): Increase or decrease the volume by [-13dB, 8dB]
+          tts_buffering (str):  If 'punctuation', TTS will wait to generate until the end of sentences for better dynamics.  If 'time', TTS will wait until audio gap-out approaches.  If 'time,punctuation', will wait for both.
         """
-        super().__init__(**kwargs)
+        super().__init__(tts_buffering=tts_buffering, **kwargs)
         
         self.server = riva_server
         self.auth = riva.client.Auth(uri=riva_server)
@@ -60,7 +75,34 @@ class RivaTTS(AutoTTS):
             self.voice = "English-US.Female-1"
             
         self.process("This is a test of Riva text to speech.", flush=True)
-    
+
+    def apply_config(self, voice: str = None, voice_rate: str = None, voice_pitch: str = None, voice_volume: str = None, tts_buffering: str = None, **kwargs):
+        """
+        Streaming TTS using NVIDIA Riva.
+        
+        Args:
+          voice (str):  Name of the voice to use (e.g. 'English-US.Female-1', 'English-US.Male-1')
+          voice_rate (str):  The speed of the voice (between '25%' and '250%')
+          voice_pitch (str): Pitch shift to apply (between [-3,3] or [-150Hz, 150Hz])
+          voice_volume (str): Increase or decrease the volume by [-13dB, 8dB]
+          tts_buffering (str):  If 'punctuation', TTS will wait to generate until the end of sentences for better dynamics.  If 'time', TTS will wait until audio gap-out approaches.  If 'time,punctuation', will wait for both.
+        """
+        self.voice = update_default(voice, self.voice, str)
+        self.rate = update_default(voice_rate, self.rate, str)
+        self.pitch = update_default(voice_pitch, self.pitch, str)
+        self.volume = update_default(voice_volume, self.volume, str)
+        self.buffering = update_default(tts_buffering, self.buffering, str)
+
+    def state_dict(self):
+        return {
+            **super().state_dict(),
+            'voice': self.voice,
+            'voice_rate': self.rate,
+            'voice_pitch': self.pitch,
+            'voice_volume': self.volume,
+            'tts_buffering': self.buffering,
+       }
+       
     def process(self, text, **kwargs):
         """
         Inputs text, outputs stream of audio samples (np.ndarray, np.int16)

@@ -5,7 +5,7 @@ from nano_llm.utils import ArgParser, print_table
 from nano_llm.plugins import (
     UserPrompt, ChatQuery, PrintStream, 
     AutoASR, AutoTTS, VADFilter, RateLimit,
-    ProcessProxy, AudioOutputDevice, AudioOutputFile
+    ProcessProxy, AudioOutputDevice, AudioRecorder
 )
 
 
@@ -70,7 +70,7 @@ class VoiceChat(Agent):
                 self.tts_output.add(self.audio_output_device)
             
             if self.audio_output_file is not None:
-                self.audio_output_file = AudioOutputFile(**kwargs)
+                self.audio_output_file = AudioRecorder(**kwargs)
                 self.tts_output.add(self.audio_output_file)
         
         #: Text prompts from web UI or CLI.

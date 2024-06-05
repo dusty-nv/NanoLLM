@@ -8,7 +8,7 @@ import torch
 import torchaudio
 
 from .auto_tts import AutoTTS
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
 from piper import PiperVoice
 from piper.download import ensure_voice_exists, find_voice, get_voices
@@ -23,23 +23,30 @@ class PiperTTS(AutoTTS):
     You can get the list of voices with tts.voices, and list of languages with tts.languages
     The speed can be set with tts.rate (1.0 = normal). The default voice is '...' with rate 1.0
     """
-    def __init__(self, voice='en_US-libritts-high', voice_speaker=None,
-                 language_code='en_US', sample_rate_hz=22050, voice_rate=1.0, 
-                 model_cache=os.environ.get('PIPER_CACHE'), **kwargs):
+    def __init__(self, voice: str = 'en_US-libritts-high', voice_speaker: str = None,
+                 voice_rate: float = 1.0, sample_rate_hz: int = 22050, 
+                 model_cache: str = os.environ.get('PIPER_CACHE'), **kwargs):
         """
-        Load Piper TTS model and set default options (many of which can be changed at runtime)
+        Load Piper TTS model with ONNX Runtime using CUDA.
+        
+        Args:
+          voice (str):  Name of the Piper model to use.
+          voice_speaker (str):  Name or ID of the speaker to use for multi-voice models.
+          voice_rate (float):  The speed of the voice (1.0 = 100%)
+          sample_rate_hz (int):  Piper generates 16000 KHz for 'low' quality models and 22050 KHz for 'medium' and 'high' quality models.
+          model_cache (str):  The directory on the server to save the models that get downloaded.
         """
-        super().__init__(**kwargs)
+        super().__init__(outputs='audio', **kwargs)
         
         if not voice:
             voice = 'en_US-libritts-high' #'en_GB-cori-high' #'en_US-lessac-high'
-            
-        self.rate = voice_rate
+
         self.sample_rate = sample_rate_hz
         self.cache_path = model_cache  
         self.resampler = None
         self.languages = []
         self.voices = []
+        self._voice = None
         
         self.voices_info = get_voices(self.cache_path, update_voices=True)
 
@@ -47,21 +54,24 @@ class PiperTTS(AutoTTS):
             if model_info['language']['code'] not in self.languages:
                 self.languages.append(model_info['language']['code'])
         
-        self.language = language_code
-        self.voice = voice
-        
-        if voice_speaker:
-            self.speaker = voice_speaker
+        #self.language = language_code
 
+        self.add_parameter('voice', default=voice)
+        self.add_parameter('speaker', default=voice_speaker, kwarg='voice_speaker')
+        self.add_parameter('rate', default=voice_rate, kwarg='voice_rate')
+        
         logging.debug(f"running Piper TTS model warm-up for {self.voice}")
         self.process("This is a test of the text to speech.")
-        
+          
     @property
     def voice(self):
         return self._voice
         
     @voice.setter
     def voice(self, voice):
+        if self._voice == voice:
+            return
+            
         try:
             model_path, config_path = find_voice(voice, [self.cache_path])
         except Exception as error:
@@ -99,7 +109,8 @@ class PiperTTS(AutoTTS):
             self._speaker = speaker
         except Exception as error:
             logging.warning(f"Piper TTS failed to set speaker to '{speaker}', ignoring... ({error})")
-            
+     
+    '''       
     @property
     def language(self):
         return self._language
@@ -112,7 +123,8 @@ class PiperTTS(AutoTTS):
         for key, model_info in self.voices_info.items():
             if model_info['language']['code'].lower().startswith(self._language):
                 self.voices.append(key)
-
+    '''
+    
     def process(self, text, **kwargs):
         """
         Inputs text, outputs stream of audio samples (np.ndarray, np.int16)

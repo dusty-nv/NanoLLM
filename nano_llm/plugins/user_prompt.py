@@ -19,11 +19,11 @@ class UserPrompt(Plugin):
         """
         Parameters:
         
-          prompt (str) -- optional initial prompt or path to txt/json file
-          interactive (bool) -- read user input from stdin (todo file descriptors)
-          prefix (str) -- when in interactive mode, the prompt for user input
+          prompt (str): Optional initial prompt or path to txt/json file
+          interactive (bool): Read user input from terminal on `stdin`.
+          prefix (str): When in interactive mode, the prompt for user input.
         """
-        super().__init__(input_channels=0, **kwargs)
+        super().__init__(inputs=0, outputs='text', **kwargs)
         
         self.prefix = prefix
         self.interactive = interactive
@@ -58,7 +58,7 @@ class UserPrompt(Plugin):
             self.output(sys.stdin.readline().strip())
             
     def on_websocket(self, msg, msg_type=0, **kwargs): 
-        print('UserPrompt.on_websocket()', msg)
+        print(f'{self.name}.on_websocket()', msg)
         
         if msg_type != WebServer.MESSAGE_JSON or self.name not in msg:
             return

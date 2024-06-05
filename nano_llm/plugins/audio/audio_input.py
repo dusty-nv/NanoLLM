@@ -14,19 +14,22 @@ from nano_llm.utils import convert_audio, resample_audio, find_audio_device, pya
 
 class AudioInputDevice(Plugin):
     """
-    Capture audio from a microphone or soundcard device attached to the machine.
+    Capture audio from a microphone or soundcard device attached to the server.
     Outputs audio samples as an np.ndarray with dtype=int16
     """
-    def __init__(self, audio_input_device=None, audio_input_channels=1, sample_rate_hz=None, audio_chunk=0.1, **kwargs):
+    def __init__(self, audio_input_device: int = None, audio_input_channels: int = 1, 
+                 sample_rate_hz: int = None, audio_chunk: float = 0.1, **kwargs):
         """
-        Parameters:
+        Capture audio from a microphone or soundcard device attached to the machine.
         
-          audio_input_device (int):  Audio input device number (use ``--list-audio-devices`` to find them)
-          audio_input_channels (int):  1 for mono, 2 for stereo
+        Args:
+          audio_input_device (int):  Audio input device number (PyAudio / PortAudio)
+          audio_input_channels (int):  1 for mono, 2 for stereo.
           sample_rate_hz (int):  Sample rate to open the device with (typically 16000, 44100, 48000),
                                  or None to use the device's default sampling rate.
+          audio_chunk (float): The duration of time or number of audio samples captured per batch.
         """
-        super().__init__(**kwargs)
+        super().__init__(input_channels=0, **kwargs)
         
         self.pa = pyaudio.PyAudio()
         

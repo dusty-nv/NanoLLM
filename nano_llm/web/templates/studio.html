@@ -40,9 +40,16 @@
             setStateDict(payload['state_dict']);
           }
           
+          if( 'stats' in payload ) {
+            setStats(payload['stats']);
+          }
+          
           if( 'alert' in payload ) {
             addAlert(payload['alert']);
           }
+        }
+        else if( type == MESSAGE_AUDIO ) {
+          onAudioOutput(payload);
         }
       }
       
@@ -54,8 +61,8 @@
 
         connectWebsocket(onWebsocketMsg, port={{ ws_port }});
         
-        //enumerateAudioDevices();
-        //openAudioDevices();
+        enumerateAudioDevices();
+        openAudioDevices();
 
         //window.setInterval(generateAudio, 100);
         //window.setInterval(testWebsocketSend, 500);
@@ -131,6 +138,32 @@
       </nav>
     </div>
     <div class="grid-stack m-2"></div>
+    
+    <!-- Audio settings dialog -->
+    <div class="modal fade" id="audioDialog" tabindex="-1" aria-labelledby="audioDialogLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="audioDialogLabel">Audio Settings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="audio-input-select" class="form-label">Input Device (Microphone)</label>
+              <select id="audio-input-select" name="audio-input-select" class="form-select" onclick="openAudioDevices()"></select>
+            </div>
+            <div class="mb-3">
+              <label for="audio-output-select" class="form-label">Output Device (Speaker)</label>
+              <select id="audio-output-select" name="audio-output-select" class="form-select" onclick="openAudioDevices()"></select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+          </div>
+        </div>
+      </div>
+    </div>
     
     <!-- Alert Messages -->
     <div id="alert_container" class="container"> <!--class="fixed-top"-->

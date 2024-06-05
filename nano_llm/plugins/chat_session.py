@@ -42,7 +42,7 @@ class ChatSession(Plugin):
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)
           chat_template (str|dict): The chat template to use like 'llama-2', 'vicuna-v1' (by default, will attempt to determine model type)              
         """
-        super().__init__(output_channels=5, **kwargs)
+        super().__init__(outputs=['delta', 'words', 'final', 'stream', 'embed'], **kwargs)
 
         load_time = time.perf_counter()
         

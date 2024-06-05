@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-from pprint import pprint
+import logging
+import pprint
 
 from nano_llm import Agent, Plugin
 from nano_llm.web import WebServer
-from nano_llm.plugins import ChatSession, VideoSource, VideoOutput, UserPrompt
-from nano_llm.utils import ArgParser, inspect_function
 
+from nano_llm.utils import ArgParser, inspect_function
 
 
 class DynamicPlugin(Plugin):
@@ -18,6 +18,13 @@ class DynamicPlugin(Plugin):
                 plugin = cls.Types[plugin]
             else:
                 raise ValueError(f"unregistered plugin type: {plugin}")
+                
+        for key, value in kwargs.items():
+            if value == 'false':
+                kwargs[key] = False
+            elif value == 'true':
+                kwargs[key] = True
+                
         return plugin(*args, **kwargs)
         
     @classmethod
@@ -28,28 +35,51 @@ class DynamicPlugin(Plugin):
             'init': inspect_function(plugin.__init__),
         }
 
-        if hasattr(plugin, 'apply_config'):
-            info['config'] = inspect_function(plugin.apply_config)
-
         cls.TypeInfo[info['name']] = info
         cls.Types[info['name']] = plugin
 
-   
-DynamicPlugin.register(ChatSession)   
-DynamicPlugin.register(UserPrompt)  
-DynamicPlugin.register(VideoSource)
-DynamicPlugin.register(VideoOutput)
+    @classmethod
+    def register_all(cls):
+        from nano_llm.plugins import (
+            ChatSession, VideoSource, VideoOutput, 
+            UserPrompt, VADFilter, PrintStream,
+            AudioInputDevice, AudioOutputDevice, AudioRecorder
+        )
+        
+        from nano_llm.plugins.audio.riva_asr import RivaASR
+        from nano_llm.plugins.audio.riva_tts import RivaTTS
+        from nano_llm.plugins.audio.piper_tts import PiperTTS
+        from nano_llm.plugins.audio.whisper_asr import WhisperASR
+        from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
+        
+        DynamicPlugin.register(ChatSession)   
+        DynamicPlugin.register(UserPrompt)  
+        DynamicPlugin.register(PrintStream)
+        DynamicPlugin.register(VideoSource)
+        DynamicPlugin.register(VideoOutput)
+        DynamicPlugin.register(VADFilter)
+        DynamicPlugin.register(WhisperASR)
+        DynamicPlugin.register(RivaASR)
+        DynamicPlugin.register(RivaTTS)
+        DynamicPlugin.register(PiperTTS)
+        DynamicPlugin.register(AudioInputDevice)
+        DynamicPlugin.register(AudioOutputDevice)
+        DynamicPlugin.register(AudioRecorder)
+        DynamicPlugin.register(WebAudioIn)
+        DynamicPlugin.register(WebAudioOut)
+        
+        logging.info(f"Registered dynamic plugin types:\n\n{pprint.pformat(DynamicPlugin.TypeInfo, indent=2)}")
 
-pprint(DynamicPlugin.TypeInfo)
- 
  
 class DynamicAgent(Agent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        self.webserver = WebServer(title='Agent Studio', msg_callback=self.on_websocket, **kwargs)
+        DynamicPlugin.register_all()
+        
         self.plugins = []
-    
+        self.webserver = WebServer(title='Agent Studio', msg_callback=self.on_websocket, **kwargs)
+
     def add(self, plugin, **kwargs):
         if not isinstance(plugin, Plugin):
             plugin = DynamicPlugin(plugin, **kwargs)
@@ -65,7 +95,7 @@ class DynamicAgent(Agent):
         
         self.plugins.append(plugin)
         self.webserver.send_message({
-            'plugin_added': [DynamicPlugin.state_dict(plugin)],
+            'plugin_added': [plugin.state_dict(config=True)],
         })
         
         return plugin
@@ -76,8 +106,9 @@ class DynamicAgent(Agent):
                 return plugin
    
     def on_websocket(self, msg, msg_type=0, metadata='', **kwargs): 
-        print('on_websocket()', msg)
         if msg_type == WebServer.MESSAGE_JSON:
+            print('on_websocket()', msg)
+            
             if 'client_state' in msg:
                 if msg['client_state'] == 'connected':
                     init_msg = {
@@ -85,15 +116,15 @@ class DynamicAgent(Agent):
                     }
                     
                     if self.plugins:
-                        init_msg['plugin_added'] = [plugin.state_dict() for plugin in self.plugins]
+                        init_msg['plugin_added'] = [plugin.state_dict(config=True) for plugin in self.plugins]
                         
                     self.webserver.send_message(init_msg)
                     
             if 'init_plugin' in msg:
-                self.add(msg['init_plugin']['type'], **msg['init_plugin']['args'])
+                self.add(msg['init_plugin']['name'], **msg['init_plugin']['args'])
                 
             if 'config_plugin' in msg:
-                self.find(msg['config_plugin']['type']).apply_config(**msg['config_plugin']['args'])
+                self.find(msg['config_plugin']['name']).set_parameters(**msg['config_plugin']['args'])
                 
             if 'add_connection' in msg:
                 conn = msg['add_connection']

@@ -32,15 +32,24 @@ function addGrid() {
 function addGridWidget(id, title, html, titlebar_html, grid_options) {
   if( grid_options == undefined ) 
       grid_options = {w: 3, h: 3};
-    
-  if( title == undefined ) 
-      title = name;
 
-  if( titlebar_html == undefined )
-      titlebar_html = '';
-  else
+  if( titlebar_html != undefined )
       titlebar_html = `<span class="float-end float-top">${titlebar_html}</span>`;
+   
+  let title_html = '';
+  
+  if( title != undefined || titlebar_html != undefined ) {
+    title_html += `<span class="mb-2">`;
+    
+    if( title != undefined )
+      title_html += `<h5 class="d-inline">${title}</h5>`;
       
+    if( titlebar_html != undefined )
+      title_html += titlebar_html
+      
+    title_html += `</span>`;
+  }    
+  
   /*let card_html = `
   <div class="card ms-1 mt-1">
     <div class="card-body d-flex flex-column h-100">
@@ -59,10 +68,7 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
   let card_html = `
   <div class="card" id="${id}">
     <div class="card-body d-inline-flex flex-column h-100">
-      <span class="mb-2">
-        <h5 class="d-inline">${title}</h5>
-        ${titlebar_html}
-      </span>
+      ${title_html}
       ${html}
     </div>
   </div>
@@ -72,6 +78,43 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
   //fitGridWidgetContents(widget);
   return widget;
 } 
+
+function addTextInputWidget(name, id) {
+  const input_id = `${id}_input`;
+  const submit_id = `${id}_submit`;
+  
+  const html = `
+    <div class="input-group">
+      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline)"></textarea>
+      <span id="${submit_id}" class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;"></span>
+    </div>
+  `;
+  
+  let widget = addGridWidget(id, null, html, null, {x: 1, y: 1, w: 5, h: 2});
+
+  let onsubmit = function() {
+    const input = document.getElementById(input_id);
+    console.log('submitting text input', input.value);
+    msg = {}
+    msg[name] = {'input': input.value};
+    sendWebsocket(msg);
+    input.value = "";
+  }
+  
+  let onkeydown = function(event) {
+    // https://stackoverflow.com/a/49389811
+    if( event.which === 13 && !event.shiftKey ) {
+      if( !event.repeat )
+        onsubmit();
+      event.preventDefault(); // prevents the addition of a new line in the text field
+    }
+  }
+
+  document.getElementById(input_id).addEventListener('keydown', onkeydown);
+  document.getElementById(submit_id).addEventListener('click', onsubmit);
+
+  return widget;
+}
 
 function addChatWidget(name, id) {
   const history_id = `${id}_history`;
@@ -212,6 +255,23 @@ function setStateDict(state_dicts) {
   }
 }
 
+function setStats(stats_dicts) {
+  for( plugin_name in stats_dicts ) {
+    const stats = stats_dicts[plugin_name];
+    
+    if( ! 'summary' in stats )
+      continue;
+    
+    let summary = stats['summary'];
+    
+    if( Array.isArray(summary) )
+      summary = summary.join('<br/>');
+        
+    document.getElementById(`${plugin_name}_node_stats`).innerHTML = summary;
+  }
+}
+
+
 function addPlugin(plugin) {
   console.log('addPlugin() =>');
   console.log(plugin)
@@ -225,15 +285,16 @@ function addPlugin(plugin) {
   if( nodes.length > 0 ) {
     const node = nodes[nodes.length-1];
     const abs_rect = node.getBoundingClientRect();
-    x = node.offsetLeft + abs_rect.width + 45;
+    x = node.offsetLeft + abs_rect.width + 60;
     y = node.offsetTop
   }
 
   const html = `
     <div style="position: absolute; top: 5px;">
       ${plugin_name}
+      <p id="${plugin_name}_node_stats" style="font-size: 80%"></p>
     </div>
-    <div style="font-size: 80%">ABC123</div>
+    <!--<div style="font-size: 80%">ABC123</div>-->
   `;
   
   drawflow.addNode(plugin_name, plugin['inputs'].length, plugin['outputs'].length, x, y, plugin_name, {}, html);
@@ -241,7 +302,7 @@ function addPlugin(plugin) {
   let style = '';
   
   for( i in plugin['outputs'] ) {
-    const output = `Output ${i}`;//plugin['outputs'][i].toString();
+    const output = plugin['outputs'][i].toString();
     style += `.${plugin_name} .outputs .output:nth-child(${Number(i)+1}):before {`;
     style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 15}px;} `;
   }
@@ -261,6 +322,8 @@ function addPlugin(plugin) {
       config_modal.show();
     }
   });
+  
+  addPluginDialog(plugin_name, 'config', null, plugin['parameters']);
 }
 
 function addPluginGridWidget(name, type) {
@@ -270,6 +333,8 @@ function addPluginGridWidget(name, type) {
     return null;
     
   switch(type) {
+    case 'UserPrompt':
+      return addTextInputWidget(name, id);
     case 'ChatSession':
       return addChatWidget(name, id);
     case 'VideoOutput':
@@ -312,15 +377,29 @@ function addPluginTypes(types) {
             
   if( id != null )
     id.innerHTML = pluginMenuList();
-    
+
   for( pluginName in pluginTypes ) {
     const plugin = pluginTypes[pluginName];
+    let pluginMenu = document.getElementById(`menu_create_plugin_${pluginName}`);
     
-    if( 'init' in plugin )
-      addPluginDialog(plugin, 'init');
-      
-    if( 'config' in plugin )
-      addPluginDialog(plugin, 'config');
+    if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
+      const dialog_id = addPluginDialog(pluginName, 'init', plugin['init']['description'], plugin['init']['parameters']);
+      pluginMenu.addEventListener('click', (event) => {
+        console.log(`opening dialog ${dialog_id}`);
+        const modal = new bootstrap.Modal(`#${dialog_id}`);
+        modal.show();
+      });
+    }
+    else {
+      pluginMenu.addEventListener('click', (event) => {
+        sendWebsocket({
+          'init_plugin': {
+            'name': plugin['name'],
+            'args': {}
+          }
+        });
+      });
+    }
   }
 }
 
@@ -331,7 +410,7 @@ function pluginMenuList() {
   let html = '';
   
   for( plugin in pluginTypes )
-    html += `<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#${plugin}_init_dialog">${plugin}</a></li>`;
+    html += `<li><a class="dropdown-item" id="menu_create_plugin_${plugin}" href="#">${plugin}</a></li>`; // data-bs-toggle="modal" data-bs-target="#${plugin}_init_dialog"
 
   return html; 
 }  
@@ -422,20 +501,18 @@ function onConnectionCreated(event) {
   });
 }
 
-function addPluginDialog(plugin, stage) {
+function addPluginDialog(plugin_name, stage, description, parameters) {
 
-  let plugin_name = plugin['name'];
-  
   let html = '';
   
-  if( stage != 'config' )
-    html += `<p>${plugin[stage]['description']}</p>`;
+  if( description != null )
+    html += `<p>${description}</p>`;
     
   html += '<form>';
 
-  for( param_name in plugin[stage]['parameters'] ) {
-    const param = plugin[stage]['parameters'][param_name];
-    const id = `${plugin['name']}_${stage}_${param_name}`;
+  for( param_name in parameters ) {
+    const param = parameters[param_name];
+    const id = `${plugin_name}_${stage}_${param_name}`;
     
     let value = '';
     
@@ -444,8 +521,8 @@ function addPluginDialog(plugin, stage) {
       
     let help = '';
     
-    if( 'description' in param )
-      help = `<div id="${id}_help" class="form-text">${param['description']}</div>`;
+    if( 'help' in param )
+      help = `<div id="${id}_help" class="form-text">${param['help']}</div>`;
     
     switch(param['type']) {
       case 'number':
@@ -467,33 +544,35 @@ function addPluginDialog(plugin, stage) {
   html += `</form>`;
   
   let onsubmit = function() {
-    console.log(`onsubmit(${plugin['name']})`);
+    console.log(`onsubmit(${plugin_name})`);
     let args = {};
     
-    for( param_name in plugin[stage]['parameters'] ) {
-      let value = document.getElementById(`${plugin['name']}_${stage}_${param_name}`).value;
+    for( param_name in parameters ) {
+      let value = document.getElementById(`${plugin_name}_${stage}_${param_name}`).value;
       if( value != undefined && value.length > 0 ) { // input.value are always strings
-        const type = plugin[stage]['parameters'][param_name]['type'];
+        const type = parameters[param_name]['type'];
         if( type == 'integer' || type == 'number' )
           value = Number(value);
         args[param_name] = value;
       }
     }
     
-    console.log(`${stage}Plugin(${plugin['name']}) =>`);
+    console.log(`${stage}Plugin(${plugin_name}) =>`);
     console.log(args);
 
     let msg = {};
     
     msg[`${stage}_plugin`] = {
-        'type': plugin['name'],
+        'name': plugin_name,
         'args': args
     }
     
     sendWebsocket(msg);
   }
   
-  addDialog(`${plugin['name']}_${stage}_dialog`, plugin['name'], html, onsubmit);
+  const dialog_id = `${plugin_name}_${stage}_dialog`;
+  addDialog(dialog_id, plugin_name, html, onsubmit);
+  return dialog_id;
 }
 
 function fitGridWidgetContents(el) {
@@ -504,6 +583,7 @@ function fitGridWidgetContents(el) {
   //console.log('grid widget resize', card_title, card_title.offsetHeight);
   //el.querySelector('.collapse').style.height = `${el.offsetHeight - card_title.offsetHeight - 50}px`;
   console.log('grid widget resize', el.offsetWidth, el.offsetHeight);
+  
   let grid_rect = el.getBoundingClientRect();
 
   let card = el.querySelector('.card-body');

@@ -11,18 +11,19 @@ from nano_llm.utils import convert_audio
 
 class AudioOutputDevice(Plugin):
     """
-    Output audio to an audio interface attached to the machine.
+    Output audio to an audio interface attached to the server.
     Expects to recieve audio samples as input, np.ndarray with dtype=float or int16
     """
-    def __init__(self, audio_output_device=0, audio_output_channels=1, sample_rate_hz=48000, **kwargs):
+    def __init__(self, audio_output_device: int = None, audio_output_channels: int = 1, sample_rate_hz: int = 48000, **kwargs):
         """
-        Parameters:
+        Output audio to an audio interface attached to the server.
         
-          audio_output_device (int) -- audio output device number for PortAudio
-          audio_output_channels (int) -- 1 for mono, 2 for stereo
-          sample_rate_hz (int) -- sample rate of any outgoing audio (typically 16000, 44100, 48000)
+        Args:
+          audio_output_device (int): Audio output device number (PyAudio / PortAudio)
+          audio_output_channels (int): 1 for mono, 2 for stereo.
+          sample_rate_hz (int): Sample rate of any outgoing audio (typically 16000, 44100, 48000)
         """
-        super().__init__(**kwargs)
+        super().__init__(output_channels=0, **kwargs)
         
         self.pa = pyaudio.PyAudio()
         
@@ -118,21 +119,22 @@ class AudioOutputDevice(Plugin):
         return True
 
         
-class AudioOutputFile(Plugin):
+class AudioRecorder(Plugin):
     """
     Output audio to a wav file
     Expects to recieve audio samples as input, np.ndarray with dtype=float or int16
     TODO:  this doesn't fill in gaps for "realtime playback"
     """
-    def __init__(self, audio_output_file='output.wav', audio_output_channels=1, sample_rate_hz=None, **kwargs):
+    def __init__(self, audio_output_file: str = '/data/audio/output.wav', audio_output_channels: int = 1, sample_rate_hz: int = None, **kwargs):
         """
-        Parameters:
+        Output audio to a WAV file saved on the server.
         
-          audio_output_file (str) -- path to the output wav file
-          audio_output_channels (int) -- 1 for mono, 2 for stereo
-          sample_rate_hz (int) -- sample rate of any outgoing audio (typically 16000, 44100, 48000)
+        Args:
+          audio_output_file (str):  Path to the output wav file (save under '/data' for mounted dir)
+          audio_output_channels (int):  1 for mono, 2 for stereo.
+          sample_rate_hz (int):  Sample rate of any outgoing audio (typically 16000, 44100, 48000)
         """
-        super().__init__(**kwargs)
+        super().__init__(output_channels=0, **kwargs)
         
         self.pa = pyaudio.PyAudio()
         
@@ -199,7 +201,7 @@ if __name__ == "__main__":
         device.input(samples)
         
     if args.audio_output_file is not None:
-        file = AudioOutputFile(**vars(args)).start()
+        file = AudioRecorder(**vars(args)).start()
         file.input(samples)
         
     time.sleep(args.length + 1.0)

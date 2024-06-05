@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import logging
 
 import torch
@@ -107,9 +108,24 @@ def audio_rms(samples):
     """
     Compute the average audio RMS (returns a float between 0 and 1)
     """
-    return np.sqrt(np.mean(convert_audio(samples, dtype=np.float32)**2))
+    if isinstance(samples, torch.Tensor):
+        return torch.sqrt(torch.mean(convert_audio(samples, dtype=torch.float32)**2)).item()
+    else:
+        return np.sqrt(np.mean(convert_audio(samples, dtype=np.float32)**2))
 
 
+def audio_db(samples):
+    """
+    Compute RMS of audio samples in dB.
+    """
+    rms = audio_rms(samples)
+    
+    if rms != 0.0:
+        return 20.0 * math.log10(rms)
+    else:
+        return -100.0
+    
+    
 def audio_silent(samples, threshold=0.0):
     """
     Detect if the audio samples are silent or muted.

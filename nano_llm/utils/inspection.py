@@ -23,6 +23,24 @@ PYTHON_TO_JSON_TYPES = {
     "bool": "boolean",
 }
 
+JSON_TO_PYTHON_TYPES = {
+    'string': str,
+    'integer': int,
+    'number': float,
+    'boolean': bool,
+}
+
+def json_type(python_type):
+    """
+    Converts Python types to json type names like 'text', 'integer', 'number', and 'boolean'.
+    """
+    return PYTHON_TO_JSON_TYPES.get(python_type.__name__)
+    
+def python_type(json_type):
+    """
+    Converts json type names like 'text', 'integer', and 'boolean' to their Python types.
+    """
+    
 # https://github.com/langchain-ai/langchain/blob/master/libs/core/langchain_core/utils/function_calling.py
 # https://github.com/langchain-ai/langchain/commit/7a5e1bcf99ab445cf9438f5412f19e5024e5e123
 def _get_python_function_name(function: Callable) -> str:
@@ -167,9 +185,12 @@ def inspect_function(func):
         default = sig.parameters[param_name].default
         if default != inspect.Parameter.empty:
             param['default'] = default 
+        if 'description' in param:
+            param['help'] = param['description']
+            del param['description']
 
     return desc
-    
+      
 def function_has_kwargs(func):
     """
     Return true if the function accepts kwargs, otherwise false.

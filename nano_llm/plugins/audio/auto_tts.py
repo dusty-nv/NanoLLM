@@ -31,6 +31,8 @@ class AutoTTS(Plugin):
             (re.compile(r'`(.*?)`'), r''),   # filter out code blocks
             (re.compile(r'\*(.*?)\*'), r''), # filter out emotives between asterisks
         ]
+        
+        self.add_parameter('buffering', name='TTS Buffering', default=tts_buffering, end=True, help="If 'punctuation', the TTS will wait to generate until the end of sentences for better dynamics.  If 'time', TTS will wait until audio gap-out approaches as to accumulate the most text.  If 'time,punctuation', it will wait for both.")
 
     @staticmethod
     def from_pretrained(tts=None, **kwargs):

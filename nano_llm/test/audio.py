@@ -3,7 +3,7 @@ import sys
 import termcolor
 
 from nano_llm.utils import ArgParser
-from nano_llm.plugins import AudioInputDevice, AudioOutputDevice, AudioOutputFile
+from nano_llm.plugins import AudioInputDevice, AudioOutputDevice, AudioRecorder
 
 args = ArgParser(extras=['audio_input', 'audio_output', 'log']).parse_args()
 
@@ -13,6 +13,6 @@ if args.audio_output_device is not None:
     audio_input.add(AudioOutputDevice(**vars(args)))
 
 if args.audio_output_file is not None:
-    audio_input.add(AudioOutputFile(**vars(args)))
+    audio_input.add(AudioRecorder(**vars(args)))
 
 audio_input.start().join()

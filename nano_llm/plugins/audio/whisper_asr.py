@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from nano_llm.plugins import AutoASR
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
 from whisper_trt.vad import load_vad
 from whisper_trt.model import load_trt_model
@@ -23,13 +23,16 @@ class WhisperASR(AutoASR):
     Output:  two channels, the first for word-by-word 'partial' transcript strings
              the second is for the full/final sentences
     """
-    def __init__(self, model='small', language_code='en_US', partial_transcripts=0.25, **kwargs):
+    def __init__(self, model: str = 'base', language_code: str = 'en_US', partial_transcripts: float = 0.25, **kwargs):
         """
-        Parameters:
+        Whisper streaming voice transcription with TensorRT.
         
-          asr (str): The Whisper model to load - 'tiny' (39M), 'base' (74M), 'small' (244M)
+        Args:
+          model (str): The Whisper model to load - 'tiny' (39M), 'base' (74M), 'small' (244M)
+          language_code (str): The language to load the models for (currently 'en_US')
+          partial_transcripts (float): The update rate for streaming partial ASR results (in seconds, <=0 to disable)
         """
-        super().__init__(output_channels=2, **kwargs)
+        super().__init__(outputs=['final', 'partial'], **kwargs)
         
         self.language = language_code.lower().replace('-', '_').split('_')[0]  # ignore the country
         
@@ -43,10 +46,10 @@ class WhisperASR(AutoASR):
             
         self.model_name = f"{model}.{self.language}"
         self.sample_rate = 16000  # what the Whisper models use
+        self.last_partial = 0
         self.chunks = []
         
-        self.partial_transcripts = partial_transcripts
-        self.last_partial = 0
+        self.add_parameter('partial_transcripts', type=float, default=partial_transcripts)
         
         logging.info(f"loading Whisper model '{self.model_name}' with TensorRT")
         
@@ -66,7 +69,10 @@ class WhisperASR(AutoASR):
         
         time_elapsed = time.perf_counter() - time_begin
         time_audio = len(samples) / self.sample_rate
-        logging.debug(f"Whisper {self.model_name} - transcribed {time_audio:.2f} sec of audio in {time_elapsed:.2f} sec (RTFX={time_audio/time_elapsed:2.2f}x)")
+        rtfx = time_audio / time_elapsed
+        
+        logging.debug(f"Whisper {self.model_name} - transcribed {time_audio:.2f} sec of audio in {time_elapsed:.2f} sec (RTFX={rtfx:2.2f}x)")
+        self.send_stats(rtfx=rtfx, summary=f"RTFX={rtfx:2.2f}x")
         
         return transcript
         
@@ -103,6 +109,5 @@ class WhisperASR(AutoASR):
             partial_transcript = self.transcribe(self.chunks)
             
             if partial_transcript:
-                self.output(partial_transcript, channel=AutoASR.OutputPartial, partial=True)
-                
+                self.output(partial_transcript, channel=AutoASR.OutputPartial, partial=True)     
 

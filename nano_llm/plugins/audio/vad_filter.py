@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from nano_llm import Plugin
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
 from whisper_trt.vad import load_vad
 
@@ -19,36 +19,37 @@ class VADFilter(Plugin):
     Inputs:  incoming audio samples (prefer @ 16KHz)
     Output:  audio samples that have voice activity
     """
-    def __init__(self, vad_threshold=0.5, vad_window=0.5, audio_chunk=0.1, **kwargs):
+    def __init__(self, vad_threshold : float = 0.5, vad_window : float = 0.5, audio_chunk : float = 0.1, **kwargs):
         """
-        Parameters:
-        
-          vad_threshold (float): If any of the audio chunks in the window are above this confidence,
+        Voice Activity Detection (VAD) model that filters/drops audio when there is no speaking.
+        This is typically used before ASR to reduce erroneous transcripts from background noise.
+    
+        Args:
+          vad_threshold (float): If any of the audio chunks in the window are above this confidence for voice activity,
                                  then the audio will be forwarded to the next plugin (otherwise dropped).
-                                 This should be between 0 and 1, with a threshold of 0 emitting all audio.
-                                 
+                                 This should be between 0 and 1, with a threshold of 0 emitting all audio.                  
           vad_window (float): The duration of time (in seconds) that the VAD filter processes over.
-                              If speaking isn't detected for this long, it will be considered silent.                      
+                              If speaking isn't detected for this long, it will be considered silent.                   
+          audio_chunk (float): The duration of time or number of audio samples processed per batch.                     
         """
-        super().__init__(output_channels=1, **kwargs)
+        super().__init__(outputs='audio', **kwargs)
         
         self.vad = load_vad()
         
-        self.vad_threshold = vad_threshold
-        self.vad_window = vad_window
         self.vad_filter = []
+        
+        self.buffers = []
+        self.buffered_samples = 0
         
         self.speaking = False     # true when voice is detected
         self.speaking_start = 0   # time when voice first detected
         self.sample_rate = 16000  # what the Silero VAD model uses
 
-        if audio_chunk < 16:
-            self.audio_chunk = int(audio_chunk * self.sample_rate)
-        else:
-            self.audio_chunk = int(audio_chunk)
+        self.add_parameter('vad_threshold', name='Voice Threshold', type=float, range=(0,1), default=vad_threshold)
+        self.add_parameter('vad_window', name='Window Length', type=float, default=vad_window)
+        self.add_parameter('audio_chunk', type=float, default=audio_chunk)
         
-        self.buffers = []
-        self.buffered_samples = 0
+        #self.apply_config(vad_threshold=vad_threshold, vad_window=vad_window, audio_chunk=audio_chunk)
         
     def process(self, samples, sample_rate=None, **kwargs):
         """
@@ -81,18 +82,67 @@ class VADFilter(Plugin):
         else:
             self.vad_filter[0:-1] = self.vad_filter[1:]
             self.vad_filter[-1] = vad_prob
-        
+
         speaking = any(x > self.vad_threshold for x in self.vad_filter)
+        curr_time = time.perf_counter()
             
         if speaking and not self.speaking:
             logging.info(f"voice activity detected (conf={self.vad_filter[-1]:.3f})")
-            self.speaking_start = time.perf_counter()
+            self.speaking_start = curr_time
 
         if speaking:
             self.output(samples, sample_rate=self.sample_rate, vad_confidence=vad_prob)
         elif self.speaking:
             self.output(None, vad_confidence=vad_prob) # EOS   
-            logging.info(f"voice activity ended (duration={time.perf_counter()-self.speaking_start:.2f}s, conf={self.vad_filter[-1]:.3f})")
+            logging.info(f"voice activity ended (duration={curr_time-self.speaking_start:.2f}s, conf={self.vad_filter[-1]:.3f})")
             
         self.speaking = speaking
-         
+        
+        stats = {
+            'speaking': speaking,
+            'confidence': vad_prob,
+            'summary': [f"{vad_prob*100:.1f}%"],
+        }
+        
+        if speaking:
+            stats['summary'].append(f"{curr_time-self.speaking_start:.1f}s")
+        
+        self.send_stats(**stats)
+
+    @property
+    def audio_chunk(self):
+        return self._audio_chunk
+        
+    @audio_chunk.setter
+    def audio_chunk(self, value):
+        if value < 16:
+            self._audio_chunk = int(value * self.sample_rate)
+        else:
+            self._audio_chunk = int(value)
+    
+    '''                
+    def apply_config(self, vad_threshold : float = None, vad_window : float = None, audio_chunk : float = None, **kwargs):
+        """
+        Update VAD settings.
+        
+        Args:
+          vad_threshold (float): If any of the audio chunks in the window are above this confidence,
+                                 then the audio will be forwarded to the next plugin (otherwise dropped).
+                                 This should be between 0 and 1, with a threshold of 0 emitting all audio.            
+          vad_window (float): The duration of time (in seconds) that the VAD filter processes over.
+                              If speaking isn't detected for this long, it will be considered silent.               
+          audio_chunk (float): The duration of time or number of audio samples processed per batch. 
+        """   
+        self.vad_threshold = update_default(vad_threshold, self.vad_threshold, float)
+        self.vad_window = update_default(vad_window, self.vad_window, float)
+    
+            
+
+    def state_dict(self):
+        return {
+            **super().state_dict(),
+            'vad_threshold': self.vad_threshold,
+            'vad_window': self.vad_window,
+            'audio_chunk': self.audio_chunk,
+       }
+    '''           
