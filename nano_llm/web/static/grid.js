@@ -604,10 +604,13 @@ function addPluginDialog(plugin_name, stage, description, parameters) {
     const id = `${plugin_name}_${stage}_${param_name}`;
     
     let value = '';
+    let value_html = '';
     
-    if( 'default' in param && param['default'] != undefined )
-      value = `value="${param['default']}"`;
-      
+    if( 'default' in param && param['default'] != undefined ) {
+      value = param['default'];
+      value_html = `value="${value}"`;
+    }
+     
     let help = '';
     
     if( 'help' in param )
@@ -663,7 +666,7 @@ function addPluginDialog(plugin_name, stage, description, parameters) {
       var input_html = `<textarea id="${id}" class="form-control" aria-describedby="${id}_help" rows=${param['multiline']}>${value}</textarea>`;
     }
     else {
-      var input_html = `<input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value}>`;
+      var input_html = `<input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value_html}>`;
     }
 
     html += `

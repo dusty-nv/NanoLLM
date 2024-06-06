@@ -4,7 +4,6 @@ import logging
 
 from nano_llm import Plugin
 
-# RateLimit(48000*2, chunk=6000)
 
 class RateLimit(Plugin):
     """
@@ -15,19 +14,22 @@ class RateLimit(Plugin):
       
     It can also chunk indexable outputs into smaller amounts of data at a time.
     """
-    def __init__(self, rate=None, chunk=None, **kwargs):
+    def __init__(self, rate : int = None, chunk : int = None, **kwargs):
         """
-        Parameters:
+        Rate limiter plugin with the ability to pause/resume from the queue.
         
-          rate (int) -- The number of items per second that can be transmitted
-          chunk (int) -- for indexable inputs, the maximum number of items 
-                         that can be in each output message (if None, no chunking)
+        Args:
+          rate (int): The number of items per second that can be transmitted.
+          chunk (int): For indexable inputs, the maximum number of items 
+                       that can be in each output message (if None, no chunking)
         """
         super().__init__(**kwargs)
         
-        self.rate = rate
-        self.chunk = chunk
         self.paused = -1
+        
+        self.add_parameter('rate', default=rate)
+        self.add_parameter('chunk', default=chunk)
+
         
     def process(self, input, sample_rate=None, **kwargs):
         """

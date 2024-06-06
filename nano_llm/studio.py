@@ -48,9 +48,9 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register_all(cls):
         from nano_llm.plugins import (
-            ChatSession, VideoSource, VideoOutput, 
+            ChatSession, VideoSource, VideoOutput, RateLimit,
             UserPrompt, AutoPrompt, VADFilter, TextStream,
-            AudioInputDevice, AudioOutputDevice, AudioRecorder
+            AudioInputDevice, AudioOutputDevice, AudioRecorder,
         )
         
         from nano_llm.plugins.audio.riva_asr import RivaASR
@@ -65,6 +65,7 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(TextStream)
         DynamicPlugin.register(VideoSource)
         DynamicPlugin.register(VideoOutput)
+        DynamicPlugin.register(RateLimit)
         DynamicPlugin.register(VADFilter)
         DynamicPlugin.register(WhisperASR)
         DynamicPlugin.register(RivaASR)

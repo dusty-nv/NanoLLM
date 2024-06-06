@@ -31,7 +31,7 @@ class VideoSource(Plugin):
           video_input_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
           return_tensors (str): The object datatype of the image to output ('np', 'pt', 'cuda')
         """
-        super().__init__(input_channels=0, **kwargs)
+        super().__init__(inputs=0, outputs='image', **kwargs)
         
         options = {}
         
@@ -154,7 +154,7 @@ class VideoOutput(Plugin):
           video_output_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
           video_output_bitrate (int): The desired bitrate in bits per second (default is 4 Mbps)
         """
-        super().__init__(output_channels=0, **kwargs)
+        super().__init__(outputs=0, **kwargs)
         
         options = {}
 

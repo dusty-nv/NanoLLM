@@ -457,6 +457,8 @@ class ChatHistory():
                 entry['text'] = web_text(entry['text'])
             if 'image' in entry:
                 entry['image'] = web_image(entry['image'])
+                if not entry['image']:
+                    del entry['image']
                 
         return messages
                 
