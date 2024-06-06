@@ -318,6 +318,9 @@ class ChatHistory():
         Set the system prompt instruction string and reset the chat history.
         TODO make it so this doesn't reset the chat history, but uncaches it.
         """
+        if instruction is None:
+            return
+            
         if self.template['system_prompt'] == instruction:
             return
             

@@ -26,7 +26,8 @@ function addGrid() {
   drawflow = new Drawflow(document.getElementById("drawflow"));
   drawflow.start();
   
-  drawflow.on('connectionCreated', onConnectionCreated);
+  drawflow.on('connectionCreated', onNodeConnectionCreated);
+  drawflow.on('connectionRemoved', onNodeConnectionRemoved);
 }
 
 function addGridWidget(id, title, html, titlebar_html, grid_options) {
@@ -34,7 +35,7 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
       grid_options = {w: 3, h: 3};
 
   if( titlebar_html != undefined )
-      titlebar_html = `<span class="float-end float-top">${titlebar_html}</span>`;
+      titlebar_html = `<span class="float-top">${titlebar_html}</span>`;
    
   let title_html = '';
   
@@ -43,13 +44,18 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
     
     if( title != undefined )
       title_html += `<h5 class="d-inline">${title}</h5>`;
-      
+
+    title_html += `<button id="${id}_close" type="button" class="btn-close float-end float-top ms-2" aria-label="Close"></button>`;
+    
+    if( document.getElementById(`${title}_config_dialog`) != null )
+      title_html += `<i id="${id}_show_config" class="fa fa-cog float-end gear-button" aria-hidden="true"></i>`;
+    
     if( titlebar_html != undefined )
-      title_html += titlebar_html
-      
+      title_html += titlebar_html;
+
     title_html += `</span>`;
   }    
-  
+  //  position: absolute; right: 15px;
   /*let card_html = `
   <div class="card ms-1 mt-1">
     <div class="card-body d-flex flex-column h-100">
@@ -75,7 +81,26 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
   `;
   
   let widget = grid.addWidget(card_html, grid_options);
-  //fitGridWidgetContents(widget);
+  console.log(`created grid widget id=${id} title=${title}`, widget);
+  
+  let btn_close = document.getElementById(`${id}_close`);
+  
+  if( btn_close != undefined ) {
+      btn_close.addEventListener('click', function(e) {
+      grid.removeWidget(widget);
+    });
+  }
+  
+  let btn_config = document.getElementById(`${id}_show_config`);
+  
+  if( btn_config != undefined ) {
+      btn_config.addEventListener('click', function(e) {
+        sendWebsocket({'get_state_dict': title});
+        const config_modal = new bootstrap.Modal(`#${title}_config_dialog`);
+        config_modal.show();
+    });
+  }
+  
   return widget;
 } 
 
@@ -113,6 +138,32 @@ function addTextInputWidget(name, id) {
   document.getElementById(input_id).addEventListener('keydown', onkeydown);
   document.getElementById(submit_id).addEventListener('click', onsubmit);
 
+  return widget;
+}
+
+function addTextStreamWidget(name, id) {
+  const history_id = `${id}_history`;
+
+  const html = `
+    <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-family: monospace, monospace; font-size: 100%; overflow-y: scroll; flex-grow: 1;"</div>
+  `;
+  
+  let widget = addGridWidget(id, name, html, null, {x: 1, y: 1, w: 5, h: 6});
+
+  addStateListener(name, function(state_dict) {
+    if( ! ('text' in state_dict) )
+      return;
+    
+    let el_type = 'p';  
+    
+    if( 'delta' in state_dict )
+      el_type = 'span';
+
+    document.getElementById(history_id).innerHTML += `
+      <${el_type} style="color: ${state_dict['color']}">${state_dict['text']}</${el_type}>
+    `;
+  });
+  
   return widget;
 }
 
@@ -259,15 +310,18 @@ function setStats(stats_dicts) {
   for( plugin_name in stats_dicts ) {
     const stats = stats_dicts[plugin_name];
     
-    if( ! 'summary' in stats )
+    if( ! ('summary' in stats) )
       continue;
     
     let summary = stats['summary'];
     
     if( Array.isArray(summary) )
       summary = summary.join('<br/>');
-        
-    document.getElementById(`${plugin_name}_node_stats`).innerHTML = summary;
+
+    let node_stats = document.getElementById(`${plugin_name}_node_stats`);
+    
+    if( node_stats != undefined ) 
+      node_stats.innerHTML = summary;
   }
 }
 
@@ -289,41 +343,52 @@ function addPlugin(plugin) {
     y = node.offsetTop
   }
 
+  let stats_class = '';
+  
+  if( plugin['outputs'].length > 1 )
+    stats_class = 'mt-2';
+    
   const html = `
     <div style="position: absolute; top: 5px;">
       ${plugin_name}
-      <p id="${plugin_name}_node_stats" style="font-size: 80%"></p>
+      <p id="${plugin_name}_node_stats" class="${stats_class}" style="font-family: monospace, monospace; font-size: 80%"></p>
     </div>
-    <!--<div style="font-size: 80%">ABC123</div>-->
   `;
   
   drawflow.addNode(plugin_name, plugin['inputs'].length, plugin['outputs'].length, x, y, plugin_name, {}, html);
   
   let style = '';
+  let max_output_chars = 0;
   
   for( i in plugin['outputs'] ) {
     const output = plugin['outputs'][i].toString();
+    max_output_chars = Math.max(max_output_chars, output.length);
     style += `.${plugin_name} .outputs .output:nth-child(${Number(i)+1}):before {`;
-    style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 15}px;} `;
+    style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 20}px;} `;
   }
     
-  style += `.outputs { margin-top: 20px; } `;
+  style += `.outputs { margin-top: 20px; font-family: monospace, monospace; } `;
   
   var style_el = document.createElement('style');
   style_el.id = `${plugin_name}_node_io_styles`;
   style_el.innerHTML = style;
   document.head.appendChild(style_el);
 
+  const has_config_dialog = (Object.keys(plugin['parameters']).length > 0);
+  
   $(`.${plugin_name}`).on('dblclick', function () {
     console.log(`double-click ${plugin_name}`);
     if( addPluginGridWidget(plugin_name, plugin['type']) == null ) {
-      sendWebsocket({'get_state_dict': plugin_name});
-      const config_modal = new bootstrap.Modal(`#${plugin['name']}_config_dialog`);
-      config_modal.show();
+      if( has_config_dialog ) {
+        sendWebsocket({'get_state_dict': plugin_name});
+        const config_modal = new bootstrap.Modal(`#${plugin['name']}_config_dialog`);
+        config_modal.show();
+      }
     }
   });
   
-  addPluginDialog(plugin_name, 'config', null, plugin['parameters']);
+  if( has_config_dialog )
+    addPluginDialog(plugin_name, 'config', null, plugin['parameters']);
 }
 
 function addPluginGridWidget(name, type) {
@@ -335,6 +400,8 @@ function addPluginGridWidget(name, type) {
   switch(type) {
     case 'UserPrompt':
       return addTextInputWidget(name, id);
+    case 'TextStream':
+      return addTextStreamWidget(name, id);
     case 'ChatSession':
       return addChatWidget(name, id);
     case 'VideoOutput':
@@ -419,9 +486,9 @@ function addGraphEditor() {
 
   let titlebar_html = `
     <span class="dropdown float-end float-top">
-      <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <a class="dropdown-toggle me-1" href="#" data-bs-toggle="dropdown" aria-expanded="false" style="color: #aaaaaa;">
         Add
-      </button>
+      </a>
       <ul class="dropdown-menu" id="add_plugin_menu_list">
         ${pluginMenuList()}
       </ul>
@@ -481,14 +548,34 @@ function addDialog(id, title, html, onsubmit, oncancel) {
     $(`#${id}_cancel`).on('click', oncancel);
 }
 
-function onConnectionCreated(event) {
-  console.log(`onConnectionCreated(ignore=${ignore_connection_events})`, event);
+function onNodeConnectionCreated(event) {
+  console.log(`onNodeConnectionCreated(ignore=${ignore_connection_events})`, event);
   
   if( ignore_connection_events )
     return;
     
   sendWebsocket({
     'add_connection': {
+      'input': {
+        'name': drawflow.getNodeFromId(event['input_id'])['name'],
+        'channel': Number(event['input_class'].split('_').at(-1)) - 1
+      },
+      'output': {
+        'name': drawflow.getNodeFromId(event['output_id'])['name'],
+        'channel': Number(event['output_class'].split('_').at(-1)) - 1
+      }
+    }
+  });
+}
+
+function onNodeConnectionRemoved(event) {
+  console.log(`onNodeConnectionRemoved(ignore=${ignore_connection_events})`, event);
+  
+  if( ignore_connection_events )
+    return;
+    
+  sendWebsocket({
+    'remove_connection': {
       'input': {
         'name': drawflow.getNodeFromId(event['input_id'])['name'],
         'channel': Number(event['input_class'].split('_').at(-1)) - 1
@@ -508,8 +595,10 @@ function addPluginDialog(plugin_name, stage, description, parameters) {
   if( description != null )
     html += `<p>${description}</p>`;
     
-  html += '<form>';
+  html += '<div>';
 
+  var select2_args = {};
+  
   for( param_name in parameters ) {
     const param = parameters[param_name];
     const id = `${plugin_name}_${stage}_${param_name}`;
@@ -532,16 +621,61 @@ function addPluginDialog(plugin_name, stage, description, parameters) {
         var type='text';
     }
     
+    const has_options = ('options' in param);
+    const has_suggestions = ('suggestions' in param);
+    const has_multiline = ('multiline' in param);
+    
+    if( has_options /*|| has_suggestions*/ ) {
+      if( has_options ) {
+        var options = param['options'];
+      }
+      /*else if( has_suggestions ) {
+        var options = param['suggestions'];
+        select2_args[id] = {tags: true, placeholder: 'enter'};
+      }*/
+      
+      var input_html = `<select id="${id}" class="form-control">\n`
+      
+      for( i in options ) {
+        if( i == 0 )
+          var selected = ` selected="selected"`;
+        else
+          var selected = '';
+        
+        input_html += `  <option${selected}>${options[i]}</option>\n`
+      }
+      
+      input_html += `</select>\n`;
+    }
+    else if( has_suggestions ) {
+      const list_id = `${id}_list`;
+      var input_html = `<input id="${id}" type="${type}" class="form-control" list="${list_id}"/>`;
+      
+      input_html += `<datalist id="${list_id}">`;
+      
+      for( i in param['suggestions'] ) {
+        input_html += `<option>${param['suggestions'][i]}</option>`;
+      }
+      
+      input_html += `</datalist>`; 
+    }
+    else if( has_multiline ) {
+      var input_html = `<textarea id="${id}" class="form-control" aria-describedby="${id}_help" rows=${param['multiline']}>${value}</textarea>`;
+    }
+    else {
+      var input_html = `<input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value}>`;
+    }
+
     html += `
       <div class="mb-3">
         <label for="${id}" class="form-label">${param['display_name']}</label>
-        <input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value}>
+        ${input_html}
         ${help}
       </div>
     `;
   }
   
-  html += `</form>`;
+  html += `</div>`;
   
   let onsubmit = function() {
     console.log(`onsubmit(${plugin_name})`);
@@ -572,6 +706,10 @@ function addPluginDialog(plugin_name, stage, description, parameters) {
   
   const dialog_id = `${plugin_name}_${stage}_dialog`;
   addDialog(dialog_id, plugin_name, html, onsubmit);
+  
+  //for( select2_id in select2_args )
+  //  $(`#${select2_id}`).select2(select2_args[select2_id]);
+
   return dialog_id;
 }
 

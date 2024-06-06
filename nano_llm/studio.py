@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import logging
+import time
 import pprint
+import logging
 
 from nano_llm import Agent, Plugin
 from nano_llm.web import WebServer
-
+from nano_llm.plugins import Tegrastats
 from nano_llm.utils import ArgParser, inspect_function
 
 
@@ -34,6 +35,12 @@ class DynamicPlugin(Plugin):
             'flags': kwargs,
             'init': inspect_function(plugin.__init__),
         }
+        
+        if hasattr(plugin, 'type_hints'):
+            type_hints = plugin.type_hints()
+            for key, value in type_hints.items():
+                if key in info['init']['parameters']:
+                    info['init']['parameters'][key].update(value)
 
         cls.TypeInfo[info['name']] = info
         cls.Types[info['name']] = plugin
@@ -42,7 +49,7 @@ class DynamicPlugin(Plugin):
     def register_all(cls):
         from nano_llm.plugins import (
             ChatSession, VideoSource, VideoOutput, 
-            UserPrompt, VADFilter, PrintStream,
+            UserPrompt, AutoPrompt, VADFilter, TextStream,
             AudioInputDevice, AudioOutputDevice, AudioRecorder
         )
         
@@ -53,8 +60,9 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
         DynamicPlugin.register(ChatSession)   
-        DynamicPlugin.register(UserPrompt)  
-        DynamicPlugin.register(PrintStream)
+        DynamicPlugin.register(UserPrompt)
+        DynamicPlugin.register(AutoPrompt)   
+        DynamicPlugin.register(TextStream)
         DynamicPlugin.register(VideoSource)
         DynamicPlugin.register(VideoOutput)
         DynamicPlugin.register(VADFilter)
@@ -78,9 +86,12 @@ class DynamicAgent(Agent):
         DynamicPlugin.register_all()
         
         self.plugins = []
+        self.tegrastats = Tegrastats()
         self.webserver = WebServer(title='Agent Studio', msg_callback=self.on_websocket, **kwargs)
 
     def add(self, plugin, **kwargs):
+        load_begin = time.perf_counter()
+        
         if not isinstance(plugin, Plugin):
             plugin = DynamicPlugin(plugin, **kwargs)
             
@@ -97,6 +108,12 @@ class DynamicAgent(Agent):
         self.webserver.send_message({
             'plugin_added': [plugin.state_dict(config=True)],
         })
+        
+        load_time = time.perf_counter() - load_begin
+        
+        if load_time > 1:  # don't show if model was cached
+            args_str = pprint.pformat(kwargs, indent=2, width=80).replace('\n', '<br/>')
+            self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
         
         return plugin
     
@@ -129,6 +146,10 @@ class DynamicAgent(Agent):
             if 'add_connection' in msg:
                 conn = msg['add_connection']
                 self.find(conn['output']['name']).add(self.find(conn['input']['name']), conn['output']['channel'])
+            
+            if 'remove_connection' in msg:
+                conn = msg['remove_connection']
+                self.find(conn['output']['name']).outputs[conn['output']['channel']].remove(self.find(conn['input']['name']))
              
             if 'get_state_dict' in msg:
                 plugin_name = msg['get_state_dict']
@@ -139,6 +160,7 @@ class DynamicAgent(Agent):
                 })
                                        
     def start(self):
+        self.tegrastats.start()
         self.webserver.start()
         return self
         

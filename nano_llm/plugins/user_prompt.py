@@ -58,8 +58,6 @@ class UserPrompt(Plugin):
             self.output(sys.stdin.readline().strip())
             
     def on_websocket(self, msg, msg_type=0, **kwargs): 
-        print(f'{self.name}.on_websocket()', msg)
-        
         if msg_type != WebServer.MESSAGE_JSON or self.name not in msg:
             return
             

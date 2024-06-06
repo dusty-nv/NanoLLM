@@ -9,6 +9,10 @@ html, body {
 	font-family: monospace, monospace;*/
 }
 
+.btn-circle {
+    background-color: rgb(70,110,72);
+}
+
 .btn-circle.btn-sm {
 	width: 30px;
 	height: 30px;

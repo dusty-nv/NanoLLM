@@ -436,6 +436,9 @@ class MLCModel(NanoLLM):
         # decode until EOS or max_new_tokens
         time_begin_decode = time.perf_counter()
 
+        self.stats.prefill_time = time_begin_decode - time_begin_prefill
+        self.stats.prefill_rate = self.stats.input_tokens / self.stats.prefill_time
+        
         while True:
             tokens = [self._sample(output[0], do_sample, temperature, top_p, repetition_penalty)]
             stream.add_tokens(tokens)
@@ -484,6 +487,9 @@ class MLCModel(NanoLLM):
                     tvm.runtime.ShapeTuple([stream.kv_cache.num_tokens]), stream.kv_cache.state, self.params
                 )
 
+            self.stats.decode_time = time.perf_counter() - time_begin_decode
+            self.stats.decode_rate = self.stats.output_tokens / self.stats.decode_time
+        
             # stop generation on EOS tokens
             if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
                 break
@@ -496,16 +502,9 @@ class MLCModel(NanoLLM):
                 prefill(self.embed_tokens([self.tokenizer.eos_token_id], return_tensors='tvm'), stream.kv_cache)
                 break
 
-        time_end_decode = time.perf_counter()
-        
         stream.stopped = True
         stream.event.set()
         
-        self.stats.prefill_time = time_begin_decode - time_begin_prefill
-        self.stats.prefill_rate = self.stats.input_tokens / self.stats.prefill_time
-        self.stats.decode_time = time_end_decode - time_begin_decode
-        self.stats.decode_rate = self.stats.output_tokens / self.stats.decode_time
-       
     def _sample(self, logits, do_sample, temperature, top_p, repetition_penalty):
         """
         Perform token sampling (TODO implement repetition penalty)

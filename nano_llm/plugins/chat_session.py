@@ -30,8 +30,8 @@ class ChatSession(Plugin):
     
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
-                 max_context_len : int = None, chat_template : str = None,
-                 **kwargs):
+                 max_context_len : int = None, chat_template : str = None, 
+                 system_prompt : str = None, **kwargs):
         """
         Load an LLM and run generation on chat requests.
         
@@ -39,8 +39,9 @@ class ChatSession(Plugin):
           model (str): Either the path to the model, or HuggingFace model repo/name.
           api (str): The model backend API to use:  'mlc', 'awq', or 'hf' (by default, it will attempt to be automatically determined)
           quantization (str): For MLC, 'q4f16_ft', 'q4f16_1', 'q8f16_ft', 'q8f16_1'. For AWQ, the path to the fully-quantized AWQ weights.
-          max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)
-          chat_template (str|dict): The chat template to use like 'llama-2', 'vicuna-v1' (by default, will attempt to determine model type)              
+          max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
+          chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
+          system_prompt (str):  Set the system prompt (changing this will reset the chat)           
         """
         super().__init__(outputs=['delta', 'words', 'final', 'stream', 'embed'], **kwargs)
 
@@ -58,23 +59,22 @@ class ChatSession(Plugin):
             self.model = model
             self.model_name = self.config.name
 
-        load_time = time.perf_counter() - load_time
+        self.history = ChatHistory(self.model, chat_template=chat_template, system_prompt=system_prompt, **kwargs)
         
-        self.history = ChatHistory(self.model, chat_template=chat_template, **kwargs)
         self.functions = None
         self.stream = None
         
-        self.max_context_len = self.model.config.max_length
-        self.max_new_tokens = kwargs.get('max_new_tokens', 128)
-        self.min_new_tokens = kwargs.get('min_new_tokens', -1)
-        self.wrap_tokens = kwargs.get('wrap_tokens', 512)
+        self.add_parameter('system_prompt', name='System Prompt', default=system_prompt)
+        self.add_parameter('max_new_tokens', type=int, default=kwargs.get('max_new_tokens', 128), help="The number of tokens to output in addition to the prompt.")
+        self.add_parameter('min_new_tokens', type=int, default=kwargs.get('min_new_tokens', -1), help="Force the model to generate a set number of output tokens (<0 to disable)")
+        self.add_parameter('do_sample', type=bool, default=kwargs.get('do_sample', False), help="If true, temperature/top_p sampling will be used over the logits.")
+        self.add_parameter('temperature', type=float, default=kwargs.get('temperature', 0.7), help="Randomness token sampling parameter (only used if do_sample=true)")
+        self.add_parameter('top_p', type=float, default=kwargs.get('top_p', 0.95), help="If set to < 1 and do_sample=True, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept.")
+        self.add_parameter('repetition_penalty', type=float, default=kwargs.get('repetition_penalty', 1.0), help="The parameter for repetition penalty. 1.0 means no penalty")
         
-        self.do_sample = kwargs.get('do_sample', False)
-        self.repetition_penalty = kwargs.get('repetition_penalty', 1.0)
-        self.temperature = kwargs.get('temperature', 0.7)
-        self.top_p = kwargs.get('top_p', 0.95)
-            
-        self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
+        self.max_context_len = self.model.config.max_length
+        self.wrap_tokens = kwargs.get('wrap_tokens', 512)
+        self.print_stats = kwargs.get('print_stats', True) #kwargs.get('debug', False))
         
         warmup = True
         
@@ -84,52 +84,6 @@ class ChatSession(Plugin):
             logging.info(f"Warming up LLM with query '{warmup}'")
             logging.info(f"Warmup response:  '{self.model.generate(self.history.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
             self.history.reset()
-
-        if load_time > 1:  # don't show if model was cached
-            self.send_alert(f"Loaded {self.model_name} in {load_time:.1f} seconds", level='success')
-    
-    def apply_config(self, system_prompt : str = None, 
-                     max_new_tokens : int = None, min_new_tokens : int = None,
-                     do_sample : bool = None, temperature : float = None,
-                     top_p : float = None, repetition_penalty : float = None, 
-                     **kwargs):
-        """
-        Change LLM generation settings.
-        
-        Args:
-          system_prompt (str):  Set the system prompt (changing this will reset the chat)
-          max_new_tokens (int): The number of tokens to output in addition to the prompt (default: 128)
-          min_new_tokens (int): Force the model to generate a set number of output tokens (default: -1)
-          do_sample (bool): If true, temperature/top_p sampling will be used over the logits.
-          temperature (float): Randomness token sampling parameter (default=0.7, only used if do_sample=True)
-          top_p (float): If set to < 1 and do_sample=True, only the smallest set of most probable tokens
-                         with probabilities that add up to top_p or higher are kept for generation (default 0.95) 
-          repetition_penalty (float): The parameter for repetition penalty. 1.0 means no penalty (default: 1.0) 
-        """   
-        if system_prompt is not None:
-            self.history.system_prompt = system_prompt
-
-        self.max_new_tokens = update_default(max_new_tokens, self.max_new_tokens, int)
-        self.min_new_tokens = update_default(min_new_tokens, self.min_new_tokens, int)
-        self.do_sample = update_default(do_sample, self.do_sample, bool)
-        self.temperature = update_default(temperature, self.temperature, float)
-        self.top_p = update_default(top_p, self.top_p, float)
-
-    def state_dict(self, html=True, **kwargs):
-        return {
-            **super().state_dict(),
-            'model': self.model_name,
-            'history': self.history.to_list(html=html),
-            'num_tokens': self.history.num_tokens,
-            'max_context_len': self.max_context_len,
-            'max_new_tokens': self.max_new_tokens,
-            'min_new_tokens': self.min_new_tokens,
-            'do_sample': self.do_sample,
-            'temperature': self.temperature,
-            'top_p': self.top_p,
-            'repetition_penalty': self.repetition_penalty,
-            'system_prompt': self.history.system_prompt,
-       }
                       
     @property
     def chat_history(self):
@@ -147,6 +101,36 @@ class ChatSession(Plugin):
     def config(self):
         return self.model.config
 
+    @property
+    def system_prompt(self):
+        return self.history.system_prompt
+        
+    @system_prompt.setter
+    def system_prompt(self, value):
+        self.history.system_prompt = value
+        
+    @classmethod
+    def type_hints(cls):
+        return {
+            'model': {
+                'suggestions': [
+                    "meta-llama/Meta-Llama-3-8B-Instruct",
+                    "NousResearch/Hermes-2-Pro-Llama-3-8B",
+                    "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT",
+                ]
+            },
+            'system_prompt': {
+                'multiline': 3,
+            },
+        }
+
+    def state_dict(self, html=True, **kwargs):
+        return {
+            **super().state_dict(**kwargs),
+            'model': self.model_name,
+            'history': self.history.to_list(html=html),
+       }
+       
     def process(self, input, **kwargs):
         """
         Generate the reply to a prompt or the latest ChatHistory.
@@ -161,7 +145,7 @@ class ChatSession(Plugin):
           The generated text (token by token), if input was a string or dict.
           If input was a ChatHistory, returns the streaming iterator/generator.
         """
-        self.apply_config(**kwargs)
+        #self.apply_config(**kwargs)
         
         if input is None:
             return
@@ -250,7 +234,7 @@ class ChatSession(Plugin):
                 bot_reply.tokens = self.stream.tokens
                 
                 # output stream of raw tokens
-                self.output(token, ChatSession.OutputToken)
+                self.output(token, ChatSession.OutputToken, delta=True, partial=True)
                 self.send_state()
                 
                 # if a space was added, emit new word(s)
@@ -258,14 +242,24 @@ class ChatSession(Plugin):
                 last_space = words.rfind(' ')
                 
                 if last_space >= 0:
-                    self.output(words[:last_space+1], ChatSession.OutputWords)
+                    self.output(words[:last_space+1], ChatSession.OutputWords, delta=True, partial=True)
                     if last_space < len(words) - 1:
                         words = words[last_space+1:]
                     else:
                         words = ''
                 
+                # update the web stats
+                num_chat_tokens = self.history.num_tokens
+                
+                self.send_stats(
+                    chat_tokens=num_chat_tokens, 
+                    prefill_time=self.model.stats.prefill_time, 
+                    decode_rate=self.model.stats.decode_rate,
+                    summary=[f"{num_chat_tokens} tokens", f"{self.model.stats.decode_rate:.1f} tps"],
+                )
+                
             if len(words) > 0:
-                self.output(words, ChatSession.OutputWords)
+                self.output(words, ChatSession.OutputWords, delta=True, partial=True)
                 
             bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens

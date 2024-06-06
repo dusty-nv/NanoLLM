@@ -8,10 +8,12 @@
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
     
     <link rel="stylesheet" href="/static/bootstrap.css">
+    <link rel="stylesheet" href="/static/select2.min.css">
     <link rel="stylesheet" href="/static/chat.css">
     
     <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.min.js"></script>
@@ -19,6 +21,7 @@
     
     <script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
     <script type='text/javascript' src='/static/bootstrap.bundle.min.js'></script>
+    <script type='text/javascript' src="/static/select2.min.js"></script>
     <script type='text/javascript' src='/static/webrtc.js'></script>
     <script type='text/javascript' src='/static/websocket.js'></script>
     <script type='text/javascript' src='/static/audio.js'></script>
@@ -72,15 +75,49 @@
       </script>
       <style>
           #alert_container {
-            z-index: 999;
+            z-index: 100;
             position: fixed;
-            max-width: fit-content;
+            max-width: max-content;
             height:50px;
             left:100%;
             transform:translateX(-100%);
-            top:60px;
+            top:85px;
+          }
+
+          .gear-button {
+            color: #888888;
+            font-size: 150%;
           }
           
+          .gear-button:hover {
+            color: #cccccc;
+          }
+          
+          .select2-container--default .select2-selection--multiple, .select2-results {
+            color: #222222;
+            scrollbar-color: #AAAAAA #EEEEEE;
+          }
+          
+          .select2-container--default .select2-selection--single {
+            height: 120%;
+            line-height: 120%;
+            vertical-align : middle;
+          }
+          
+          .select2-selection__arrow {
+            padding-top: 35px;
+            padding-right: 25px;
+          }
+          
+          .select2-selection__rendered {
+            padding-top: 3px;
+          }
+          
+          .select2-search__field {
+            color: #222222;
+            background-color: #EEEEEE;
+          }
+      
           /*.grid-stack-item {
             background-color: #1FAD32;
           }*/
@@ -91,8 +128,8 @@
 	<body class="bg-dark-gray" data-bs-theme="dark" height="100%">
     <!-- Navbar + main body -->
     <div class="d-flex flex-column">
-      <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green"> <!-- fixed-top will let rest of body scroll -->
-        <div class="container-fluid">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green p-0"> <!-- fixed-top will let rest of body scroll -->
+        <div class="container-fluid p-2">
           <div class="d-flex flex-grow-1">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
               <span class="navbar-toggler-icon"></span>
@@ -115,7 +152,7 @@
                 <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#test_dialog">Agent</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#VideoSource_dialog">Audio</a>
+                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#audioDialog">Audio</a>
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarChatHistory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -130,13 +167,15 @@
               </li>
             </ul>
           </div>
-          <span class="navbar-nav ms-auto flex-row">
+          <span class="navbar-nav ms-auto me-0 flex-row align-items-center">
             <button id="audio-input-mute" class="btn btn-primary btn-circle btn-md bi bi-mic-mute-fill ms-1 me-1" type="button" title="Mute/unmute the microphone" onclick="muteAudioInput()"></button>
-            <button id="audio-output-mute" class="btn btn-primary btn-circle btn-md bi bi-volume-up-fill" type="button" title="Mute/unmute the speakers" onclick="muteAudioOutput()"></button>
+            <button id="audio-output-mute" class="btn btn-primary btn-circle btn-md bi bi-volume-up-fill me-1" type="button" title="Mute/unmute the speakers" onclick="muteAudioOutput()"></button>
+            <span id="Tegrastats_node_stats" class="ms-1 px-2 py-1" style="background-color: rgba(0,0,0,0.2); font-size: 75%; font-family: monospace, monospace;"></span>
           </span>
         </div>
       </nav>
     </div>
+              
     <div class="grid-stack m-2"></div>
     
     <!-- Audio settings dialog -->
@@ -164,12 +203,13 @@
         </div>
       </div>
     </div>
+
     
     <!-- Alert Messages -->
     <div id="alert_container" class="container"> <!--class="fixed-top"-->
       <div id="alert_window" class="alert mb-0" style="background-color: rgba(48,48,48,1.0); display: none">
-        <div id="alert_messages" class="d-inline-block"></div>
-        <button type="button" class="btn-close float-end align-middle d-inline-block" onclick="onHideAlerts()"></button>
+        <div id="alert_messages" class="me-3"></div>
+        <a href="#" class="btn-close" style="position: absolute; right: 5px; top: 5px; font-size: 80%" onclick="onHideAlerts()"></a>
       </div>
       
       <script type='text/javascript'>
@@ -205,36 +245,23 @@
 
           // automatically remove the messages (if this is the last message, hide the window too)
           if( alert['timeout'] > 0 ) {
+            const alert_id = alert['id'];
             setTimeout(function() {
               if( $('#alert_messages pre').length > 1 ) {
-                $(`#alert_messages #alert-${alert['id']}`).remove();
+                $(`#alert_messages #alert-${alert_id}`).remove();
                 console.log('removing alerts due to timeout');
-                console.log(`#alert_messages #alert-${alert['id']}`);
+                console.log(`#alert_messages #alert-${alert_id}`);
               }
-              else {
+              else if( $(`#alert_messages #alert-${alert['id']}`).length > 0 ) {
                 onHideAlerts();
               }
             }, alert['timeout']);
           }
         }
       </script>
-      <!--
-      <style>
-        .ChatSession .outputs .output:nth-child(1):before {
-            display: block;
-            content: "Yes";
-            position: relative;
-            right: 70px;
-          }
-         .ChatSession .outputs .output:nth-child(2):before {
-            display: block;
-            content: "No";
-            position: relative;
-            right: 30px;
-         }
-      </style>
-      -->
     </div>
+
     <link rel="stylesheet" href="/static/drawflow.css">
+    
 	</body>
 </html>

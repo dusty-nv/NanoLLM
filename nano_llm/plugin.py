@@ -5,6 +5,7 @@ import threading
 import logging
 import traceback
 
+from nano_llm.web import WebServer
 from nano_llm.utils import inspect_function, json_type, python_type
 
 
@@ -62,9 +63,14 @@ class Plugin(threading.Thread):
         if isinstance(outputs, list):
             self.output_names = outputs
             outputs = len(outputs)
-        else:
+        elif isinstance(outputs, int):
             self.output_names = [str(x) for x in range(outputs)]
- 
+        elif outputs is None:
+            self.output_names = ['0']
+            outputs = 0
+        else:
+            raise TypeError(f"outputs should have been int, str, list[str], or None  (was {type(outputs)})")
+
         self.outputs = [[] for i in range(outputs)]
 
         if threaded:
@@ -340,6 +346,11 @@ class Plugin(threading.Thread):
             'const': const,
         }
         
+        if hasattr(self, 'type_hints'):
+            for key, value in self.type_hints().items():
+                if key == attribute:
+                    param.update(value)
+                    
         #if kwarg:
         #    param['kwarg'] = kwarg
         
@@ -354,7 +365,7 @@ class Plugin(threading.Thread):
    
         if end:
             param['end'] = end
-            
+
         param.update(**kwargs)
         self.parameters[attribute] = param
         return param
@@ -365,6 +376,12 @@ class Plugin(threading.Thread):
         """
         for attr, value in kwargs.items():
             logging.debug(f"{self.name} setting parameter '{attr}' to {value}")
+            if self.parameters[attr]['type'] == 'boolean' and isinstance(value, str):
+                value = value.lower()
+                if value == 'true' or value == '1':
+                    value = True
+                else:
+                    value = False
             setattr(self, attr, value)
     
     def reorder_parameters(self):
@@ -423,8 +440,6 @@ class Plugin(threading.Thread):
         """
         Send the state dict message over the websocket.
         """
-        from nano_llm.web import WebServer
-        
         if not WebServer.Instance or not WebServer.Instance.connected:
             logging.warning(f"plugin {self.name} had no webserver or connected clients to send state_dict")
             return
@@ -436,25 +451,23 @@ class Plugin(threading.Thread):
             'state_dict': {self.name: state_dict}
         })
      
-    def send_stats(self, **kwargs):
+    def send_stats(self, stats={}, **kwargs):
         """
         Send performance stats over the websocket.
         """
-        from nano_llm.web import WebServer
-        
-        if not WebServer.Instance or not WebServer.Instance.connected or not kwargs:
+        if not WebServer.Instance or not WebServer.Instance.connected or (not stats and not kwargs):
             return
+       
+        stats.update(kwargs)
 
         WebServer.Instance.send_message({
-            'stats': {self.name: kwargs}
+            'stats': {self.name: stats}
         })
            
     def send_alert(self, message, **kwargs):
         """
         Send an alert message to the webserver (see WebServer.send_alert() for kwargs)
         """
-        from nano_llm.web import WebServer
-        
         if not WebServer.Instance or not WebServer.Instance.connected:
             return
             

@@ -168,4 +168,9 @@ class PiperTTS(AutoTTS):
             self.output(samples, sample_rate=self.sample_rate)
 
         time_elapsed = time.perf_counter() - time_begin
-        logging.debug(f"finished TTS request, streamed {num_samples} samples at {self.sample_rate/1000:.1f}KHz - {num_samples/self.sample_rate:.2f} sec of audio in {time_elapsed:.2f} sec (RTFX={num_samples/self.sample_rate/time_elapsed:.4f})")
+        time_audio = num_samples / self.sample_rate
+        rtfx = time_audio / time_elapsed
+        
+        logging.debug(f"finished TTS request, streamed {num_samples} samples at {self.sample_rate/1000:.1f}KHz - {time_audio:.2f} sec of audio in {time_elapsed:.2f} sec (RTFX={rtfx:.4f})")
+        self.send_stats(rtfx=rtfx, summary=f"RTFX={rtfx:2.2f}x")
+        
