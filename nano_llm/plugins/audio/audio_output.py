@@ -23,7 +23,7 @@ class AudioOutputDevice(Plugin):
           audio_output_channels (int): 1 for mono, 2 for stereo.
           sample_rate_hz (int): Sample rate of any outgoing audio (typically 16000, 44100, 48000)
         """
-        super().__init__(output_channels=0, **kwargs)
+        super().__init__(outputs=0, **kwargs)
         
         self.pa = pyaudio.PyAudio()
         
@@ -134,7 +134,7 @@ class AudioRecorder(Plugin):
           audio_output_channels (int):  1 for mono, 2 for stereo.
           sample_rate_hz (int):  Sample rate of any outgoing audio (typically 16000, 44100, 48000)
         """
-        super().__init__(output_channels=0, **kwargs)
+        super().__init__(outputs=0, **kwargs)
         
         self.pa = pyaudio.PyAudio()
         

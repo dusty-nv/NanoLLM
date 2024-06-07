@@ -14,22 +14,31 @@ class RateLimit(Plugin):
       
     It can also chunk indexable outputs into smaller amounts of data at a time.
     """
-    def __init__(self, rate : int = None, chunk : int = None, **kwargs):
+    def __init__(self, rate : float = None, chunk : int = None, 
+                       drop : bool = False, on_demand : bool = False, **kwargs):
         """
         Rate limiter plugin with the ability to pause/resume from the queue.
         
         Args:
-          rate (int): The number of items per second that can be transmitted.
+          rate (float): The number of items per second that can be transmitted (or the playback factor for audio)
           chunk (int): For indexable inputs, the maximum number of items 
-                       that can be in each output message (if None, no chunking)
+                       that can be in each output message.
+          drop (bool): If true, only the most recent inputs will be transmitted, with older inputs being dropped.
+                       Otherwise, the queue will continue to grow and be throttled to the given rate.
+          on_demand (bool): If true, outputs will only be sent when the reciever's input queues
+                            are empty and ready for more data.  This will effectively rate limit to the
+                            downstream processing speed.
         """
-        super().__init__(**kwargs)
+        super().__init__(outputs='items', drop_inputs=drop, **kwargs)
         
         self.paused = -1
-        
+        self.tx_rate = 0
+        self.last_time = time.perf_counter()
+
         self.add_parameter('rate', default=rate)
         self.add_parameter('chunk', default=chunk)
-
+        self.add_parameter('drop_inputs', name='Drop', default=drop, kwarg='drop')
+        self.add_parameter('on_demand', default=on_demand)
         
     def process(self, input, sample_rate=None, **kwargs):
         """
@@ -49,29 +58,44 @@ class RateLimit(Plugin):
                 time.sleep(pause_duration)
                 continue
             
-            if isinstance(self.rate, float) and sample_rate is not None:
+            if self.rate < 16 and sample_rate is not None:
                 rate = self.rate * sample_rate
             else:
                 rate = self.rate
                        
-            if self.chunk > 0:
+            if self.chunk is not None and self.chunk > 0:
                 #logging.debug(f"RateLimit chunk {len(input)}  {self.chunk}  {time.perf_counter()}")
                 if len(input) > self.chunk:
                     self.output(input[:self.chunk], sample_rate=sample_rate, **kwargs)
+                    self.update_stats()
                     input = input[self.chunk:]
                     time.sleep(self.chunk/rate*0.95)
                     new=False
                     continue
                 else:
                     self.output(input, sample_rate=sample_rate, **kwargs)
+                    self.update_stats()
                     time.sleep(len(input)/rate*0.95)
                     return
             else:
                 self.output(input, sample_rate=sample_rate, **kwargs)
+                self.update_stats()
                 if self.rate > 0:
                     time.sleep(1.0/self.rate)
                 return
-            
+     
+    def update_stats(self):
+        """
+        Calculate and send the throughput statistics when new outputs are transmitted.
+        """
+        curr_time = time.perf_counter()
+        elapsed_time = curr_time - self.last_time
+        self.tx_rate = (self.tx_rate * 0.5) + ((1.0 / elapsed_time) * 0.5)
+        self.last_time = curr_time
+        self.send_stats(
+            summary=[f"{self.tx_rate:.1f} tx/sec"],
+        )
+               
     def pause(self, duration=None, until=None):
         """
         Pause audio playback for `duration` number of seconds, or until the end time.

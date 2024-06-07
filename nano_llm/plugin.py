@@ -30,14 +30,15 @@ class Plugin(threading.Thread):
       drop_inputs (bool): if true, only the most recent input in the queue will be used
       threaded (bool): if true, will spawn independent thread for processing the queue.
     """
-    def __init__(self, name=None, inputs=1, outputs=1, relay=False,
-                 drop_inputs=False, threaded=True, **kwargs):
+    def __init__(self, name=None, title=None, inputs=1, outputs=1,
+                 relay=False, drop_inputs=False, threaded=True, **kwargs):
         """
         Initialize plugin
         """
         super().__init__(daemon=True)
 
         self.name = name if name else self.__class__.__name__
+        self.title = title
         self.relay = relay
         self.drop_inputs = drop_inputs
         self.threaded = threaded
@@ -437,6 +438,7 @@ class Plugin(threading.Thread):
             self.reorder_parameters()
             
             state.update({
+                'title': self.title if self.title else self.name,
                 'inputs': self.input_names,
                 'outputs': self.output_names,
                 'connections': connections,

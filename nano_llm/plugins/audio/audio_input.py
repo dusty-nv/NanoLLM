@@ -9,7 +9,7 @@ import torch
 import torchaudio
 
 from nano_llm import Plugin
-from nano_llm.utils import convert_audio, resample_audio, find_audio_device, pyaudio_dtype
+from nano_llm.utils import convert_audio, resample_audio, audio_db, find_audio_device, pyaudio_dtype
 
 
 class AudioInputDevice(Plugin):
@@ -29,7 +29,7 @@ class AudioInputDevice(Plugin):
                                  or None to use the device's default sampling rate.
           audio_chunk (float): The duration of time or number of audio samples captured per batch.
         """
-        super().__init__(input_channels=0, **kwargs)
+        super().__init__(inputs=0, outputs='audio', **kwargs)
         
         self.pa = pyaudio.PyAudio()
         
@@ -115,6 +115,8 @@ class AudioInputDevice(Plugin):
                 logging.warning(f"resampled input audio from device {self.device_id} has {len(samples)} samples, but expected {expected_samples} samples")
                 self._resample_warning = True
 
+        db = audio_db(samples)
+        self.send_stats(audio_db=db, summary=f"{db:.1f}dB")
         #logging.debug(f"captured {len(samples)} audio samples from audio device {self.device_id} (dtype={samples.dtype})")
         return samples
 

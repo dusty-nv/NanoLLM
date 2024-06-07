@@ -15,7 +15,7 @@ class AutoPrompt(Plugin):
     Apply prompting templates to incoming streams that form a kind of script.
     For example, "<img> Describe the image" will insert the most recent image.
     """
-    def __init__(self, template : str = '<image> Describe the image concisely.', **kwargs):
+    def __init__(self, template : str = '<image> Describe the image concisely. <reset>', **kwargs):
         """
         Apply prompting templates to incoming streams that form a kind of script.
         For example, "<img> Describe the image" will insert the most recent image.
@@ -38,6 +38,9 @@ class AutoPrompt(Plugin):
         
     @template.setter
     def template(self, template):
+        template = template.replace('/reset', '<reset>')
+        template = template.replace('/pop', '<pop>')
+        
         for tag, aliases in self.tags.items():
             for alias in aliases:
                 template = template.replace(f"<{alias}>", f"<{tag}>")
@@ -85,13 +88,20 @@ class AutoPrompt(Plugin):
         
         for i, text in enumerate(template.split('<image>')):
             if text:
-                msg.append(text)
+                cmd_split = text.split('<reset>')
+                if len(cmd_split) > 1:
+                    for cmd_text in cmd_split:
+                        if cmd_text:
+                            msg.append(cmd_text)
+                            msg.append('<reset>')
+                else:
+                    msg.append(text)
             if i < len(self.vars['image'].queue):
                 msg.append(self.vars['image'].queue[i])
 
-        from pprint import pprint
-        print('AUTOPROMPT')
-        pprint(msg, indent=2)
+        #from pprint import pprint
+        #print('AUTOPROMPT')
+        #pprint(msg, indent=2)
         
         self.output(msg)
     

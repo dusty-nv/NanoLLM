@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import time
 import logging
 
@@ -30,8 +31,8 @@ class ChatSession(Plugin):
     
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
-                 max_context_len : int = None, chat_template : str = None, 
-                 system_prompt : str = None, **kwargs):
+                 max_context_len : int = None, drop_inputs : bool = False,
+                 chat_template : str = None, system_prompt : str = None, **kwargs):
         """
         Load an LLM and run generation on chat requests.
         
@@ -40,10 +41,11 @@ class ChatSession(Plugin):
           api (str): The model backend API to use:  'mlc', 'awq', or 'hf' (by default, it will attempt to be automatically determined)
           quantization (str): For MLC, 'q4f16_ft', 'q4f16_1', 'q8f16_ft', 'q8f16_1'. For AWQ, the path to the fully-quantized AWQ weights.
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
+          drop_inputs (bool): If true, only the latest message from the input queue will be used (older messages dropped)
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
           system_prompt (str):  Set the system prompt (changing this will reset the chat)           
         """
-        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'embed'], **kwargs)
+        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'embed'], drop_inputs=drop_inputs, **kwargs)
 
         load_time = time.perf_counter()
         
@@ -59,18 +61,20 @@ class ChatSession(Plugin):
             self.model = model
             self.model_name = self.config.name
 
-        self.history = ChatHistory(self.model, chat_template=chat_template, system_prompt=system_prompt, **kwargs)
-        
-        self.functions = None
+        self.title = os.path.basename(self.model_name)
         self.stream = None
+        self.functions = None
         
+        self.history = ChatHistory(self.model, chat_template=chat_template, system_prompt=system_prompt, **kwargs)
+
         self.add_parameter('max_new_tokens', type=int, default=kwargs.get('max_new_tokens', 128), help="The number of tokens to output in addition to the prompt.")
         self.add_parameter('min_new_tokens', type=int, default=kwargs.get('min_new_tokens', -1), help="Force the model to generate a set number of output tokens (<0 to disable)")
         self.add_parameter('do_sample', type=bool, default=kwargs.get('do_sample', False), help="If true, temperature/top_p sampling will be used over the logits.")
         self.add_parameter('temperature', type=float, default=kwargs.get('temperature', 0.7), help="Randomness token sampling parameter (only used if do_sample=true)")
         self.add_parameter('top_p', type=float, default=kwargs.get('top_p', 0.95), help="If set to < 1 and do_sample=True, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept.")
         self.add_parameter('repetition_penalty', type=float, default=kwargs.get('repetition_penalty', 1.0), help="The parameter for repetition penalty. 1.0 means no penalty")
-        self.add_parameter('system_prompt', name='System Prompt', default=system_prompt)
+        self.add_parameter('drop_inputs', default=drop_inputs)
+        self.add_parameter('system_prompt', default=system_prompt)
         
         self.max_context_len = self.model.config.max_length
         self.wrap_tokens = kwargs.get('wrap_tokens', 512)
@@ -117,6 +121,8 @@ class ChatSession(Plugin):
                     "meta-llama/Meta-Llama-3-8B-Instruct",
                     "NousResearch/Hermes-2-Pro-Llama-3-8B",
                     "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT",
+                    "Efficient-Large-Model/VILA1.5-3b",
+                    "Efficient-Large-Model/Llama-3-VILA1.5-8B",
                 ]
             },
             'system_prompt': {
@@ -161,8 +167,9 @@ class ChatSession(Plugin):
         # handle some special commands
         if isinstance(input, str):
             x = input.lower()
-            if any([x == y for y in ('/reset', '/clear', 'reset', 'clear')]):
+            if any([x == y for y in ('/reset', '/clear', '<reset>', '<clear>')]):
                 self.history.reset()
+                self.send_state()
                 return
         
         # add prompt to chat history

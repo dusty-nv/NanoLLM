@@ -145,7 +145,7 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
   return widget;
 } 
 
-function addTextInputWidget(name, id, grid_options) {
+function addTextInputWidget(name, id, title, grid_options) {
   const input_id = `${id}_input`;
   const submit_id = `${id}_submit`;
   
@@ -182,14 +182,19 @@ function addTextInputWidget(name, id, grid_options) {
   return widget;
 }
 
-function addTextStreamWidget(name, id, grid_options) {
+function scrollBottom(container) {  // https://stackoverflow.com/a/21067431
+  container.scrollTop = container.scrollHeight - container.clientHeight;
+  console.log(`scrolling to bottom ${container.scrollTop} ${container.scrollHeight} ${container.clientHeight}`);
+}
+
+function addTextStreamWidget(name, id, title, grid_options) {
   const history_id = `${id}_history`;
 
   const html = `
     <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-family: monospace, monospace; font-size: 100%; overflow-y: scroll; flex-grow: 1;"</div>
   `;
   
-  let widget = addGridWidget(id, name, html, null, Object.assign({w: 4, h: 6}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 6}, grid_options));
 
   addStateListener(name, function(state_dict) {
     if( ! ('text' in state_dict) )
@@ -200,15 +205,22 @@ function addTextStreamWidget(name, id, grid_options) {
     if( 'delta' in state_dict )
       el_type = 'span';
 
-    document.getElementById(history_id).innerHTML += `
+    let chc = document.getElementById(history_id);
+    let isScrolledToBottom = chc.scrollHeight - chc.clientHeight <= chc.scrollTop + 1;
+    
+    chc.innerHTML += `
       <${el_type} style="color: ${state_dict['color']}">${state_dict['text']}</${el_type}>
     `;
+    
+    if( isScrolledToBottom ) { // autoscroll unless the user has scrolled up
+      scrollBottom(chc);
+    }
   });
   
   return widget;
 }
 
-function addChatWidget(name, id, grid_options) {
+function addChatWidget(name, id, title, grid_options) {
   const history_id = `${id}_history`;
   const input_id = `${id}_input`;
   const submit_id = `${id}_submit`;
@@ -221,7 +233,7 @@ function addChatWidget(name, id, grid_options) {
     </div>
   `;
   
-  let widget = addGridWidget(id, name, html, null, Object.assign({w: 4, h: 14}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 14}, grid_options));
 
   let onsubmit = function() {
     const input = document.getElementById(input_id);
@@ -281,11 +293,6 @@ function updateChatHistory(id, history) {
         chj.append(`<div id="msg_${n}" class="chat-message-${role} mb-3">${contents}</div><br/>`);
     }
 
-    function scrollBottom(container) {  // https://stackoverflow.com/a/21067431
-      container.scrollTop = container.scrollHeight - container.clientHeight;
-      console.log(`scrolling to bottom ${container.scrollTop} ${container.scrollHeight} ${container.clientHeight}`);
-    }
-
     if( isScrolledToBottom ) { // autoscroll unless the user has scrolled up
       if( hasImage )
         setTimeout(scrollBottom, 50, chc);  // wait for images to load to get right height
@@ -295,7 +302,7 @@ function updateChatHistory(id, history) {
 }
 
 
-function addVideoOutputWidget(name, id, grid_options) {
+function addVideoOutputWidget(name, id, title, grid_options) {
   const video_id = `${id}_video_player`;
   const html = `
     <div>
@@ -303,7 +310,7 @@ function addVideoOutputWidget(name, id, grid_options) {
     </div>
   `;
   
-  let widget = addGridWidget(id, name, html, null, Object.assign({w: 8, h: 5}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 8, h: 5}, grid_options));
   let video = document.getElementById(video_id);
   
   video.addEventListener('playing', function(e) {
@@ -368,12 +375,19 @@ function setStats(stats_dicts) {
   }
 }
 
+function truncate(str, max_len) {
+  if( str.length > max_len )
+    return str.slice(0, max_len+1);
+  else
+    return str;
+}
 
 function addPlugin(plugin) {
   console.log('addPlugin() =>');
   console.log(plugin)
   
   const plugin_name = plugin['name'];
+  const plugin_title = plugin['title'];
   const web_grid = plugin['web_grid'];
   const web_node = plugin['web_node'];
   const nodes = document.querySelectorAll('.drawflow-node');
@@ -402,7 +416,7 @@ function addPlugin(plugin) {
     
   const html = `
     <div style="position: absolute; top: 5px;">
-      ${plugin_name}
+      ${truncate(plugin_title, 14)}
       <p id="${plugin_name}_node_stats" class="${stats_class}" style="font-family: monospace, monospace; font-size: 80%"></p>
     </div>
   `;
@@ -432,7 +446,7 @@ function addPlugin(plugin) {
   
   $(`.${plugin_name}`).on('dblclick', function () {
     console.log(`double-click ${plugin_name}`);
-    if( addPluginGridWidget(plugin_name, plugin['type']) == null ) {
+    if( addPluginGridWidget(plugin_name, plugin['type'], plugin_title) == null ) {
       if( has_config_dialog ) {
         sendWebsocket({'get_state_dict': plugin_name});
         const config_modal = new bootstrap.Modal(`#${plugin['name']}_config_dialog`);
@@ -442,33 +456,36 @@ function addPlugin(plugin) {
   });
   
   if( has_config_dialog )
-    addPluginDialog(plugin_name, 'config', null, plugin['parameters']);
+    addPluginDialog(plugin_name, 'config', plugin_title, null, plugin['parameters']);
     
   if( Object.keys(web_grid).length > 0 ) {
-    addPluginGridWidget(plugin_name, plugin['type'], web_grid);
+    addPluginGridWidget(plugin_name, plugin['type'], plugin_title, web_grid);
   }
 }
 
-function addPluginGridWidget(name, type, grid_options) {
+function addPluginGridWidget(name, type, title, grid_options) {
   const id = `${name}_grid`;
   
   if( type == undefined )
     type = name;
-    
+  
+  if( title == undefined )
+    title = name;
+      
   if( document.getElementById(id) != null )
     return null;
     
   switch(type) {
     case 'UserPrompt':
-      return addTextInputWidget(name, id, grid_options);
+      return addTextInputWidget(name, id, title, grid_options);
     case 'TextStream':
-      return addTextStreamWidget(name, id, grid_options);
+      return addTextStreamWidget(name, id, title, grid_options);
     case 'ChatSession':
-      return addChatWidget(name, id, grid_options);
+      return addChatWidget(name, id, title, grid_options);
     case 'VideoOutput':
-      return addVideoOutputWidget(name, id, grid_options);
+      return addVideoOutputWidget(name, id, title, grid_options);
     case 'GraphEditor':
-      return addGraphEditor(name, id, grid_options);
+      return addGraphEditor(name, id, title, grid_options);
     default:
       return null;
   }
@@ -518,7 +535,7 @@ function addPluginTypes(types) {
     const plugin = pluginTypes[pluginName];
 
     if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
-      addPluginDialog(pluginName, 'init', plugin['init']['description'], plugin['init']['parameters']);
+      addPluginDialog(pluginName, 'init', null, plugin['init']['description'], plugin['init']['parameters']);
     }
   }
 }
@@ -692,7 +709,10 @@ function addDialog(id, title, html, xl, onsubmit, oncancel) {
     $(`#${id}_cancel`).on('click', oncancel);
 }
 
-function addPluginDialog(plugin_name, stage, description, parameters, max_per_column) {
+function addPluginDialog(plugin_name, stage, title, description, parameters, max_per_column) {
+  if( title == undefined )
+    title = plugin_name;
+    
   if( max_per_column == undefined )
     max_per_column = 6;
     
@@ -807,6 +827,8 @@ function addPluginDialog(plugin_name, stage, description, parameters, max_per_co
     let args = {};
     
     for( param_name in parameters ) {
+      if( parameters[param_name]['hidden'] )
+        continue;
       let value = document.getElementById(`${plugin_name}_${stage}_${param_name}`).value;
       if( value != undefined && value.length > 0 ) { // input.value are always strings
         const type = parameters[param_name]['type'];
@@ -830,7 +852,7 @@ function addPluginDialog(plugin_name, stage, description, parameters, max_per_co
   }
   
 
-  addDialog(dialog_id, plugin_name, html, dialog_xl, onsubmit);
+  addDialog(dialog_id, title, html, dialog_xl, onsubmit);
   
   //for( select2_id in select2_args )
   //  $(`#${select2_id}`).select2(select2_args[select2_id]);
