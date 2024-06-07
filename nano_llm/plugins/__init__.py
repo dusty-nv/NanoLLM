@@ -9,6 +9,7 @@ from .auto_prompt import AutoPrompt
 from .event_filter import EventFilter
 from .rate_limit import RateLimit
 from .text_stream import TextStream
+from .text_overlay import TextOverlay
 from .process_proxy import ProcessProxy
 
 from .audio import *

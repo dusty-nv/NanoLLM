@@ -73,6 +73,9 @@ class Plugin(threading.Thread):
 
         self.outputs = [[] for i in range(outputs)]
 
+        self.add_parameter('web_grid', type=dict, default={}, hidden=True)
+        self.add_parameter('web_node', type=dict, default={}, hidden=True)
+        
         if threaded:
             self.input_queue = queue.Queue()
             self.input_event = threading.Event()
@@ -320,7 +323,7 @@ class Plugin(threading.Thread):
         return None
     
     def add_parameter(self, attribute: str, name=None, type=None, const=False,
-                      default=None, help=None, kwarg=None, end=None, **kwargs):
+                      default=None, hidden=False, help=None, kwarg=None, end=None, **kwargs):
         """
         Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
         """
@@ -344,6 +347,7 @@ class Plugin(threading.Thread):
             'display_name': name,
             'type': type,
             'const': const,
+            'hidden': hidden,
         }
         
         if hasattr(self, 'type_hints'):
@@ -370,6 +374,14 @@ class Plugin(threading.Thread):
         self.parameters[attribute] = param
         return param
     
+    def add_parameters(self, **kwargs):
+        """
+        Add parameters from kwargs of the form ``Plugin.add_parameters(x=x, y=y)`` 
+        where the keys are the attribute names and the values are the default values.
+        """
+        for key, value in kwargs.items():
+            self.add_parameter(key, default=value)
+            
     def set_parameters(self, **kwargs):
         """
         Set a state dict of parameters.
@@ -432,7 +444,8 @@ class Plugin(threading.Thread):
             })
         
         for attr, param in self.parameters.items():
-            state[attr] = getattr(self, attr)
+            if not param['hidden'] or config:
+                state[attr] = getattr(self, attr)
             
         return state
                

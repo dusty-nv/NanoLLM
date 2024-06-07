@@ -48,8 +48,9 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register_all(cls):
         from nano_llm.plugins import (
-            ChatSession, VideoSource, VideoOutput, RateLimit,
-            UserPrompt, AutoPrompt, VADFilter, TextStream,
+            ChatSession, VideoSource, VideoOutput,
+            UserPrompt, AutoPrompt, VADFilter,
+            TextStream, TextOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder,
         )
         
@@ -63,6 +64,7 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(UserPrompt)
         DynamicPlugin.register(AutoPrompt)   
         DynamicPlugin.register(TextStream)
+        DynamicPlugin.register(TextOverlay)
         DynamicPlugin.register(VideoSource)
         DynamicPlugin.register(VideoOutput)
         DynamicPlugin.register(RateLimit)
@@ -87,6 +89,8 @@ class DynamicAgent(Agent):
         DynamicPlugin.register_all()
         
         self.plugins = []
+        self.global_states = {'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}}}
+        
         self.tegrastats = Tegrastats()
         self.webserver = WebServer(title='Agent Studio', msg_callback=self.on_websocket, **kwargs)
 
@@ -124,42 +128,58 @@ class DynamicAgent(Agent):
                 return plugin
    
     def on_websocket(self, msg, msg_type=0, metadata='', **kwargs): 
-        if msg_type == WebServer.MESSAGE_JSON:
-            print('on_websocket()', msg)
+        if msg_type != WebServer.MESSAGE_JSON:
+            return
             
-            if 'client_state' in msg:
-                if msg['client_state'] == 'connected':
-                    init_msg = {
-                        'plugin_types': DynamicPlugin.TypeInfo,
-                    }
-                    
-                    if self.plugins:
-                        init_msg['plugin_added'] = [plugin.state_dict(config=True) for plugin in self.plugins]
-                        
-                    self.webserver.send_message(init_msg)
-                    
-            if 'init_plugin' in msg:
-                self.add(msg['init_plugin']['name'], **msg['init_plugin']['args'])
+        print('on_websocket()', msg)
+        
+        if 'client_state' in msg:
+            if msg['client_state'] == 'connected':
+                init_msg = {
+                    'plugin_types': DynamicPlugin.TypeInfo,
+                }
                 
-            if 'config_plugin' in msg:
-                self.find(msg['config_plugin']['name']).set_parameters(**msg['config_plugin']['args'])
+                init_msg['plugin_added'] = [{'name': name, 'global': True, **state} for name, state in self.global_states.items()]
+                init_msg['plugin_added'].extend([plugin.state_dict(config=True) for plugin in self.plugins])
+                    
+                self.webserver.send_message(init_msg)
                 
-            if 'add_connection' in msg:
-                conn = msg['add_connection']
-                self.find(conn['output']['name']).add(self.find(conn['input']['name']), conn['output']['channel'])
+        if 'init_plugin' in msg:
+            self.add(msg['init_plugin']['name'], **msg['init_plugin']['args'])
             
-            if 'remove_connection' in msg:
-                conn = msg['remove_connection']
-                self.find(conn['output']['name']).outputs[conn['output']['channel']].remove(self.find(conn['input']['name']))
-             
-            if 'get_state_dict' in msg:
-                plugin_name = msg['get_state_dict']
-                self.webserver.send_message({
-                    'state_dict': {
-                        plugin_name: self.find(plugin_name).state_dict()
-                    }
-                })
-                                       
+        if 'config_plugin' in msg:
+            config = msg['config_plugin']
+            plugin = self.find(config['name'])
+            
+            if plugin is not None:
+                plugin.set_parameters(**config['args'])
+            else:
+                self.global_states[config['name']] = config['args']
+         
+        if 'remove_plugin' in msg:
+            name = msg['remove_plugin'];
+            plugin = self.find(name);
+            self.plugins.remove(plugin)
+            logging.info(f"removed plugin {plugin.name}")
+            del plugin
+   
+        if 'add_connection' in msg:
+            conn = msg['add_connection']
+            self.find(conn['output']['name']).add(self.find(conn['input']['name']), conn['output']['channel'])
+        
+        if 'remove_connection' in msg:
+            conn = msg['remove_connection']
+            self.find(conn['output']['name']).outputs[conn['output']['channel']].remove(self.find(conn['input']['name']))
+         
+        if 'get_state_dict' in msg:
+            plugin_name = msg['get_state_dict']
+            plugin = self.find(plugin_name)
+            self.webserver.send_message({
+                'state_dict': {
+                    plugin_name: plugin.state_dict() if plugin else self.global_states.get(plugin_name)
+                }
+            })
+                                   
     def start(self):
         self.tegrastats.start()
         self.webserver.start()

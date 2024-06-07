@@ -72,7 +72,10 @@ class MLCModel(NanoLLM):
         self.device = tvm.runtime.cuda(0)  # tvm.runtime.Device(tvm.runtime.Device.kDLCUDAManaged, 0)
         assert(self.device.exist) # this is needed to initialize CUDA?
         logging.info(f"device={self.device}, name={self.device.device_name}, compute={self.device.compute_version}, max_clocks={self.device.max_clock_rate}, multiprocessors={self.device.multi_processor_count}, max_thread_dims={self.device.max_thread_dimensions}, api_version={self.device.api_version}, driver_version={self.device.driver_version}")
-
+        
+        self.cuda_stream = self.device.create_raw_stream()
+        self.device.set_raw_stream(self.cuda_stream)
+        
         # load model config
         with open(os.path.join(self.weight_path, 'mlc-chat-config.json'), 'r') as file:
             config = json.load(file)
@@ -371,6 +374,8 @@ class MLCModel(NanoLLM):
         temperature = stream.kwargs.get('temperature', 0.7)
         top_p = stream.kwargs.get('top_p', 0.95)
         repetition_penalty = stream.kwargs.get('repetition_penalty', 1.0)
+
+        self.device.set_raw_stream(self.cuda_stream)
         
         # if the stop tokens are strings, tokenize them
         stop_tokens = stream.kwargs.get('stop_tokens', [self.tokenizer.eos_token_id])

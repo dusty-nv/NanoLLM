@@ -17,10 +17,11 @@ from typing import (
 )
 
 PYTHON_TO_JSON_TYPES = {
-    "str": "string",
-    "int": "integer",
-    "float": "number",
-    "bool": "boolean",
+    'str': 'string',
+    'int': 'integer',
+    'float': 'number',
+    'bool': 'boolean',
+    'dict': 'dict',
 }
 
 JSON_TO_PYTHON_TYPES = {
@@ -28,6 +29,7 @@ JSON_TO_PYTHON_TYPES = {
     'integer': int,
     'number': float,
     'boolean': bool,
+    'dict': dict,
 }
 
 def json_type(python_type):
@@ -40,6 +42,7 @@ def python_type(json_type):
     """
     Converts json type names like 'text', 'integer', and 'boolean' to their Python types.
     """
+    return JSON_TO_PYTHON_TYPE.get(json_type)
     
 # https://github.com/langchain-ai/langchain/blob/master/libs/core/langchain_core/utils/function_calling.py
 # https://github.com/langchain-ai/langchain/commit/7a5e1bcf99ab445cf9438f5412f19e5024e5e123

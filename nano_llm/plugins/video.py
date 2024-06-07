@@ -20,7 +20,7 @@ class VideoSource(Plugin):
     def __init__(self, video_input : str = '/dev/video0', 
                  video_input_width : int = None, video_input_height : int = None, 
                  video_input_codec : str = None, video_input_framerate : float = None, 
-                 video_input_save : str = None, return_tensors : str = 'cuda', **kwargs):
+                 video_input_save : str = None, num_buffers : int = None, return_tensors : str = 'cuda', **kwargs):
         """
         Creates a video input source from MIPI CSI or V4L2 camera, RTP/RTSP/WebRTC stream, or video file.
         
@@ -29,6 +29,7 @@ class VideoSource(Plugin):
           video_input_width (int): The disired width in pixels (by default, uses the stream's native resolution)
           video_input_height (int): The disired height in pixels (by default, uses the stream's native resolution)
           video_input_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
+          num_buffers (int): The number of images in the ringbuffer used for capturing (by default, 4 frames)
           return_tensors (str): The object datatype of the image to output ('np', 'pt', 'cuda')
         """
         super().__init__(inputs=0, outputs='image', **kwargs)
@@ -50,12 +51,17 @@ class VideoSource(Plugin):
         if video_input_save:
             options['save'] = video_input_save
         
+        if num_buffers:
+            options['numBuffers'] = num_buffers
+            
         self.stream = videoSource(video_input, options=options)
         self.file = (self.stream.GetOptions()['resource']['protocol'] == 'file')
         self.options = options
         self.resource = video_input  # self.stream.GetOptions().resource['string']
         self.return_tensors = return_tensors
-
+        self.time_last = time.perf_counter()
+        self.framerate = 0
+        
     def capture(self, timeout=2500, retries=8, return_tensors=None):
         """
         Capture images from the video source as long as it's streaming
@@ -67,7 +73,8 @@ class VideoSource(Plugin):
         
         while retry < retries:
             image = self.stream.Capture(format='rgb8', timeout=timeout)
-
+            shape = image.shape
+            
             if image is None:
                 if self.file:
                     break
@@ -84,6 +91,12 @@ class VideoSource(Plugin):
                 raise ValueError(f"return_tensors should be 'np', 'pt', or 'cuda' (was '{return_tensors}')")
                 
             self.output(image)
+            
+            curr_time = time.perf_counter()
+            self.framerate = self.framerate * 0.9 + (1.0 / (curr_time - self.time_last)) * 0.1
+            self.time_last = curr_time
+            self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])
+            
             return image
     
         return None
@@ -138,6 +151,7 @@ class VideoSource(Plugin):
         """
         return not self.streaming
         
+        
 class VideoOutput(Plugin):
     """
     Saves images to a compressed video or directory of individual images, the display, or a network stream.
@@ -174,10 +188,20 @@ class VideoOutput(Plugin):
         
         self.stream = videoOutput(video_output, options=options, argv=args)
         self.resource = video_output
+        self.time_last = time.perf_counter()
+        self.framerate = 0
         
     def process(self, input, **kwargs):
         """
         Input should be a jetson_utils.cudaImage, np.ndarray, torch.Tensor, or have __cuda_array_interface__
         """
-        self.stream.Render(cuda_image(input))
+        input = cuda_image(input)
+        shape = input.shape
+        
+        self.stream.Render(input)
+        
+        curr_time = time.perf_counter()
+        self.framerate = self.framerate * 0.9 + (1.0 / (curr_time - self.time_last)) * 0.1
+        self.time_last = curr_time
+        self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])
             

@@ -22,11 +22,11 @@ class ChatSession(Plugin):
               channel 3 (StreamingReponse) -- the stream iterator from generate()    
               channel 4 (ndarray) -- the last CLIP image features/embeddings
     """
-    OutputToken = 0
-    OutputWords = 1
+    OutputDelta = 0
+    OutputPartial = 1
     OutputFinal = 2
-    OutputStream = 3
-    OutputImageEmbedding = 4
+    OutputWords = 3
+    OutputEmbed = 4
     
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
@@ -43,7 +43,7 @@ class ChatSession(Plugin):
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
           system_prompt (str):  Set the system prompt (changing this will reset the chat)           
         """
-        super().__init__(outputs=['delta', 'words', 'final', 'stream', 'embed'], **kwargs)
+        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'embed'], **kwargs)
 
         load_time = time.perf_counter()
         
@@ -64,13 +64,13 @@ class ChatSession(Plugin):
         self.functions = None
         self.stream = None
         
-        self.add_parameter('system_prompt', name='System Prompt', default=system_prompt)
         self.add_parameter('max_new_tokens', type=int, default=kwargs.get('max_new_tokens', 128), help="The number of tokens to output in addition to the prompt.")
         self.add_parameter('min_new_tokens', type=int, default=kwargs.get('min_new_tokens', -1), help="Force the model to generate a set number of output tokens (<0 to disable)")
         self.add_parameter('do_sample', type=bool, default=kwargs.get('do_sample', False), help="If true, temperature/top_p sampling will be used over the logits.")
         self.add_parameter('temperature', type=float, default=kwargs.get('temperature', 0.7), help="Randomness token sampling parameter (only used if do_sample=true)")
         self.add_parameter('top_p', type=float, default=kwargs.get('top_p', 0.95), help="If set to < 1 and do_sample=True, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept.")
         self.add_parameter('repetition_penalty', type=float, default=kwargs.get('repetition_penalty', 1.0), help="The parameter for repetition penalty. 1.0 means no penalty")
+        self.add_parameter('system_prompt', name='System Prompt', default=system_prompt)
         
         self.max_context_len = self.model.config.max_length
         self.wrap_tokens = kwargs.get('wrap_tokens', 512)
@@ -197,7 +197,7 @@ class ChatSession(Plugin):
             
             # output vision features
             if chat_history.image_embedding is not None:
-                self.output(chat_history.image_embedding, ChatSession.OutputImageEmbedding)
+                self.output(chat_history.image_embedding, ChatSession.OutputEmbed)
                 
             # start generating output
             self.stream = self.model.generate(
@@ -217,7 +217,7 @@ class ChatSession(Plugin):
             )
             
             # output the stream iterator on channel 3
-            self.output(self.stream, ChatSession.OutputStream)
+            #self.output(self.stream, ChatSession.OutputStream)
 
             # output the generated tokens on channel 0
             bot_reply = chat_history.append(role='bot', text='', cached=True)
@@ -234,8 +234,10 @@ class ChatSession(Plugin):
                 bot_reply.tokens = self.stream.tokens
                 
                 # output stream of raw tokens
-                self.output(token, ChatSession.OutputToken, delta=True, partial=True)
-                self.send_state()
+                self.output(token, ChatSession.OutputDelta, delta=True, partial=True)
+                self.output(bot_reply.content, ChatSession.OutputPartial, partial=True)
+                
+                self.send_state() # sync the chat history with clients
                 
                 # if a space was added, emit new word(s)
                 words += token

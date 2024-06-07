@@ -151,7 +151,9 @@ function websocketListener(event) {
 		if( msg_type == MESSAGE_JSON ) { 
 			payload.text().then((text) => {
 				json = JSON.parse(text);
-				console.log('recieved json websocket message:', json);
+				
+				if( Array.isArray(json) || Object.keys(json).length > 1 || ! ('stats' in json) )
+				    console.log('recieved json websocket message:', json);
 				
 				if( websocketCallback != undefined )
 						websocketCallback(json, msg_type);
