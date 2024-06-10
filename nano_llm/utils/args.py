@@ -4,8 +4,8 @@ import sys
 import argparse
 import logging
 
-from .log import LogFormatter
-from .prompts import DefaultChatPrompts, DefaultCompletionPrompts, load_prompts
+from clip_trt.utils import LogFormatter, load_prompts
+from .prompts import DefaultChatPrompts, DefaultCompletionPrompts 
 
 
 class ArgParser(argparse.ArgumentParser):

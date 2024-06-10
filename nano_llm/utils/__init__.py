@@ -3,42 +3,11 @@ from nanodb.utils import *
 
 from .args import *
 from .audio import *
-from .image import *
+from .inspection import *
 from .keyboard import *
-from .log import *
 from .model import *
 from .prompts import *
 from .request import WebRequest
-from .table import *
-from .inspection import *
-
-
-# https://modal.com/docs/guide/ex/vllm_inference
-DefaultChatPrompts = [
-    "What is the weather forecast today?",
-    "What is the fable involving a fox and grapes?",
-    "What's a good recipe for making tabouli?",
-    "How do I allocate memory in C?",
-    "Implement a Python function to compute the Fibonacci numbers.",
-    "What is the product of 9 and 8?",
-    "Is Pluto really a planet or not?",
-    "When was the Hoover Dam built?",
-    "What's a training plan to run a marathon?",
-    "If a train travels 120 miles in 2 hours, what is its average speed?",
-]
-
-DefaultCompletionPrompts = [
-    "Once upon a time,",
-    "A great place to live is",
-    "In a world where dreams are shared,",
-    "The weather forecast today is",
-    "Large language models are",
-    "Space exploration is exciting",
-    "The history of the Hoover Dam is",
-    "San Fransisco is a city in",
-    "To train for running a marathon,",
-    "A recipe for making tabouli is"
-]
 
 
 def replace_text(text, dict):
@@ -50,49 +19,6 @@ def replace_text(text, dict):
     return text    
 
 
-class AttributeDict(dict):
-    """
-    A dict where keys are available as attributes:
-    
-      https://stackoverflow.com/a/14620633
-      
-    So you can do things like:
-    
-      x = AttributeDict(a=1, b=2, c=3)
-      x.d = x.c - x['b']
-      x['e'] = 'abc'
-      
-    This is using the __getattr__ / __setattr__ implementation
-    (as opposed to the more concise original commented out below)
-    because of memory leaks encountered without it:
-    
-      https://bugs.python.org/issue1469629
-      
-    TODO - rename this to ConfigDict or NamedDict?
-    """
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-
-    def __getattr__(self, key):
-        return self[key]
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __getstate__(self):
-        return self.__dict__
-
-    def __setstate__(self, value):
-        self.__dict__ = value
-
-'''    
-class AttributeDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttributeDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-'''
-
-    
 def ends_with_token(input, tokens, tokenizer=None):
     """
     Check to see if the list of input tokens ends with any of the list of stop tokens.

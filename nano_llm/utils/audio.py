@@ -8,7 +8,7 @@ import torchaudio
 import numpy as np
 import pyaudio as pa
 
-from .tensor import convert_dtype, convert_tensor, convert_dtype
+from clip_trt.utils import convert_dtype, convert_tensor
 
 
 def convert_audio(samples, dtype=np.int16):
