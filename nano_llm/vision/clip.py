@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from clip_trt import CLIPVisionModel
+
+'''
 import os
 import json
 import time
@@ -236,4 +239,5 @@ class CLIPImageEmbedding():
         
     def __call__(self, image, hidden_state=None, return_tensors='pt', **kwargs):
         return self.embed_image(image, hidden_state=hidden_state, return_tensors='pt', **kwargs)
+'''
         

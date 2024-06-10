@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 
-from .clip import CLIPImageEmbedding
+from .clip import CLIPVisionModel
 from .mm_projector import MMProjector
