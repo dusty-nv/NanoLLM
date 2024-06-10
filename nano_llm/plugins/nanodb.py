@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import nanodb
 import torch
+import json
 
 from nano_llm import Plugin
+from nano_llm.web import WebServer
 from nano_llm.utils import torch_image
 
 from jetson_utils import cudaImage
@@ -10,29 +12,35 @@ from jetson_utils import cudaImage
 
 class NanoDB(Plugin):
     """
-    Plugin that loads a NanoDB database and searches it for incoming text/images   
+    Plugin that loads a NanoDB database and searches it for incoming text/images.   
     """
-    def __init__(self, path=None, model='ViT-L/14@336px', reserve=1024, k=1, **kwargs):
+    def __init__(self, path: str = "/data/nanodb/coco/2017", 
+                 model: str = "openai/clip-vit-large-patch14-336", dtype: str = 'float16',
+                 reserve: int = 1024, top_k: int = 8, crop: bool = False, **kwargs):
         """
-        Parameters:
+        Multimodal vector database with CUDA and CLIP/SigLIP embeddings.
         
-          path (str) -- directory to either load or create NanoDB at
-          model (str) -- the CLIP embedding model to use
-          reserve (int) -- the memory to reserve for the database in MB
-          kwargs (dict) -- these get passed to the NanoDB constructor
+        Args:
+          path (str):  The directory to either load or create the NanoDB database under.
+          model (str):  The CLIP or SigLIP embedding model to use (on HuggingFace or local path)
+          dtype (str):  Whether to compute and store the embeddings in 16-bit or 32-bit floating point.
+          reserve (int):  The number of megabytes (MB) to reserve for the database vectors.
+          top_k (int):  The number of search results and top K similar entries to return.
+          crop (bool):  Enable or disable cropping of images (CLIP was trained with cropping, SigLIP was not)
         """
-        super().__init__(**kwargs)
+        super().__init__(inputs='text/image', outputs='search', **kwargs)
         
         self.db = nanodb.NanoDB(
             path=path, model=model, 
-            dtype='float16', metric='cosine', 
-            reserve=reserve*(1<<20), crop=True, **kwargs
+            dtype=dtype, metric='cosine', 
+            reserve=reserve*(1<<20), crop=crop, **kwargs
         )
         
         self.scans = self.db.scans
-        self.k = k
-        
-    def process(self, input, add=False, metadata=None, k=None, **kwargs):
+        self.add_parameters(top_k=top_k)
+
+            
+    def process(self, input, add=False, metadata=None, top_k=None, sender=None, **kwargs):
         """
         Search the database for the closest matches to the input.
         
@@ -44,20 +52,48 @@ class NanoDB(Plugin):
         
           Returns a list of K search results
         """
-        if not k:
-            k = self.k
+        if not top_k:
+            top_k = self.top_k
         
-        if isinstance(input, cudaImage): # TODO migrate this inside CLIP implementation
-            input = torch_image(input, dtype=torch.float32, device='cuda')
-
         if add:
             self.db.add(input, metadata=metadata)
-        else:
-            if len(self.db) == 0:
-                return None
-                
-            indexes, similarity = self.db.search(input, k=k)
+            return
             
-            return [dict(index=indexes[n], similarity=float(similarity[n]), metadata=self.db.metadata[indexes[n]])
-                    for n in range(k) if indexes[n] >= 0]
+        if len(self.db) == 0:
+            return
+            
+        indexes, similarity = self.db.search(input, k=top_k)
         
+        results = [dict(index=indexes[n], similarity=float(similarity[n]), metadata=self.db.metadata[indexes[n]])
+                   for n in range(top_k) if indexes[n] >= 0]
+        
+        import pprint
+        print('NANODB search results for', input)
+        pprint.pprint(results, indent=2)
+                   
+        self.output(results, query=input)
+        
+        if not WebServer.Instance:
+            return 
+            
+        html = []
+        
+        for result in results:
+            path = result['metadata']['path']
+            for root, mount in WebServer.Instance.mounts.items():
+                if root in path:
+                    html.append(dict(
+                        image=path.replace(root, mount), 
+                        similarity=f"{result['similarity']*100:.1f}%",
+                        metadata=json.dumps(result['metadata'], indent=2).replace('"', '&quot;')
+                    ))
+
+        self.send_state({'search_results': html})
+     
+    @classmethod
+    def type_hints(cls):
+        return {
+            'dtype': {
+                'options': ['float16', 'float32'],
+            },
+        }

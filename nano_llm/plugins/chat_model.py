@@ -8,7 +8,7 @@ from nano_llm.web import WebServer
 from nano_llm.utils import ImageTypes, print_table, update_default
 
 
-class ChatSession(Plugin):
+class ChatModel(Plugin):
     """
     Plugin that feeds incoming text or ChatHistory to LLM and generates the reply.
     It can either internally manage the ChatHistory, or that can be done externally.
@@ -179,7 +179,7 @@ class ChatSession(Plugin):
         elif isinstance(input, ChatHistory):
             chat_history = input  # TODO also recieve chat history as list for cross-process
         else:
-            raise TypeError(f"ChatSession plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
+            raise TypeError(f"ChatModel plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
 
         # images should be followed by text prompts
         if chat_history[-1].is_type('image'):
@@ -204,7 +204,7 @@ class ChatSession(Plugin):
             
             # output vision features
             if chat_history.image_embedding is not None:
-                self.output(chat_history.image_embedding, ChatSession.OutputEmbed)
+                self.output(chat_history.image_embedding, ChatModel.OutputEmbed)
                 
             # start generating output
             self.stream = self.model.generate(
@@ -224,7 +224,7 @@ class ChatSession(Plugin):
             )
             
             # output the stream iterator on channel 3
-            #self.output(self.stream, ChatSession.OutputStream)
+            #self.output(self.stream, ChatModel.OutputStream)
 
             # output the generated tokens on channel 0
             bot_reply = chat_history.append(role='bot', text='', cached=True)
@@ -241,8 +241,8 @@ class ChatSession(Plugin):
                 bot_reply.tokens = self.stream.tokens
                 
                 # output stream of raw tokens
-                self.output(token, ChatSession.OutputDelta, delta=True, partial=True)
-                self.output(bot_reply.content, ChatSession.OutputPartial, partial=True)
+                self.output(token, ChatModel.OutputDelta, delta=True, partial=True)
+                self.output(bot_reply.content, ChatModel.OutputPartial, partial=True)
                 
                 self.send_state() # sync the chat history with clients
                 
@@ -251,7 +251,7 @@ class ChatSession(Plugin):
                 last_space = words.rfind(' ')
                 
                 if last_space >= 0:
-                    self.output(words[:last_space+1], ChatSession.OutputWords, delta=True, partial=True)
+                    self.output(words[:last_space+1], ChatModel.OutputWords, delta=True, partial=True)
                     if last_space < len(words) - 1:
                         words = words[last_space+1:]
                     else:
@@ -268,7 +268,7 @@ class ChatSession(Plugin):
                 )
                 
             if len(words) > 0:
-                self.output(words, ChatSession.OutputWords, delta=True, partial=True)
+                self.output(words, ChatModel.OutputWords, delta=True, partial=True)
                 
             bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens
@@ -276,7 +276,7 @@ class ChatSession(Plugin):
             self.stream = None
             
             # output the final generated text on channel 2
-            self.output(bot_reply.content, ChatSession.OutputFinal)
+            self.output(bot_reply.content, ChatModel.OutputFinal)
             self.send_state()
             
             if self.print_stats:

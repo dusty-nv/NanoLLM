@@ -95,7 +95,7 @@ class Tegrastats(Plugin):
             time_begin = time.perf_counter()
             self.read(use_cache=False)
             self.output(self.stats)
-            self.send_stats(stats=self.stats)
+            self.send_stats(stats=dict(summary=self.stats['summary']))
             time_sleep = self.poll_rate - (time.perf_counter() - time_begin)
             if time_sleep > 0:
                 time.sleep(time_sleep)

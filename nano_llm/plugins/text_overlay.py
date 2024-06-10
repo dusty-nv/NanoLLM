@@ -7,7 +7,7 @@ import traceback
 from nano_llm import Plugin, StopTokens
 from nano_llm.utils import is_image, cuda_image, wrap_text
 
-from jetson_utils import cudaFont
+from jetson_utils import cudaFont, cudaMemcpy
 
 
 class TextOverlay(Plugin):
@@ -17,7 +17,8 @@ class TextOverlay(Plugin):
     def __init__(self, font: str = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 
                  font_size: float = 32.0, prefix_text: str = None,    
                  color: str = "#78d715", background: str = "#000000", opacity: float = 0.4, 
-                 x: int = 5, y: int = 5, line_spacing: int = 38, line_length: int = None, **kwargs):
+                 x: int = 5, y: int = 5, line_spacing: int = 38, line_length: int = None, 
+                 return_copy: bool = False, **kwargs):
         """
         Overlay text on top of a video stream.
         
@@ -32,6 +33,7 @@ class TextOverlay(Plugin):
           y (int):  y-coordinate offset in the image to render the text.
           line_spacing (int):  The spacing between lines (in pixels) for when the text is wrapped onto multiple lines.
           line_length (int):  The maximum number of characters per line before wrapping (by default, will be calculated from the image dimensions)
+          return_copy (bool): Copy incoming frames to prevent other possible consumers from losing the original.
         """
         super().__init__(outputs='image', **kwargs)
         
@@ -42,7 +44,8 @@ class TextOverlay(Plugin):
 
         self.add_parameters(font=font, font_size=font_size, prefix_text=prefix_text,
                             color=color, background=background, opacity=opacity, x=x, y=y, 
-                            line_spacing=line_spacing, line_length=line_length)
+                            line_spacing=line_spacing, line_length=line_length,
+                            return_copy=return_copy)
 
     @property
     def font(self):
@@ -71,7 +74,7 @@ class TextOverlay(Plugin):
             'background': {'color': True},
         }
         
-    def process(self, input, **kwargs):
+    def process(self, input, return_copy=None, **kwargs):
         """
         Input should be a jetson_utils.cudaImage, np.ndarray, torch.Tensor, or have __cuda_array_interface__
         """
@@ -97,6 +100,13 @@ class TextOverlay(Plugin):
             text = text.replace(stop_token, '')
         
         input = cuda_image(input)
+        
+        if return_copy is None:
+            return_copy = self.return_copy
+            
+        if return_copy:
+            input = cudaMemcpy(input)
+            
         alpha = int(self.opacity * 255)
         color = PIL.ImageColor.getcolor(self.color, 'RGB')
         bg = PIL.ImageColor.getcolor(self.background, 'RGB') 

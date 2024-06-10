@@ -9,7 +9,7 @@ import numpy as np
 from nano_llm import Plugin
 from nano_llm.utils import cuda_image
 
-from jetson_utils import videoSource, videoOutput, cudaDeviceSynchronize, cudaToNumpy
+from jetson_utils import videoSource, videoOutput, cudaDeviceSynchronize, cudaMemcpy, cudaToNumpy
 
 
 class VideoSource(Plugin):
@@ -20,7 +20,8 @@ class VideoSource(Plugin):
     def __init__(self, video_input : str = '/dev/video0', 
                  video_input_width : int = None, video_input_height : int = None, 
                  video_input_codec : str = None, video_input_framerate : float = None, 
-                 video_input_save : str = None, num_buffers : int = None, return_tensors : str = 'cuda', **kwargs):
+                 video_input_save : str = None, num_buffers : int = None, 
+                 return_copy : bool = True, return_tensors : str = 'cuda', **kwargs):
         """
         Creates a video input source from MIPI CSI or V4L2 camera, RTP/RTSP/WebRTC stream, or video file.
         
@@ -30,6 +31,7 @@ class VideoSource(Plugin):
           video_input_height (int): The disired height in pixels (by default, uses the stream's native resolution)
           video_input_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
           num_buffers (int): The number of images in the ringbuffer used for capturing (by default, 4 frames)
+          return_copy (str): Copy incoming frames to prevent them from being overwritten in the ringbuffer.
           return_tensors (str): The object datatype of the image to output ('np', 'pt', 'cuda')
         """
         super().__init__(inputs=0, outputs='image', **kwargs)
@@ -58,14 +60,18 @@ class VideoSource(Plugin):
         self.file = (self.stream.GetOptions()['resource']['protocol'] == 'file')
         self.options = options
         self.resource = video_input  # self.stream.GetOptions().resource['string']
+        self.return_copy = return_copy
         self.return_tensors = return_tensors
         self.time_last = time.perf_counter()
         self.framerate = 0
         
-    def capture(self, timeout=2500, retries=8, return_tensors=None):
+    def capture(self, timeout=2500, retries=8, return_copy=None, return_tensors=None, **kwargs):
         """
         Capture images from the video source as long as it's streaming
         """
+        if not return_copy:
+            return_copy = self.return_copy
+            
         if not return_tensors:
             return_tensors = self.return_tensors
             
@@ -82,6 +88,9 @@ class VideoSource(Plugin):
                 retry = retry + 1
                 continue
    
+            if return_copy:
+                image = cudaMemcpy(image)
+                
             if return_tensors == 'pt':
                 image = torch.as_tensor(image, device='cuda')
             elif return_tensors == 'np':
@@ -98,8 +107,7 @@ class VideoSource(Plugin):
             self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])
             
             return image
-    
-        return None
+
         
     def reconnect(self):
         """
@@ -124,7 +132,7 @@ class VideoSource(Plugin):
         """
         Run capture continuously and attempt to handle disconnections
         """
-        while True:
+        while not self.stop_flag:
             try:
                 img = self.capture()
             except Exception as error:
