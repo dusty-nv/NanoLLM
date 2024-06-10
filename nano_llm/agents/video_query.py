@@ -99,7 +99,7 @@ class VideoQuery(Agent):
                 path=nanodb, 
                 model=None if self.db_share_embed else 'ViT-L/14@336px',
                 reserve=kwargs.get('nanodb_reserve'), 
-                k=18, drop_inputs=True,
+                top_k=18, drop_inputs=True,
             ).start().add(self.on_search)
             
             if self.db_share_embed:

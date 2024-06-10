@@ -42,6 +42,7 @@ class Plugin(threading.Thread):
         self.relay = relay
         self.drop_inputs = drop_inputs
         self.threaded = threaded
+        self.stop_flag = False
         self.interrupted = False
         self.processing = False
         self.parameters = {}
@@ -189,11 +190,11 @@ class Plugin(threading.Thread):
             
         if channel >= 0:
             for output_plugin in self.outputs[channel]:
-                output_plugin.input(output, **kwargs)
+                output_plugin.input(output, sender=self, **kwargs)
         else:
             for output_channel in self.outputs:
                 for output_plugin in output_channel:
-                    output_plugin.input(output, **kwargs)
+                    output_plugin.input(output, sender=self, **kwargs)
                     
         return output
      
@@ -220,17 +221,24 @@ class Plugin(threading.Thread):
                 output.start()
                 
         return self
-            
+     
+    def stop(self):
+        """
+        Flag the plugin to stop processing and exit the run() thread.
+        """
+        self.stop_flag = True
+        logging.info(f"stopping plugin {self.name}")
+               
     def run(self):
         """
         Processes the queue forever and automatically run when created with ``threaded=True``
         """
-        while True:
+        while not self.stop_flag:
             try:
                 self.input_event.wait()
                 self.input_event.clear()
                 
-                while True:
+                while not self.stop_flag:
                     try:
                         input, kwargs = self.input_queue.get(block=False)
                         self.dispatch(input, **kwargs)
@@ -239,6 +247,8 @@ class Plugin(threading.Thread):
             except Exception as error:
                 logging.error(f"Exception occurred during processing of {type(self)}\n\n{traceback.format_exc()}")
 
+        logging.info(f"{self.name} plugin stopped")
+        
     def dispatch(self, input, **kwargs):
         """
         Invoke the process() function on incoming data

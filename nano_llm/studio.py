@@ -48,10 +48,11 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register_all(cls):
         from nano_llm.plugins import (
-            ChatSession, VideoSource, VideoOutput,
+            ChatModel, VideoSource, VideoOutput,
             UserPrompt, AutoPrompt, VADFilter,
             TextStream, TextOverlay, RateLimit,
-            AudioInputDevice, AudioOutputDevice, AudioRecorder,
+            AudioInputDevice, AudioOutputDevice, 
+            AudioRecorder, NanoDB,
         )
         
         from nano_llm.plugins.audio.riva_asr import RivaASR
@@ -60,13 +61,14 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins.audio.whisper_asr import WhisperASR
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
-        DynamicPlugin.register(ChatSession)   
+        DynamicPlugin.register(ChatModel)   
         DynamicPlugin.register(UserPrompt)
         DynamicPlugin.register(AutoPrompt)   
         DynamicPlugin.register(TextStream)
         DynamicPlugin.register(TextOverlay)
         DynamicPlugin.register(VideoSource)
         DynamicPlugin.register(VideoOutput)
+        DynamicPlugin.register(NanoDB)
         DynamicPlugin.register(RateLimit)
         DynamicPlugin.register(VADFilter)
         DynamicPlugin.register(WhisperASR)
@@ -89,10 +91,18 @@ class DynamicAgent(Agent):
         DynamicPlugin.register_all()
         
         self.plugins = []
-        self.global_states = {'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}}}
-        
         self.tegrastats = Tegrastats()
-        self.webserver = WebServer(title='Agent Studio', msg_callback=self.on_websocket, **kwargs)
+        self.global_states = {'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}}}
+
+        self.webserver = WebServer(
+            title='Agent Studio', 
+            msg_callback=self.on_websocket, 
+            mounts={
+                #'/data/uploads': '/uploads',
+                '/data': '/data',
+            },
+            **kwargs
+        )
 
     def add(self, plugin, **kwargs):
         load_begin = time.perf_counter()
@@ -161,6 +171,7 @@ class DynamicAgent(Agent):
             plugin = self.find(name);
             self.plugins.remove(plugin)
             logging.info(f"removed plugin {plugin.name}")
+            plugin.stop()
             del plugin
    
         if 'add_connection' in msg:
