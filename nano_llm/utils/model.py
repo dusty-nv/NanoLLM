@@ -11,6 +11,9 @@ from packaging.version import Version
 from huggingface_hub import snapshot_download, hf_hub_download, login
 
 
+__all__ = ['download_model', 'default_model_api', 'ONNXRuntimeModel']
+
+
 def download_model(model, type='model', cache_dir='$TRANSFORMERS_CACHE', use_safetensors=False, **kwargs):
     """
     Get the local path to a cached model or file in the cache_dir, or download it from HuggingFace Hub if needed.
