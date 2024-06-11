@@ -120,6 +120,7 @@ class DynamicAgent(Agent):
     
     def on_client_connected(self):
         init_msg = {
+            'modules': DynamicPlugin.modules(),
             'plugin_types': DynamicPlugin.TypeInfo,
         }
         

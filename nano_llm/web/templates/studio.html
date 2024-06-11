@@ -31,7 +31,11 @@
     <script type="text/javascript">
 
       function onWebsocketMsg(payload, type) {
-        if( type == MESSAGE_JSON ) { 
+        if( type == MESSAGE_JSON ) {     
+          if( 'modules' in payload ) {
+            addModules(payload['modules']);
+          }
+          
           if( 'plugin_types' in payload ) {
             addPluginTypes(payload['plugin_types']);
           }

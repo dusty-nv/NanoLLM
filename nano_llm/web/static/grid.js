@@ -2,6 +2,7 @@
 var grid;
 var drawflow;
 var pluginTypes;
+var moduleTypes;
 var nodeIdToName = {};
 var stateListeners = {};
 var outputListeners = {};
@@ -662,45 +663,85 @@ function addPlugins(plugins) {
 
 function addPluginTypes(types) {
   pluginTypes = types;
-  
-  /*let id = document.getElementById("add_plugin_menu_list");
-            
-  if( id != null )
-    id.innerHTML = pluginMenuList();*/
 
-  for( pluginName in pluginTypes ) {
+  /*for( pluginName in pluginTypes ) {
     const plugin = pluginTypes[pluginName];
 
     if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
       addPluginDialog(pluginName, 'init', null, plugin['init']['description'], plugin['init']['parameters']);
     }
+  }*/
+}
+
+function addModules(modules) {
+  moduleTypes = modules;
+
+  for( moduleName in moduleTypes ) {
+    for( pluginName in moduleTypes[moduleName] ) {
+      const plugin = moduleTypes[moduleName][pluginName];
+      console.log('addModules', pluginName, plugin);
+      if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
+        addPluginDialog(pluginName, 'init', null, plugin['init']['description'], plugin['init']['parameters']);
+      }
+    }
   }
 }
 
+function capitalizeTitle(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function pluginMenuList() {
-  if( pluginTypes == undefined )
+  if( moduleTypes == undefined )
     return '';
  
   let html = '';
   
-  for( plugin in pluginTypes )
-    html += `<li><a class="dropdown-item" id="menu_create_plugin_${plugin}" href="#">${plugin}</a></li>`; // data-bs-toggle="modal" data-bs-target="#${plugin}_init_dialog"
+  for( module in moduleTypes ) {
+    html += `
+      <span>
+      <a class="dropdown-toggle ms-3" href="#" data-bs-target="#{add_plugin_${module}_dropdown}" data-bs-toggle="dropdown" aria-expanded="false" style="color: #aaaaaa;">
+        ${capitalizeTitle(module)}
+      </a>
+      <span class="dropdown float-end float-top" id="add_plugin_${module}_dropdown">
+      <ul class="dropdown-menu" id="add_plugin_${module}_menu">
+    `;
+    
+    for( plugin in moduleTypes[module] )
+      html += `<li><a class="dropdown-item" id="menu_create_plugin_${plugin}" href="#">${plugin}</a></li>`; // data-bs-toggle="modal" data-bs-target="#${plugin}_init_dialog"
 
+    html += `</ul></span></span>`;
+  }
+  
+  /*html = `
+  <div class="btn-group">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+      Dropdown
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+      <li><a class="dropdown-item" href="#">Menu item</a></li>
+      <li><a class="dropdown-item" href="#">Menu item</a></li>
+      <li><a class="dropdown-item" href="#">Menu item</a></li>
+    </ul>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+      Dropdown2
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+      <li><a class="dropdown-item" href="#">Menu item2</a></li>
+      <li><a class="dropdown-item" href="#">Menu item3</a></li>
+      <li><a class="dropdown-item" href="#">Menu item4</a></li>
+    </ul>
+  </div>
+  `;*/
+  
   return html; 
 }  
 
 function addGraphEditor(name, id, grid_options) {
 
-  let titlebar_html = `
-    <a class="dropdown-toggle ms-2" href="#" data-bs-toggle="dropdown" aria-expanded="false" style="color: #aaaaaa;">
-      Add
-    </a>
-    <span class="dropdown float-end float-top">
-      <ul class="dropdown-menu" id="add_plugin_menu_list">
-        ${pluginMenuList()}
-      </ul>
-    </span>
-  `;
+  let titlebar_html = pluginMenuList();
   
   let html = `
     <div id="drawflow" class="mt-1 flex-grow-1 w-100"></div>

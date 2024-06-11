@@ -18,7 +18,7 @@ class TextOverlay(Plugin):
                  font_size: float = 32.0, prefix_text: str = None,    
                  color: str = "#78d715", background: str = "#000000", opacity: float = 0.4, 
                  x: int = 5, y: int = 5, line_spacing: int = 38, line_length: int = None, 
-                 return_copy: bool = False, **kwargs):
+                 return_copy: bool = True, **kwargs):
         """
         Overlay text on top of a video stream.
         
