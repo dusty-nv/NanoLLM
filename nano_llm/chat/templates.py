@@ -49,15 +49,15 @@ ChatTemplates = {
     'vicuna-v0': {
         'system_prompt': "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.",
         'system': '${MESSAGE}\n\n',
-        'user': '### Human: ${MESSAGE}\n',
-        'bot': '### Assistant: ${MESSAGE}\n',
+        'user': '### Human: ${MESSAGE}\n### Assistant: ',
+        'bot': '${MESSAGE}\n',
     },
     
     'vicuna-v1': {
         'system_prompt': "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.",
         'system': '${MESSAGE}\n\n',
-        'user': 'USER: ${MESSAGE}\n',
-        'bot': 'ASSISTANT: ${MESSAGE}\n', # TODO: does output already end in </s> ?
+        'user': 'USER: ${MESSAGE}\nASSISTANT: ',
+        'bot': '${MESSAGE}\n', # TODO: does output already end in </s> ?
     },
     
     # https://github.com/MicrosoftDocs/azure-docs/blob/main/articles/ai-services/openai/includes/chat-markup-language.md#working-with-chat-markup-language-chatml

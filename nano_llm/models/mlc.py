@@ -528,7 +528,7 @@ class MLCModel(NanoLLM):
             stream = self.queue.get()
             self._generate(stream)
         
-    def _create_kv_cache(self, use_cache=True):
+    def _create_kv_cache(self, use_cache=False): #True):
         """
         Allocate or return a free KV cache available to use. If use_cache is true, then an existing
         KV cache that isn't in use is returned, because KV caches take ~100ms to allocate.
@@ -554,7 +554,8 @@ class MLCModel(NanoLLM):
             kv_cache = self._kv_cache_create()
         
         logging.debug(f"allocated new KV cache in {(time.perf_counter()-time_begin)*1000:.1f} ms  (existing cache refcounts={[sys.getrefcount(k) for k in self.kv_caches]})")
-        self.kv_caches.append(kv_cache)
+        if use_cache:
+            self.kv_caches.append(kv_cache)
         return kv_cache    
 
 

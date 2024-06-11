@@ -275,6 +275,8 @@ class ChatModel(Plugin):
             chat_history.kv_cache = self.stream.kv_cache
             self.stream = None
             
+            print('ROT REPLY, bot_reply.content')
+            
             # output the final generated text on channel 2
             self.output(bot_reply.content, ChatModel.OutputFinal)
             self.send_state()

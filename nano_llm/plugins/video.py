@@ -18,7 +18,7 @@ class VideoSource(Plugin):
     https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
     """
     def __init__(self, video_input : str = '/dev/video0', 
-                 video_input_width : int = None, video_input_height : int = None, 
+                 video_input_width : int = 640, video_input_height : int = 480, 
                  video_input_codec : str = None, video_input_framerate : float = None, 
                  video_input_save : str = None, num_buffers : int = None, 
                  return_copy : bool = True, return_tensors : str = 'cuda', **kwargs):
