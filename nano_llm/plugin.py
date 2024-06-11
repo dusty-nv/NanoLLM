@@ -98,7 +98,7 @@ class Plugin(threading.Thread):
           Plugins should return their output data to be sent to downstream plugins.
           You can also call :func:`output()` as opposed to returning it.
         """
-        raise NotImplementedError(f"plugin {type(self)} has not implemented process()")
+        raise NotImplementedError(f"plugin {self.name} has not implemented process()")
     
     def add(self, plugin, channel=0, **kwargs):
         """
@@ -187,14 +187,16 @@ class Plugin(threading.Thread):
         """
         #if output is None:
         #    return
-            
+
         if channel >= 0:
+            kwargs.update(dict(sender=self, channel=channel))
             for output_plugin in self.outputs[channel]:
-                output_plugin.input(output, sender=self, **kwargs)
+                output_plugin.input(output, **kwargs)
         else:
             for output_channel in self.outputs:
+                kwargs.update(dict(sender=self, channel=output_channel))
                 for output_plugin in output_channel:
-                    output_plugin.input(output, sender=self, **kwargs)
+                    output_plugin.input(output, **kwargs)
                     
         return output
      
@@ -245,7 +247,7 @@ class Plugin(threading.Thread):
                     except queue.Empty:
                         break
             except Exception as error:
-                logging.error(f"Exception occurred during processing of {type(self)}\n\n{traceback.format_exc()}")
+                logging.error(f"Exception occurred during processing of {self.name}\n\n{traceback.format_exc()}")
 
         logging.info(f"{self.name} plugin stopped")
         
@@ -497,4 +499,19 @@ class Plugin(threading.Thread):
             return
             
         return WebServer.Instance.send_alert(message, **kwargs)
+     
+    def send_client_output(self, channel):
+        """
+        Subscribe clients to recieving plugin output over websockets.
+        """
+        from nano_llm.plugins import WebClient
         
+        for plugin in self.outputs[channel]:
+            if isinstance(plugin, WebClient):
+                return
+               
+        web_client = WebClient()
+        web_client.start()
+         
+        self.add(web_client, channel=channel)
+           

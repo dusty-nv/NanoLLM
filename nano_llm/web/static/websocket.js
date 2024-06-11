@@ -143,8 +143,8 @@ function websocketListener(event) {
 			console.log(`recieved invalid websocket msg (payload_size=${payload_size} actual=${payload.size}`);
 		}
 		
-		if( msg_count_rx != undefined && msg_id != (msg_count_rx + 1) )
-			console.log(`warning:  out-of-order message ID ${msg_id}  (last=${msg_count_rx})`);
+		//if( msg_count_rx != undefined && msg_id != (msg_count_rx + 1) )
+		//	console.log(`warning:  out-of-order message ID ${msg_id}  (last=${msg_count_rx})`);
 			
 		msg_count_rx = msg_id;
 		

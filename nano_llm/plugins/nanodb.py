@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 import nanodb
-import torch
+import pprint
+import logging
 import json
 
 from nano_llm import Plugin
 from nano_llm.web import WebServer
-from nano_llm.utils import torch_image
-
-from jetson_utils import cudaImage
 
 
 class NanoDB(Plugin):
@@ -16,7 +14,7 @@ class NanoDB(Plugin):
     """
     def __init__(self, path: str = "/data/nanodb/coco/2017", 
                  model: str = "openai/clip-vit-large-patch14-336", dtype: str = 'float16',
-                 reserve: int = 1024, top_k: int = 8, crop: bool = False, **kwargs):
+                 reserve: int = 1024, top_k: int = 24, crop: bool = False, **kwargs):
         """
         Multimodal vector database with CUDA and CLIP/SigLIP embeddings.
         
@@ -64,15 +62,27 @@ class NanoDB(Plugin):
             
         indexes, similarity = self.db.search(input, k=top_k)
         
-        results = [dict(index=indexes[n], similarity=float(similarity[n]), metadata=self.db.metadata[indexes[n]])
+        results = [dict(index=int(indexes[n]), similarity=float(similarity[n]), metadata=self.db.metadata[indexes[n]])
                    for n in range(top_k) if indexes[n] >= 0]
         
-        import pprint
-        print('NANODB search results for', input)
-        pprint.pprint(results, indent=2)
-                   
         self.output(results, query=input)
         
+        if isinstance(input, str):
+            embed_time = self.db.model.text.stats.time
+        else:
+            embed_time = self.db.model.vision.stats.time
+
+        self.send_stats({
+            'summary': [
+                f"Embed {int(embed_time*1000)}ms", 
+                f"Rank  {int(self.db.index.stats.search_time*1000)}ms"
+            ]
+        })
+                
+        #if logging.getLogger().isEnabledFor(logging.DEBUG):
+        #    logging.debug(f"NanoDB search results for:  {input}\n{pprint.pformat(results, indent=2)}")
+
+        '''
         if not WebServer.Instance:
             return 
             
@@ -89,7 +99,8 @@ class NanoDB(Plugin):
                     ))
 
         self.send_state({'search_results': html})
-     
+        '''
+        
     @classmethod
     def type_hints(cls):
         return {

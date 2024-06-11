@@ -35,7 +35,7 @@ class UserPrompt(Plugin):
         if prompt:
             self.input(prompt)
             
-        WebServer.add_listener(self.on_websocket)
+        #WebServer.add_listener(self.on_websocket)
             
     def process(self, input, **kwargs):
         if isinstance(input, list):
@@ -56,7 +56,8 @@ class UserPrompt(Plugin):
             if self.prefix:
                 cprint(self.prefix, 'blue', end='', flush=True)
             self.output(sys.stdin.readline().strip())
-            
+     
+    '''       
     def on_websocket(self, msg, msg_type=0, **kwargs): 
         if msg_type != WebServer.MESSAGE_JSON or self.name not in msg:
             return
@@ -65,3 +66,4 @@ class UserPrompt(Plugin):
         
         if 'input' in msg:
             self.input(msg['input'])
+    '''

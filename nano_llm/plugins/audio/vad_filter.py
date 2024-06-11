@@ -19,20 +19,21 @@ class VADFilter(Plugin):
     Inputs:  incoming audio samples (prefer @ 16KHz)
     Output:  audio samples that have voice activity
     """
-    def __init__(self, vad_threshold : float = 0.5, vad_window : float = 0.5, audio_chunk : float = 0.1, **kwargs):
+    def __init__(self, vad_threshold : float = 0.5, vad_window : float = 0.5, interrupt_after : float = 0.5, audio_chunk : float = 0.1, **kwargs):
         """
         Voice Activity Detection (VAD) model that filters/drops audio when there is no speaking.
         This is typically used before ASR to reduce erroneous transcripts from background noise.
     
         Args:
-          vad_threshold (float): If any of the audio chunks in the window are above this confidence for voice activity,
-                                 then the audio will be forwarded to the next plugin (otherwise dropped).
-                                 This should be between 0 and 1, with a threshold of 0 emitting all audio.                  
+          vad_threshold (float): If any of the audio chunks in the window are above this confidence (0,1) for voice activity,
+                                 then the audio will be forwarded to the next plugin (otherwise dropped).                 
           vad_window (float): The duration of time (in seconds) that the VAD filter processes over.
-                              If speaking isn't detected for this long, it will be considered silent.                   
+                              If speaking isn't detected for this long, it will be considered silent. 
+          interrupt_after (float): Send an interruption signal to mute/silence the bot after this many
+                                   seconds of sustained audio activity.                 
           audio_chunk (float): The duration of time or number of audio samples processed per batch.                     
         """
-        super().__init__(outputs='audio', **kwargs)
+        super().__init__(outputs=['audio', 'interrupt'], **kwargs)
         
         self.vad = load_vad()
         
@@ -44,9 +45,11 @@ class VADFilter(Plugin):
         self.speaking = False     # true when voice is detected
         self.speaking_start = 0   # time when voice first detected
         self.sample_rate = 16000  # what the Silero VAD model uses
-
+        self.sent_interrupt = False
+        
         self.add_parameter('vad_threshold', name='Voice Threshold', type=float, range=(0,1), default=vad_threshold)
         self.add_parameter('vad_window', name='Window Length', type=float, default=vad_window)
+        self.add_parameter('interrupt_after', type=float, default=interrupt_after)
         self.add_parameter('audio_chunk', type=float, default=audio_chunk)
         
         #self.apply_config(vad_threshold=vad_threshold, vad_window=vad_window, audio_chunk=audio_chunk)
@@ -92,8 +95,15 @@ class VADFilter(Plugin):
 
         if speaking:
             self.output(samples, sample_rate=self.sample_rate, vad_confidence=vad_prob)
+            
+            if not self.sent_interrupt and (curr_time - self.speaking_start >= self.interrupt_after):
+                self.sent_interrupt = True
+                for plugin in self.outputs[1]:
+                    plugin.interrupt(block=False)
+                    
         elif self.speaking:
             self.output(None, vad_confidence=vad_prob) # EOS   
+            self.send_interrupt = False
             logging.info(f"voice activity ended (duration={curr_time-self.speaking_start:.2f}s, conf={self.vad_filter[-1]:.3f})")
             
         self.speaking = speaking

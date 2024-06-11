@@ -4,7 +4,8 @@ var drawflow;
 var pluginTypes;
 var nodeIdToName = {};
 var stateListeners = {};
-var ignore_connection_events=false;
+var outputListeners = {};
+var ignoreConnectionEvents=false;
 
 
 function addGrid() {
@@ -16,7 +17,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'args': {'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}} 
+          'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
       }});
     });
   });
@@ -27,7 +28,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'args': {'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}} 
+          'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
       }});
     });
   });
@@ -38,7 +39,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'args': {'web_grid': {}} 
+          'web_grid': {} 
       }});
     });
   });
@@ -220,6 +221,121 @@ function addTextStreamWidget(name, id, title, grid_options) {
   return widget;
 }
 
+function terminalTextColor(level) {
+    if( level == 'success' ) return 'limegreen';
+    else if( level == 'error' ) return 'red';
+    else if( level == 'warning' ) return 'orange';
+    else if( level == 'info' ) return 'rgb(225,225,225)'
+    else return 'rgb(180,180,180)';
+}
+        
+function addTerminalWidget(name, id, title, grid_options) {
+  const history_id = `${id}_history`;
+
+  const html = `
+    <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-family: monospace, monospace; font-size: 100%; overflow: scroll; text-wrap: nowrap; flex-grow: 1;"</div>
+  `;
+  
+  let widget = addGridWidget(id, 'Terminal', html, null, Object.assign({x: 0, y: 14, w: 8, h: 6}, grid_options));
+
+  addOutputListener(name, 0, function(log_entry) {
+    let chc = document.getElementById(history_id);
+    let isScrolledToBottom = chc.scrollHeight - chc.clientHeight <= chc.scrollTop + 1;
+    
+    const level = log_entry['level'];
+    const msg = log_entry['message'];
+
+    const html = `<p class="m-0 p-0" style="color: ${terminalTextColor(level)}">${msg}</p>`;
+    
+    if( chc.innerHTML.length < 10000 )
+      chc.innerHTML += html;
+    else
+      chc.innerHTML = html;
+
+    if( isScrolledToBottom ) { // autoscroll unless the user has scrolled up
+      scrollBottom(chc);
+    }
+  });
+  
+  return widget;
+}
+
+// https://stackoverflow.com/a/6234804
+function escapeHTML(unsafe) {
+  return unsafe
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function updateNanoDB(gallery_id, search_results) { 
+  console.log(`updateNanoDB(${gallery_id}) => `, search_results, window.location);
+  
+  let obj = $(`#${gallery_id}`);
+  obj.empty();
+  
+   for( let n=0; n < search_results.length; n++ ) {
+    const result = search_results[n];
+    let contents = `<div class="me-1" style="position: relative; color: white; display: inline;">`;
+    contents += `<img src="${window.location.origin + '/' + result['metadata']['path']}" style="aspect-ratio: 1.47; width: 24%;" title="&quot;METADATA&quot; : ${escapeHTML(JSON.stringify(result['metadata'], null, 2))}">`;
+    contents += `</div>`;
+      //contents = '<div style="position: relative; text-align: center; color: white" width="50%">';
+      //let contents = `<div class="me-1" style="position: relative; color: white; display: inline;">`;  // 49% width, -288% translate for 2x4 grid
+      //contents += `<img src=${search_results[n]['image']} style="aspect-ratio: 1.47; width: 32%;" title="&quot;METADATA&quot; : ${search_results[n]['metadata']}">`;
+      
+      //contents += `<img src=${search_results[n]['image']} style="aspect-ratio: 1.47; width: 32%;" title="&quot;METADATA&quot; : ${search_results[n]['metadata']}">`;
+      //contents += `<div class="ps-1 pe-1" style="position: absolute; top: 0%; right: 0%; transform: translate(0%, -168%); background-color: rgba(0,0,0,0.5)">${search_results[n]['similarity']}</div></div>`;
+      //contents += '</div>';
+    obj.append(contents);
+  }
+}
+
+
+function addNanoDBWidget(name, id, title, grid_options) {
+  const gallery_id = `${id}_results`;
+  const input_id = `${id}_input`;
+  const submit_id = `${id}_submit`;
+  
+  const html = `
+    <div class="input-group">
+      <input id="${input_id}" class="form-control" placeholder="Enter a search query"></input>
+      <span id="${submit_id}" class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;"></span>
+    </div>
+    <div id="${gallery_id}" class="bg-medium-gray p-2 mt-2" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)"></div>
+  `;
+  
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 14}, grid_options));
+
+  let onsubmit = function() {
+    const input = document.getElementById(input_id);
+    console.log('submitting to NanoDB:', input.value);
+    msg = {};
+    msg[name] = {'input': input.value};
+    sendWebsocket(msg);
+    //input.value = "";
+  }
+  
+  let onkeydown = debounce(function(event) {
+    if( !event.repeat )
+        onsubmit();
+  }, 250)
+
+  document.getElementById(input_id).addEventListener('keydown', onkeydown);
+  document.getElementById(submit_id).addEventListener('click', onsubmit);
+
+  addOutputListener(name, 0, function(search_results) {
+    updateNanoDB(gallery_id, search_results);
+  });
+
+  msg = {};
+  msg[name] = {'input': 'a polar bear swimming in the water'};
+
+  sendWebsocket(msg);
+  return widget;
+}
+
 function addChatWidget(name, id, title, grid_options) {
   const history_id = `${id}_history`;
   const input_id = `${id}_input`;
@@ -238,7 +354,9 @@ function addChatWidget(name, id, title, grid_options) {
   let onsubmit = function() {
     const input = document.getElementById(input_id);
     console.log('submitting chat message:', input.value);
-    sendWebsocket({'UserPrompt': {'input': input.value}});
+    msg = {};
+    msg[name] = {'input': input.value};
+    sendWebsocket(msg);
     input.value = "";
   }
   
@@ -301,7 +419,6 @@ function updateChatHistory(id, history) {
     }
 }
 
-
 function addVideoOutputWidget(name, id, title, grid_options) {
   const video_id = `${id}_video_player`;
   const html = `
@@ -310,7 +427,7 @@ function addVideoOutputWidget(name, id, title, grid_options) {
     </div>
   `;
   
-  let widget = addGridWidget(id, title, html, null, Object.assign({w: 8, h: 5}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 5, h: 5}, grid_options));
   let video = document.getElementById(video_id);
   
   video.addEventListener('playing', function(e) {
@@ -325,6 +442,22 @@ function addVideoOutputWidget(name, id, title, grid_options) {
   return widget;
 }
 
+function addOutputListener(name, channel, listener) {
+  if( ! (name in outputListeners) ) {
+    outputListeners[name] = [listener];
+    msg = {};
+    msg[name] = {'send_client_output': channel};
+    sendWebsocket(msg);
+  }
+  else
+    outputListeners[name].push(listener);
+}
+
+function sendOutput(output) {
+  const plugin_name = output['name'];
+  if( plugin_name in outputListeners )
+    outputListeners[plugin_name].forEach((listener) => {listener(output['data'])});
+}
 
 function addStateListener(name, listener) {
   if( name == undefined )
@@ -480,10 +613,14 @@ function addPluginGridWidget(name, type, title, grid_options) {
       return addTextInputWidget(name, id, title, grid_options);
     case 'TextStream':
       return addTextStreamWidget(name, id, title, grid_options);
-    case 'ChatSession':
+    case 'ChatModel':
       return addChatWidget(name, id, title, grid_options);
     case 'VideoOutput':
       return addVideoOutputWidget(name, id, title, grid_options);
+    case 'NanoDB':
+      return addNanoDBWidget(name, id, title, grid_options);
+    case 'TerminalPlugin':
+      return addTerminalWidget(name, id, title, grid_options);
     case 'GraphEditor':
       return addGraphEditor(name, id, title, grid_options);
     default:
@@ -504,7 +641,7 @@ function addPlugins(plugins) {
       addPlugin(plugin);
   }
   
-  ignore_connection_events = true;
+  ignoreConnectionEvents = true;
   
   for( i in plugins ) {
     for( l in plugins[i]['connections'] ) {
@@ -520,7 +657,7 @@ function addPlugins(plugins) {
     }
   }
   
-  ignore_connection_events = false;
+  ignoreConnectionEvents = false;
 }
 
 function addPluginTypes(types) {
@@ -609,12 +746,7 @@ function addGraphEditor(name, id, grid_options) {
     }
     else {
       pluginMenu.addEventListener('click', (event) => {
-        sendWebsocket({
-          'init_plugin': {
-            'name': plugin['name'],
-            'args': {}
-          }
-        });
+        sendWebsocket({'add_plugin': {'type': plugin['name']}});
       });
     }
   }
@@ -628,56 +760,47 @@ function onNodeMoved(id) {
   sendWebsocket({
     'config_plugin': {
       'name': node['name'],
-      'args': {'web_node': {'x': node['pos_x'], 'y': node['pos_y']}} 
-  }});
+      'web_node': {'x': node['pos_x'], 'y': node['pos_y']}
+    } 
+  });
 }
 
 function onNodeRemoved(id) {
   const pluginName = nodeIdToName[id];
   delete nodeIdToName[id];
   console.log(`node removed id=${id} name=${pluginName}`);
-  sendWebsocket({
-    'remove_plugin': pluginName,
-  });
+  sendWebsocket({'remove_plugin': pluginName});
 }
 
 function onNodeConnectionCreated(event) {
-  console.log(`onNodeConnectionCreated(ignore=${ignore_connection_events})`, event);
+  console.log(`onNodeConnectionCreated(ignore=${ignoreConnectionEvents})`, event);
   
-  if( ignore_connection_events )
+  if( ignoreConnectionEvents )
     return;
     
   sendWebsocket({
     'add_connection': {
-      'input': {
-        'name': drawflow.getNodeFromId(event['input_id'])['name'],
-        'channel': Number(event['input_class'].split('_').at(-1)) - 1
-      },
-      'output': {
-        'name': drawflow.getNodeFromId(event['output_id'])['name'],
-        'channel': Number(event['output_class'].split('_').at(-1)) - 1
-      }
-    }
+      'input': drawflow.getNodeFromId(event['input_id'])['name'],
+      'input_channel': Number(event['input_class'].split('_').at(-1)) - 1,
+      'output': drawflow.getNodeFromId(event['output_id'])['name'],
+      'output_channel': Number(event['output_class'].split('_').at(-1)) - 1
+    } 
   });
 }
 
 function onNodeConnectionRemoved(event) {
-  console.log(`onNodeConnectionRemoved(ignore=${ignore_connection_events})`, event);
+  console.log(`onNodeConnectionRemoved(ignore=${ignoreConnectionEvents})`, event);
   
-  if( ignore_connection_events )
+  if( ignoreConnectionEvents )
     return;
     
   sendWebsocket({
     'remove_connection': {
-      'input': {
-        'name': drawflow.getNodeFromId(event['input_id'])['name'],
-        'channel': Number(event['input_class'].split('_').at(-1)) - 1
-      },
-      'output': {
-        'name': drawflow.getNodeFromId(event['output_id'])['name'],
-        'channel': Number(event['output_class'].split('_').at(-1)) - 1
-      }
-    }
+      'input': drawflow.getNodeFromId(event['input_id'])['name'],
+      'input_channel': Number(event['input_class'].split('_').at(-1)) - 1,
+      'output': drawflow.getNodeFromId(event['output_id'])['name'],
+      'output_channel': Number(event['output_class'].split('_').at(-1)) - 1
+    } 
   });
 }
 
@@ -841,16 +964,21 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     console.log(`${stage}Plugin(${plugin_name}) =>`);
     console.log(args);
 
+    args['name'] = plugin_name;
+    
     let msg = {};
     
-    msg[`${stage}_plugin`] = {
-        'name': plugin_name,
-        'args': args
+    if( stage == 'init' ) {
+      args['type'] = plugin_name;
+      msg['add_plugin'] = args;
     }
-    
+    else {
+      args['name'] = plugin_name;
+      msg[`${stage}_plugin`] = args;
+    }
+
     sendWebsocket(msg);
   }
-  
 
   addDialog(dialog_id, title, html, dialog_xl, onsubmit);
   

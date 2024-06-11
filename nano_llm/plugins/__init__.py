@@ -11,6 +11,9 @@ from .rate_limit import RateLimit
 from .text_stream import TextStream
 from .text_overlay import TextOverlay
 from .process_proxy import ProcessProxy
+from .dynamic_plugin import DynamicPlugin
+from .web_client import WebClient
+from .terminal import TerminalPlugin
 
 from .audio import *
 from .video import VideoSource, VideoOutput

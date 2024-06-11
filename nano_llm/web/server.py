@@ -68,6 +68,7 @@ class WebServer():
         self.mounts = mounts
         self.upload_dir = None
         self.alert_count = 0
+        self.websocket = None
         
         if not self.root:
             self.root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../web'))
@@ -109,7 +110,6 @@ class WebServer():
             self.ssl_context.load_cert_chain(certfile=self.ssl_cert, keyfile=self.ssl_key)
             
         # websocket
-        self.websocket = None
         self.ws_port = ws_port
         self.kwargs['ws_port'] = ws_port
 
@@ -292,8 +292,11 @@ class WebServer():
         
         if self.MessageHandlers:
             for callback in WebServer.MessageHandlers:
-                callback({'client_state': 'connected'}, msg_type=WebServer.MESSAGE_JSON, timestamp=int(time.time()*1000))
-            
+                try:
+                    callback({'client_state': 'connected'}, msg_type=WebServer.MESSAGE_JSON, timestamp=int(time.time()*1000))
+                except Exception as error:
+                    logging.error(f"Exception occurred handling client_state 'connected' message\n{traceback.format_exc()}")
+     
         #listener_thread = threading.Thread(target=self.websocket_listener, args=[websocket], daemon=True)
         #listener_thread.start()
 

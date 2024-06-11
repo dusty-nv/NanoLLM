@@ -264,7 +264,7 @@ class MLCModel(NanoLLM):
             cmd += f"&& mlc_chat compile {quant_path} --device cuda --opt O3 --output {quant_path}/{model_name + '-' + method}-cuda.so"
         else:
             cmd = f"python3 -m mlc_llm.build --model {model_path} --quantization {method} "
-            cmd += f"--target cuda --use-cuda-graph --use-flash-attn-mqa --sep-embed "
+            cmd += f"--target cuda --use-flash-attn-mqa --sep-embed " # --use-cuda-graph 
             cmd += f"--max-seq-len {max_context_len} --artifact-path {os.path.join(output,f'{model_name}-ctx{max_context_len}')} "
 
             if len(glob.glob(os.path.join(model_path, '*.safetensors'))) > 0:

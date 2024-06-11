@@ -24,6 +24,7 @@
     <script type='text/javascript' src="/static/select2.min.js"></script>
     <script type='text/javascript' src='/static/webrtc.js'></script>
     <script type='text/javascript' src='/static/websocket.js'></script>
+    <script type='text/javascript' src='/static/debounce.js'></script>
     <script type='text/javascript' src='/static/audio.js'></script>
     <script type='text/javascript' src='/static/grid.js'></script>
     
@@ -37,6 +38,10 @@
           
           if( 'plugin_added' in payload ) {
             addPlugins(payload['plugin_added']);
+          }
+          
+          if( 'send_output' in payload ) {
+            sendOutput(payload['send_output']);
           }
           
           if( 'state_dict' in payload ) {
