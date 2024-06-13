@@ -267,4 +267,5 @@ class ChatMessage():
         if self.history.print_stats:
             print_table(model.vision.stats)
             
-        logging.debug(f"chat embed image  shape={self.embedding.shape}  dtype={self.embedding.dtype}  template={template}")
+        #logging.debug(f"chat embed image  shape={self.embedding.shape}  dtype={self.embedding.dtype}  template={template}")
+        

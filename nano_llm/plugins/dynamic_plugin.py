@@ -68,36 +68,49 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins import (
             ChatModel, VideoSource, VideoOutput,
             UserPrompt, AutoPrompt, VADFilter,
-            TextStream, TextOverlay, RateLimit,
-            AudioInputDevice, AudioOutputDevice, 
-            AudioRecorder, NanoDB,
+            TextStream, VideoOverlay, RateLimit,
+            AudioInputDevice, AudioOutputDevice, AudioRecorder, 
+            NanoDB, DataTable, DataLogger, EventFilter,
         )
-        
-        from nano_llm.plugins.audio.riva_asr import RivaASR
-        from nano_llm.plugins.audio.riva_tts import RivaTTS
-        from nano_llm.plugins.audio.piper_tts import PiperTTS
-        from nano_llm.plugins.audio.whisper_asr import WhisperASR
+
+        from nano_llm.plugins.speech.riva_asr import RivaASR
+        from nano_llm.plugins.speech.riva_tts import RivaTTS
+        from nano_llm.plugins.speech.piper_tts import PiperTTS
+        from nano_llm.plugins.speech.whisper_asr import WhisperASR
+
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
+        # LLM
         DynamicPlugin.register(ChatModel)   
         DynamicPlugin.register(UserPrompt)
         DynamicPlugin.register(AutoPrompt)   
         DynamicPlugin.register(TextStream)
-        DynamicPlugin.register(TextOverlay)
-        DynamicPlugin.register(VideoSource)
-        DynamicPlugin.register(VideoOutput)
-        DynamicPlugin.register(NanoDB)
-        DynamicPlugin.register(RateLimit)
+        
+        # speech
         DynamicPlugin.register(VADFilter)
         DynamicPlugin.register(WhisperASR)
         DynamicPlugin.register(RivaASR)
         DynamicPlugin.register(RivaTTS)
         DynamicPlugin.register(PiperTTS)
+        
+        # audio
         DynamicPlugin.register(AudioInputDevice)
         DynamicPlugin.register(AudioOutputDevice)
         DynamicPlugin.register(AudioRecorder)
         DynamicPlugin.register(WebAudioIn)
         DynamicPlugin.register(WebAudioOut)
+
+        # video
+        DynamicPlugin.register(VideoSource)
+        DynamicPlugin.register(VideoOutput)
+        DynamicPlugin.register(VideoOverlay)
+        DynamicPlugin.register(RateLimit)
+        
+        # database
+        DynamicPlugin.register(NanoDB)
+        DynamicPlugin.register(DataTable)
+        DynamicPlugin.register(DataLogger)
+        DynamicPlugin.register(EventFilter)
         
         logging.info(f"Registered dynamic plugin types:\n\n{pprint.pformat(DynamicPlugin.TypeInfo, indent=2)}")
 

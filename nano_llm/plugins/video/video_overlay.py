@@ -10,7 +10,7 @@ from nano_llm.utils import is_image, cuda_image, wrap_text
 from jetson_utils import cudaFont, cudaMemcpy
 
 
-class TextOverlay(Plugin):
+class VideoOverlay(Plugin):
     """
     Overlay static or dynamic text on top of a video stream.
     """

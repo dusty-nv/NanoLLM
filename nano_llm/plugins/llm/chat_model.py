@@ -171,7 +171,10 @@ class ChatModel(Plugin):
                 self.history.reset()
                 self.send_state()
                 return
-        
+            elif any([x == y for y in ('/refresh', '<refresh>')]):
+                self.send_state()
+                return
+                
         # add prompt to chat history
         if isinstance(input, str) or isinstance(input, dict) or isinstance(input, ImageTypes):
             self.history.append(role='user', msg=input)

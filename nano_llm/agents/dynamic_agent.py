@@ -116,7 +116,7 @@ class DynamicAgent(Agent):
             state_dict = self.global_states.get(name)
            
         if state_dict is not None: 
-            return dict(state_dict=state_dict)
+            return {'state_dict': {name: state_dict}}
     
     def on_client_connected(self):
         init_msg = {

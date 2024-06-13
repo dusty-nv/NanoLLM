@@ -321,7 +321,7 @@ function addNanoDBWidget(name, id, title, grid_options) {
   let onkeydown = debounce(function(event) {
     if( !event.repeat )
         onsubmit();
-  }, 250)
+  }, 100)
 
   document.getElementById(input_id).addEventListener('keydown', onkeydown);
   document.getElementById(submit_id).addEventListener('click', onsubmit);
@@ -345,7 +345,7 @@ function addChatWidget(name, id, title, grid_options) {
   const html = `
     <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)"></div>
     <div class="input-group">
-      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline)"></textarea>
+      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline) &nbsp;&nbsp;&nbsp; [Commands: &nbsp; /reset /pop /prefix]"></textarea>
       <span id="${submit_id}" class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;"></span>
     </div>
   `;
@@ -688,7 +688,10 @@ function addModules(modules) {
 }
 
 function capitalizeTitle(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
+    if( string.length < 4 )
+      return string.toUpperCase();
+    else
+      return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 function pluginMenuList() {

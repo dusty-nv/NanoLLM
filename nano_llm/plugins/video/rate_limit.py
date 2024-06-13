@@ -14,8 +14,8 @@ class RateLimit(Plugin):
       
     It can also chunk indexable outputs into smaller amounts of data at a time.
     """
-    def __init__(self, rate : float = None, chunk : int = None, 
-                       drop : bool = False, on_demand : bool = False, **kwargs):
+    def __init__(self, rate: float = None, chunk: int = None, 
+                       drop_inputs: bool = False, on_demand: bool = False, **kwargs):
         """
         Rate limiter plugin with the ability to pause/resume from the queue.
         
@@ -23,13 +23,13 @@ class RateLimit(Plugin):
           rate (float): The number of items per second that can be transmitted (or the playback factor for audio)
           chunk (int): For indexable inputs, the maximum number of items 
                        that can be in each output message.
-          drop (bool): If true, only the most recent inputs will be transmitted, with older inputs being dropped.
-                       Otherwise, the queue will continue to grow and be throttled to the given rate.
+          drop_inputs (bool): If true, only the most recent inputs will be transmitted, with older inputs being dropped.
+                              Otherwise, the queue will continue to grow and be throttled to the given rate.
           on_demand (bool): If true, outputs will only be sent when the reciever's input queues
                             are empty and ready for more data.  This will effectively rate limit to the
                             downstream processing speed.
         """
-        super().__init__(outputs='items', drop_inputs=drop, **kwargs)
+        super().__init__(outputs='items', drop_inputs=drop_inputs, **kwargs)
         
         self.paused = -1
         self.tx_rate = 0
@@ -37,7 +37,7 @@ class RateLimit(Plugin):
 
         self.add_parameter('rate', default=rate)
         self.add_parameter('chunk', default=chunk)
-        self.add_parameter('drop_inputs', name='Drop', default=drop, kwarg='drop')
+        self.add_parameter('drop_inputs', default=drop_inputs)
         self.add_parameter('on_demand', default=on_demand)
         
     def process(self, input, sample_rate=None, **kwargs):
