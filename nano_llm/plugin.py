@@ -400,6 +400,10 @@ class Plugin(threading.Thread):
         Set a state dict of parameters.
         """
         for attr, value in kwargs.items():
+            if attr not in self.parameters:
+                if attr != 'name' and attr != 'type' and attr != 'connections':
+                    logging.warning(f"attempted to set unknown parameter {self.name}.{attr}={value} (skipping)")
+                continue
             logging.debug(f"{self.name} setting parameter '{attr}' to {value}")
             if self.parameters[attr]['type'] == 'boolean' and isinstance(value, str):
                 value = value.lower()
@@ -426,7 +430,7 @@ class Plugin(threading.Thread):
         
         self._reordered_parameters = True
                     
-    def state_dict(self, config=False, **kwargs):
+    def state_dict(self, config=False, connections=False, **kwargs):
         """
         Return a configuration dict with plugin state that gets shared with clients. 
         Subclasses can reimplement this to add custom state for each type of plugin.
@@ -437,6 +441,9 @@ class Plugin(threading.Thread):
         }
         
         if config:
+            connections = True
+            
+        if connections:
             connections = []
             
             for c, output_channel in enumerate(self.outputs):
@@ -446,14 +453,16 @@ class Plugin(threading.Thread):
                         'input': 0,
                         'output': c
                      })
+            
+            state['connections'] = connections
    
+        if config:
             self.reorder_parameters()
             
             state.update({
                 'title': self.title if self.title else self.name,
                 'inputs': self.input_names,
                 'outputs': self.output_names,
-                'connections': connections,
                 'parameters': self.parameters,
             })
         

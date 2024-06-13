@@ -219,9 +219,8 @@ class WebServer():
             return
             
         if self.trace and logging.getLogger().isEnabledFor(logging.DEBUG):
-            logging.debug(f"sending {WebServer.msg_type_str(type)} websocket message (type={type} size={len(payload)})")
-            if type <= WebServer.MESSAGE_TEXT:
-                pprint.pprint(payload)
+            msg_text = '\n' + pprint.pformat(payload) if type <= WebServer.MESSAGE_TEXT else ''
+            logging.debug(f"sending {WebServer.msg_type_str(type)} websocket message (type={type} size={len(payload)}){msg_text}")
                     
         if type == WebServer.MESSAGE_JSON and not isinstance(payload, str):  # json.dumps() might have already been called
             #print('sending JSON', payload)
@@ -269,8 +268,17 @@ class WebServer():
             'category': category,
             'timeout': int(timeout*1000),
         }
+        
         self.send_message({'alert': alert})
         self.alert_count = self.alert_count + 1
+        
+        if level == 'error':
+            logging.error(message)
+        elif level == 'warning':
+            logging.warning(message)
+        else:
+            logging.info(message)
+ 
         return alert
         
     def on_websocket(self, websocket):      
@@ -359,9 +367,8 @@ class WebServer():
                 payload = payload.decode('utf-8')
 
             if self.trace and msg_type != WebServer.MESSAGE_AUDIO and logging.getLogger().isEnabledFor(logging.DEBUG):
-                logging.debug(f"recieved {WebServer.msg_type_str(msg_type)} websocket message from {websocket.remote_address} (type={msg_type} size={payload_size})")
-                if msg_type <= WebServer.MESSAGE_TEXT:
-                    pprint.pprint(payload)
+                msg_text = '\n' + pprint.pformat(payload) if msg_type <= WebServer.MESSAGE_TEXT else ''
+                logging.debug(f"recieved {WebServer.msg_type_str(msg_type)} websocket message from {websocket.remote_address} (type={msg_type} size={payload_size}){msg_text}")
                 
             # save uploaded files/images to the upload dir
             filename = None

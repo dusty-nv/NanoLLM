@@ -44,6 +44,12 @@
             addPlugins(payload['plugin_added']);
           }
           
+          console.log(payload);
+          
+          if( 'plugin_removed' in payload ) {
+            removePlugins(payload['plugin_removed']);
+          }
+          
           if( 'send_output' in payload ) {
             sendOutput(payload['send_output']);
           }
@@ -56,6 +62,10 @@
             setStats(payload['stats']);
           }
           
+          if( 'agents' in payload ) {
+            setAgents(payload['agents']);
+          }
+          
           if( 'alert' in payload ) {
             addAlert(payload['alert']);
           }
@@ -65,10 +75,28 @@
         }
       }
       
-      function onTestDialogSubmit() {
-        console.log('onTestDialogSubmit()');
+      function newAgent(name) {
+        sendWebsocket({'reset': {'plugins': true, 'globals': true}});
       }
       
+      function loadAgent(name) {
+        sendWebsocket({'load': name});
+      }
+      
+      function saveAgent(name) {
+        sendWebsocket({'save': name});
+      }
+      
+      function setAgents(agents) {
+        console.log('setting agents list', agents);
+        let menu = $('#navbarLoadAgentMenu');
+        menu.empty();
+        
+        agents.forEach((agent) => {
+          menu.append(`<li><a class="dropdown-item" href="#" onclick="loadAgent('${agent}')">${agent}</a></li>`);
+        });
+      }
+
       window.onload = function() {
 
         connectWebsocket(onWebsocketMsg, port={{ ws_port }});
@@ -81,6 +109,42 @@
         addGrid();
 
       }
+      </script>
+      <script type="text/javascript">
+        // https://bootstrap-menu.com/detail-multilevel.html
+        document.addEventListener("DOMContentLoaded", function(){
+        // make it as accordion for smaller screens
+        if (window.innerWidth < 992) {
+
+          // close all inner dropdowns when parent is closed
+          document.querySelectorAll('.navbar .dropdown').forEach(function(everydropdown){
+            everydropdown.addEventListener('hidden.bs.dropdown', function () {
+              // after dropdown is hidden, then find all submenus
+                this.querySelectorAll('.submenu').forEach(function(everysubmenu){
+                  // hide every submenu as well
+                  everysubmenu.style.display = 'none';
+                });
+            })
+          });
+
+          document.querySelectorAll('.dropdown-menu a').forEach(function(element){
+            element.addEventListener('click', function (e) {
+                let nextEl = this.nextElementSibling;
+                if(nextEl && nextEl.classList.contains('submenu')) {	
+                  // prevent opening link if link needs to open dropdown
+                  e.preventDefault();
+                  if(nextEl.style.display == 'block'){
+                    nextEl.style.display = 'none';
+                  } else {
+                    nextEl.style.display = 'block';
+                  }
+
+                }
+            });
+          })
+        }
+        // end if innerWidth
+        }); 
       </script>
       <style>
           #alert_container {
@@ -139,7 +203,29 @@
             }
           }
 
-          
+          /* ============ desktop view ============ */
+          @media all and (min-width: 992px) {
+	          .dropdown-menu li{ position: relative; 	}
+	          .nav-item .submenu{ 
+		          display: none;
+		          position: absolute;
+		          left:100%; top:-7px;
+	          }
+	          .nav-item .submenu-left{ 
+		          right:100%; left:auto;
+	          }
+	          .dropdown-menu > li:hover{ background-color: #f1f1f1 }
+	          .dropdown-menu > li:hover > .submenu{ display: block; }
+          }	
+          /* ============ desktop view .end// ============ */
+
+          /* ============ small devices ============ */
+          @media (max-width: 991px) {
+            .dropdown-menu .dropdown-menu{
+                margin-left:0.7rem; margin-right:0.7rem; margin-bottom: .5rem;
+            }
+          }	
+          /* ============ small devices .end// ============ */
           /*.grid-stack-item {
             background-color: #1FAD32;
           }*/
@@ -167,25 +253,20 @@
           </div>
           <div class="collapse navbar-collapse flex-grow-1 text-right" id="navbarToggler">
             <ul class="navbar-nav ms-auto flex-nowrap"> <!-- me-auto mb-2 mb-lg-0 -->
-              <!--<li class="nav-item">
-                <a class="nav-link" href="#">Agent</a>
-              </li>-->
-              <li class="nav-item">
-                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#test_dialog">Agent</a>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" id="navbarAgent" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Agent
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="navbarAgent">
+                  <li><a class="dropdown-item" href="#" onclick="newAgent()">New</a></li>
+                  <li><a class="dropdown-item" id="navbarLoadAgent" href="#">Load</a>
+                    <ul class="submenu dropdown-menu" id="navbarLoadAgentMenu" aria-labelledby="navbarLoadAgent"></ul>
+                  </li>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#saveAgentDialog">Save</a></li>
+                </ul>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#audioDialog">Audio</a>
-              </li>
-              <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarChatHistory" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  Chat
-                </a>
-                <ul class="dropdown-menu" aria-labelledby="navbarChatHistory">
-                  <li><a class="dropdown-item" href="#" id="chat_length">0 / 4096 tokens</a></li>
-                  <li><a class="dropdown-item" href="#" onclick="onChatHistoryReset()">Reset Chat</a></li>
-                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileDialog">User Profile</a>
-                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#displayDialog">Display Options</a>
-                </ul>
               </li>
             </ul>
           </div>
@@ -199,6 +280,29 @@
     </div>
               
     <div class="grid-stack m-2"></div>
+    
+    <!-- Save agent dialog -->
+    <div class="modal fade" id="saveAgentDialog" tabindex="-1" aria-labelledby="saveAgentTitle" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="saveAgentTitle">Save Agent</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="color: #eeeeee;"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <!--<label for="saveAgentName" class="form-label">Name</label>-->
+              <input id="saveAgentName" class="form-control" value="MyAgent"></input>
+              <div class="form-text">The name of the agent or filename to save on the server (.json or .yaml)<br/>By default, these get saved under <code>jetson-containers/data/nano_llm/agents</code></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="saveAgent(document.getElementById('saveAgentName').value)">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <!-- Audio settings dialog -->
     <div class="modal fade" id="audioDialog" tabindex="-1" aria-labelledby="audioDialogLabel" aria-hidden="true">

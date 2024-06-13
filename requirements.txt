@@ -12,3 +12,4 @@ getch
 decorator-args
 cachetools
 natsort
+pyyaml

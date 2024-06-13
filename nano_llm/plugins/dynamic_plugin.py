@@ -31,7 +31,12 @@ class DynamicPlugin(Plugin):
             elif value == 'true':
                 kwargs[key] = True
                 
-        return plugin(*args, **kwargs)
+        instance = plugin(*args, **kwargs)
+        
+        if instance is not None:
+            instance.init_kwargs = kwargs
+            
+        return instance
        
     @classmethod
     def modules(cls):

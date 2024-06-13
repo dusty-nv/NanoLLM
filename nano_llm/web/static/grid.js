@@ -6,7 +6,7 @@ var moduleTypes;
 var nodeIdToName = {};
 var stateListeners = {};
 var outputListeners = {};
-var ignoreConnectionEvents=false;
+var ignoreGraphEvents=false;
 
 
 function addGrid() {
@@ -345,7 +345,7 @@ function addChatWidget(name, id, title, grid_options) {
   const html = `
     <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)"></div>
     <div class="input-group">
-      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline) &nbsp;&nbsp;&nbsp; [Commands: &nbsp; /reset /pop /prefix]"></textarea>
+      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline) &nbsp;&nbsp;&nbsp; [Commands: &nbsp; /reset /refresh]"></textarea>
       <span id="${submit_id}" class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;"></span>
     </div>
   `;
@@ -629,6 +629,22 @@ function addPluginGridWidget(name, type, title, grid_options) {
   }
 }
 
+function removePlugins(plugins) {
+  if( !Array.isArray(plugins) )
+    plugins = [plugins];
+    
+  ignoreGraphEvents = true;
+  
+  for( i in plugins ) {
+    let plugin = plugins[i];
+    const id = drawflow.getNodesFromName(plugin)[0];
+    console.log(`removing plugin ${plugin} (id=${id})`);
+    drawflow.removeNodeId(`node-${id}`);
+  }
+
+  ignoreGraphEvents = false;
+}
+
 function addPlugins(plugins) {
   if( !Array.isArray(plugins) )
     plugins = [plugins];
@@ -642,7 +658,7 @@ function addPlugins(plugins) {
       addPlugin(plugin);
   }
   
-  ignoreConnectionEvents = true;
+  ignoreGraphEvents = true;
   
   for( i in plugins ) {
     for( l in plugins[i]['connections'] ) {
@@ -658,7 +674,7 @@ function addPlugins(plugins) {
     }
   }
   
-  ignoreConnectionEvents = false;
+  ignoreGraphEvents = false;
 }
 
 function addPluginTypes(types) {
@@ -813,13 +829,15 @@ function onNodeRemoved(id) {
   const pluginName = nodeIdToName[id];
   delete nodeIdToName[id];
   console.log(`node removed id=${id} name=${pluginName}`);
-  sendWebsocket({'remove_plugin': pluginName});
+  
+  if( !ignoreGraphEvents )
+    sendWebsocket({'remove_plugin': pluginName});
 }
 
 function onNodeConnectionCreated(event) {
-  console.log(`onNodeConnectionCreated(ignore=${ignoreConnectionEvents})`, event);
+  console.log(`onNodeConnectionCreated(ignore=${ignoreGraphEvents})`, event);
   
-  if( ignoreConnectionEvents )
+  if( ignoreGraphEvents )
     return;
     
   sendWebsocket({
@@ -833,9 +851,9 @@ function onNodeConnectionCreated(event) {
 }
 
 function onNodeConnectionRemoved(event) {
-  console.log(`onNodeConnectionRemoved(ignore=${ignoreConnectionEvents})`, event);
+  console.log(`onNodeConnectionRemoved(ignore=${ignoreGraphEvents})`, event);
   
-  if( ignoreConnectionEvents )
+  if( ignoreGraphEvents )
     return;
     
   sendWebsocket({

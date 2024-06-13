@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
+import os
+import json
+import yaml
+import glob
 import time
 import pprint
 import logging
 import threading
+import traceback
 
-from nano_llm import Agent
+import nano_llm
+
+from nano_llm import Agent, Plugin
 from nano_llm.web import WebServer
 from nano_llm.plugins import DynamicPlugin, TerminalPlugin, Tegrastats
 
@@ -14,20 +21,25 @@ class DynamicAgent(Agent):
     Agent that is dynamically configured at runtime by adding/removing plugins and their connections.
     It also provides a websocket API that automatically routes messages to plugin functions and attributes.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, load=None, agent_dir='/data/nano_llm/agents', **kwargs):
         super().__init__(**kwargs)
         
         DynamicPlugin.register_all()
-        
-        self.plugins = []
-        self.tegrastats = Tegrastats()
-        self.terminal = TerminalPlugin()
-        
-        self.global_states = {
-            'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
-            'TerminalPlugin': {'web_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}},
-        }
 
+        self.plugins = []
+        self.agent_dir = agent_dir
+        
+        os.makedirs(agent_dir, exist_ok=True)
+        
+        if not kwargs.get('web_trace', False):
+            self.tegrastats = Tegrastats()
+            self.terminal = TerminalPlugin()
+        else:
+            self.tegrastats = None
+            self.terminal = None
+            
+        self.reset()
+        
         self.webserver = WebServer(
             title='Agent Studio', 
             msg_callback=self.on_websocket, 
@@ -38,9 +50,12 @@ class DynamicAgent(Agent):
             **kwargs
         )
 
-    def add_plugin(self, type='', **kwargs):
-        if not kwargs.get('__thread__'):
-            threading.Thread(target=self.add_plugin, kwargs={**kwargs, 'type': type, '__thread__': True}).run()
+        if load:
+            self.load(load)
+            
+    def add_plugin(self, type='', wait=False, **kwargs):
+        if not wait:
+            threading.Thread(target=self.add_plugin, kwargs={**kwargs, 'type': type, 'wait': True}).run()
             return
             
         load_begin = time.perf_counter()
@@ -59,10 +74,12 @@ class DynamicAgent(Agent):
 
         load_time = time.perf_counter() - load_begin
         
-        if load_time > 1:  # don't show alert if model was cached
-            args_str = pprint.pformat(kwargs, indent=2, width=80).replace('\n', '<br/>')
-            self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
-    
+        #if load_time > 1:  # don't show alert if model was cached
+        args_str = pprint.pformat(kwargs, indent=2, width=80).replace('\n', '<br/>')
+        self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
+        
+        return plugin
+        
     def config_plugin(self, name='', **kwargs):
         plugin = self.find_plugin(name)
             
@@ -70,16 +87,6 @@ class DynamicAgent(Agent):
             plugin.set_parameters(**kwargs)
         else:
             self.global_states[name] = kwargs
-
-    def remove_plugin(self, name):
-        plugin = self.find_plugin(name);
-        
-        if plugin is None:
-            return
-            
-        self.plugins.remove(plugin)
-        plugin.stop()
-        del plugin
                         
     def find_plugin(self, name):
         if not name:
@@ -88,7 +95,39 @@ class DynamicAgent(Agent):
         for plugin in self.plugins:
             if name == plugin.name:
                 return plugin
-   
+
+    def remove_plugin(self, name):
+        if isinstance(name, Plugin):
+            plugin = name
+        else:
+            plugin = self.find_plugin(name);
+        
+        if plugin is None:
+            return
+        
+        for output_plugin in self.plugins:
+            for output_channel in output_plugin.outputs:
+                for output in output_channel.copy():
+                    if plugin == output:
+                        output_channel.remove(plugin)
+         
+        self.webserver.send_message({'plugin_removed': plugin.name});              
+        self.plugins.remove(plugin)
+        
+        plugin.stop()
+        del plugin
+     
+    def reset(self, plugins=True, globals=True):
+        if plugins:
+            for plugin in self.plugins:
+                self.remove_plugin(plugin)
+        
+        if globals:    
+            self.global_states = {
+                'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
+                'TerminalPlugin': {'web_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}},
+            }
+        
     def add_connection(self, input='', input_channel=0, output='', output_channel=0):
         input_plugin = self.find_plugin(input)
         output_plugin = self.find_plugin(output)
@@ -107,7 +146,25 @@ class DynamicAgent(Agent):
         
         output_plugin.outputs[output_channel].remove(input_plugin)
 
-    def get_state_dict(self, name):
+    def get_state_dict(self, name=''):
+        if not name or name == 'agent':
+            state_dict = {
+                'version': nano_llm.__version__,
+                'globals': self.global_states,
+                'plugins': [],
+            }
+            
+            for plugin in self.plugins:
+                plugin_state = plugin.state_dict(connections=True)
+
+                if hasattr(plugin, 'init_kwargs'): 
+                    plugin_state['init_kwargs'] = plugin.init_kwargs
+    
+                state_dict['plugins'].append(plugin_state)
+            
+            return state_dict    
+
+        # get the state of a specific plugin
         plugin = self.find_plugin(name)
         
         if plugin is not None:
@@ -118,10 +175,150 @@ class DynamicAgent(Agent):
         if state_dict is not None: 
             return {'state_dict': {name: state_dict}}
     
+    def set_state_dict(self, state_dict={}, name='', wait=None, reset=False, **kwargs):
+        if wait is None:
+            wait = True if name else False
+
+        if not wait:
+            threading.Thread(
+                target=self.set_state_dict, 
+                kwargs={**kwargs, 'name': name, 'state_dict': state_dict, 'wait': True}
+            ).run()
+            return
+        
+        print('SET STATE DICT', state_dict, name, wait, reset, kwargs)
+           
+        state_dict.update(kwargs)
+        
+        if name and name != 'agent':
+            self.config_plugin(name, **state_dict)
+            return
+        
+        if reset:
+            self.reset()
+                
+        self.global_states.update(state_dict.get('globals', {}))
+        
+        plugins = state_dict.get('plugins', [])
+
+        for plugin in plugins:
+            try:
+                instance = self.add_plugin(type=plugin['type'], wait=True, **plugin.get('init_kwargs', {}))
+                instance.set_parameters(**plugin)
+                plugin['original_name'] = plugin['name']
+                plugin['name'] = instance.name
+            except Exception as error:
+                logging.error(f"Exception occurred during adding plugin:\n{pprint.pformat(plugin, indent=2)}\n\n{traceback.format_exc()}")
+        
+        for plugin in plugins:
+            output_plugin = self.find_plugin(plugin['name'])
+            
+            if output_plugin is None:
+                logging.warning(f"could not find plugin '{plugin['name']}' when loading config (skipping connections)")
+                continue
+            
+            for connection in plugin['connections']:
+                for p in plugins:
+                    connection['to'] = connection['to'].replace(p['original_name'], p['name'])
+                    
+                input_plugin = self.find_plugin(connection['to'])
+                
+                if output_plugin is None:
+                    logging.warning(f"could not find plugin '{connection['to']}' when loading config (skipping connections)")
+                    continue  
+                    
+                output_plugin.add(input_plugin, channel=connection['output'])
+                # TODO send add_connection message to server
+                                 
+    def save(self, path):
+        if not path:
+            return
+            
+        ext = os.path.splitext(path)[1].lower()
+        
+        if not ext:
+            ext = '.json'
+            path = path + ext
+            
+        if not os.path.dirname(path):
+            path = os.path.join(self.agent_dir, path)
+
+        state_dict = self.get_state_dict()
+        
+        with open(path, 'w') as f:
+            if ext == '.json':
+                json.dump(state_dict, f, indent=2)
+            elif ext == '.yaml' or ext == '.yml':
+                yaml.safe_dump(state_dict, f, indent=2)
+            else:
+                raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
+                
+        logging.info(f"{self.__class__.__name__} saved agent to {path}")
+        self.webserver.send_message({'agents': self.get_agents_list()})
+    
+    def load(self, path):
+        if not path:
+            return
+      
+        found_path = None
+        
+        possible_files = [
+            path,
+            path + '.json',
+            path + '.yaml',
+            path + '.yml',
+        ]
+        
+        possible_files += [os.path.join(self.agent_dir, x) for x in possible_files]
+
+        for possible_file in possible_files:
+            if os.path.isfile(possible_file):
+                found_path = possible_file
+                break
+                
+        if not found_path:
+           self.webserver.send_alert(f"Couldn't find agent '{path}' on server", level='error')
+           return
+        
+        try:   
+            ext = os.path.splitext(found_path)[1].lower()
+            
+            with open(found_path, 'r') as f:
+                if ext == '.json':
+                    state_dict = json.load(f)
+                elif ext == '.yaml' or ext == '.yml':
+                    state_dict = yaml.safe_load(f)
+                else:
+                    raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
+
+            self.set_state_dict(state_dict, reset=True)
+        except Exception as error:
+            self.webserver.send_alert(f"Exception occurred loading agent '{path}'\n\n{traceback.format_exc()}", level='error')
+        else:
+            self.webserver.send_alert(f"Loaded agent {path} ({len(self.plugins)} nodes)", level='success')
+
+    def get_agents_list(self, agent_dir=None, remove_extensions=True):
+        if not agent_dir:
+            agent_dir = self.agent_dir
+
+        files = []
+        extensions = ['.json', '.yaml', '.yml']
+        
+        for ext in extensions:
+            files.extend(glob.glob(f'**{ext}', root_dir=agent_dir))
+
+        if remove_extensions:
+            for ext in extensions:
+                for i, file in enumerate(files):
+                    files[i] = file.replace(ext, '')
+                    
+        return files
+              
     def on_client_connected(self):
         init_msg = {
             'modules': DynamicPlugin.modules(),
             'plugin_types': DynamicPlugin.TypeInfo,
+            'agents': self.get_agents_list(),
         }
         
         init_msg['plugin_added'] = [{'name': name, 'global': True, **state} for name, state in self.global_states.items()]
@@ -222,8 +419,12 @@ class DynamicAgent(Agent):
         '''
                                   
     def start(self):
-        self.terminal.start()
-        self.tegrastats.start()
+        if self.terminal is not None:
+            self.terminal.start()
+            
+        if self.tegrastats is not None:
+            self.tegrastats.start()
+            
         self.webserver.start()
         return self
         
@@ -235,6 +436,9 @@ class DynamicAgent(Agent):
 
 if __name__ == "__main__":
     parser = ArgParser(extras=['web', 'log'])
+    
+    parser.add_argument("--load", type=str, default=None, help="load an agent from .json or .yaml")
+    parser.add_argument("--agent-dir", type=str, default="/data/nano_llm/agents", help="change the agent load/save directory")
     
     parser.add_argument("--index", "--page", type=str, default="studio.html", help="the filename of the site's index html page (should be under web/templates)") 
     parser.add_argument("--root", type=str, default=None, help="the root directory for serving site files (should have static/ and template/")

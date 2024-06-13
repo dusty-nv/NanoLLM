@@ -3,7 +3,6 @@ import os
 import re
 import json
 import logging
-import traceback
 import termcolor
 import numpy as np
 
