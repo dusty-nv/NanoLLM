@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import time
+import natsort
 import logging
 
 import numpy as np
@@ -57,7 +58,7 @@ class PiperTTS(AutoTTS):
         #self.language = language_code
 
         self.add_parameter('voice', default=voice)
-        self.add_parameter('speaker', default=voice_speaker, kwarg='voice_speaker')
+        self.add_parameter('speaker', default=voice_speaker, options=self.speakers, kwarg='voice_speaker')
         self.add_parameter('rate', default=voice_rate, kwarg='voice_rate')
         
         logging.debug(f"running Piper TTS model warm-up for {self.voice}")
@@ -92,11 +93,16 @@ class PiperTTS(AutoTTS):
         if not self._speaker_id_map:
             self._speaker_id_map = {'Default': 0}
         
+        self._speaker_list = list(self._speaker_id_map.keys())
+                  
+        if len(self._speaker_list) > 20:
+            self._speaker_list = natsort.natsorted(self._speaker_list)
+            
         self.speaker = self.speakers[0]
 
     @property
     def speakers(self):
-        return list(self._speaker_id_map.keys())
+        return self._speaker_list
         
     @property
     def speaker(self):

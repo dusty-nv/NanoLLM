@@ -56,6 +56,10 @@ class WhisperASR(AutoASR):
         self.model = load_trt_model(self.model_name, verbose=True)
         self.model.transcribe(np.zeros(1536, dtype=np.float32)) # warmup
     
+    @classmethod
+    def type_hints(cls):
+        return {'model': {'options': ['tiny', 'base', 'small']}}
+        
     def transcribe(self, chunks):
         """
         Transcribe a list of audio chunks, returning the text.

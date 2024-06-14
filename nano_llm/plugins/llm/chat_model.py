@@ -27,7 +27,7 @@ class ChatModel(Plugin):
     OutputPartial = 1
     OutputFinal = 2
     OutputWords = 3
-    OutputEmbed = 4
+    OutputHistory = 4
     
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
@@ -45,7 +45,7 @@ class ChatModel(Plugin):
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
           system_prompt (str):  Set the system prompt (changing this will reset the chat)           
         """
-        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'embed'], drop_inputs=drop_inputs, **kwargs)
+        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'history'], drop_inputs=drop_inputs, **kwargs)
 
         load_time = time.perf_counter()
         
@@ -130,13 +130,15 @@ class ChatModel(Plugin):
             },
         }
 
+    '''
     def state_dict(self, html=True, **kwargs):
         return {
             **super().state_dict(**kwargs),
             'model': self.model_name,
             'history': self.history.to_list(html=html),
        }
-       
+    '''
+      
     def process(self, input, **kwargs):
         """
         Generate the reply to a prompt or the latest ChatHistory.
@@ -247,8 +249,9 @@ class ChatModel(Plugin):
                 self.output(token, ChatModel.OutputDelta, delta=True, partial=True)
                 self.output(bot_reply.content, ChatModel.OutputPartial, partial=True)
                 
-                self.send_state() # sync the chat history with clients
-                
+                if self.outputs[ChatModel.OutputHistory]:
+                    self.output(chat_history.to_list(html=True), ChatModel.OutputHistory, partial=True)
+
                 # if a space was added, emit new word(s)
                 words += token
                 last_space = words.rfind(' ')
@@ -277,13 +280,13 @@ class ChatModel(Plugin):
             bot_reply.tokens = self.stream.tokens
             chat_history.kv_cache = self.stream.kv_cache
             self.stream = None
-            
-            print('ROT REPLY, bot_reply.content')
-            
+
             # output the final generated text on channel 2
             self.output(bot_reply.content, ChatModel.OutputFinal)
-            self.send_state()
             
+            if self.outputs[ChatModel.OutputHistory]:
+                self.output(chat_history.to_list(html=True), ChatModel.OutputHistory, partial=True)
+
             if self.print_stats:
                 print_table(self.model.stats)
                 

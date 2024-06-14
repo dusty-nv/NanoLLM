@@ -75,8 +75,8 @@ class Plugin(threading.Thread):
 
         self.outputs = [[] for i in range(outputs)]
 
-        self.add_parameter('web_grid', type=dict, default={}, hidden=True)
-        self.add_parameter('web_node', type=dict, default={}, hidden=True)
+        self.add_parameter('layout_grid', type=dict, default={}, hidden=True)
+        self.add_parameter('layout_node', type=dict, default={}, hidden=True)
         
         if threaded:
             self.input_queue = queue.Queue()
@@ -100,7 +100,7 @@ class Plugin(threading.Thread):
         """
         raise NotImplementedError(f"plugin {self.name} has not implemented process()")
     
-    def add(self, plugin, channel=0, **kwargs):
+    def connect(self, plugin, channel=0, **kwargs):
         """
         Connect the output queue from this plugin with the input queue of another plugin,
         so that this plugin sends its output data to the other one.
@@ -118,7 +118,7 @@ class Plugin(threading.Thread):
         
         if not isinstance(plugin, Plugin):
             if not callable(plugin):
-                raise TypeError(f"{type(self)}.add() expects either a Plugin instance or a callable function (was {type(plugin)})")
+                raise TypeError(f"{type(self)}.connect() expects either a Plugin instance or a callable function (was {type(plugin)})")
             plugin = Callback(plugin, **kwargs)
             
         self.outputs[channel].append(plugin)
@@ -129,6 +129,12 @@ class Plugin(threading.Thread):
             logging.debug(f"connected {self.name} to {plugin.name} on channel={channel}")
             
         return self
+        
+    def add(self, plugin, channel=0, **kwargs):
+        """
+        @deprecated Please use :func:``Plugin.connect``
+        """
+        return self.connect(plugin, channel=channel, **kwargs)
     
     def __call__(self, input=None, **kwargs):
         """
@@ -229,7 +235,7 @@ class Plugin(threading.Thread):
         Flag the plugin to stop processing and exit the run() thread.
         """
         self.stop_flag = True
-        logging.info(f"stopping plugin {self.name}")
+        logging.debug(f"stopping plugin {self.name} (thread {self.native_id})")
                
     def run(self):
         """
@@ -237,7 +243,9 @@ class Plugin(threading.Thread):
         """
         while not self.stop_flag:
             try:
-                self.input_event.wait()
+                if not self.input_event.wait(timeout=0.25):
+                    continue
+                    
                 self.input_event.clear()
                 
                 while not self.stop_flag:
@@ -249,7 +257,7 @@ class Plugin(threading.Thread):
             except Exception as error:
                 logging.error(f"Exception occurred during processing of {self.name}\n\n{traceback.format_exc()}")
 
-        logging.info(f"{self.name} plugin stopped")
+        logging.debug(f"{self.name} plugin stopped (thread {self.native_id})")
         
     def dispatch(self, input, **kwargs):
         """
@@ -339,6 +347,8 @@ class Plugin(threading.Thread):
                       default=None, hidden=False, help=None, kwarg=None, end=None, **kwargs):
         """
         Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
+        These will automatically show up in the studio web UI and can be sync'd over websockets.
+        If there is an __init__ parameter by the same name, its help docs will be taken from that.
         """
         if not kwarg:
             kwarg = attribute
@@ -397,7 +407,7 @@ class Plugin(threading.Thread):
             
     def set_parameters(self, **kwargs):
         """
-        Set a state dict of parameters.
+        Set a state dict of parameters. Only entries in the dict matching a parameter will be set.
         """
         for attr, value in kwargs.items():
             if attr not in self.parameters:
@@ -415,7 +425,7 @@ class Plugin(threading.Thread):
     
     def reorder_parameters(self):
         """
-        Move some parameters to the end for display purposes if end=True
+        Move some parameters to the end for display purposes (if end=True)
         """
         if hasattr(self, '_reordered_parameters') and self._reordered_parameters:
             return
@@ -430,7 +440,7 @@ class Plugin(threading.Thread):
         
         self._reordered_parameters = True
                     
-    def state_dict(self, config=False, connections=False, **kwargs):
+    def state_dict(self, config=False, connections=False, hidden=False, **kwargs):
         """
         Return a configuration dict with plugin state that gets shared with clients. 
         Subclasses can reimplement this to add custom state for each type of plugin.
@@ -467,7 +477,7 @@ class Plugin(threading.Thread):
             })
         
         for attr, param in self.parameters.items():
-            if not param['hidden'] or config:
+            if hidden or not param['hidden'] or config:
                 state[attr] = getattr(self, attr)
             
         return state
@@ -522,5 +532,5 @@ class Plugin(threading.Thread):
         web_client = WebClient()
         web_client.start()
          
-        self.add(web_client, channel=channel)
+        self.connect(web_client, channel=channel)
            

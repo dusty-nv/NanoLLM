@@ -44,7 +44,9 @@
             addPlugins(payload['plugin_added']);
           }
           
-          console.log(payload);
+          if( 'plugin_connected' in payload ) {
+            connectPlugins(payload['plugin_connected']);
+          }
           
           if( 'plugin_removed' in payload ) {
             removePlugins(payload['plugin_removed']);
@@ -79,21 +81,30 @@
         sendWebsocket({'reset': {'plugins': true, 'globals': true}});
       }
       
-      function loadAgent(name) {
-        sendWebsocket({'load': name});
-      }
-      
       function saveAgent(name) {
         sendWebsocket({'save': name});
       }
       
+      function loadAgent(name) {
+        sendWebsocket({'load': name});
+      }
+      
+      function insertAgent(name) {
+        sendWebsocket({'insert': name});
+      }
+      
       function setAgents(agents) {
         console.log('setting agents list', agents);
-        let menu = $('#navbarLoadAgentMenu');
-        menu.empty();
+        
+        let load_menu = $('#navbarLoadAgentMenu');
+        let insert_menu = $('#navbarInsertAgentMenu');
+        
+        load_menu.empty();
+        insert_menu.empty();
         
         agents.forEach((agent) => {
-          menu.append(`<li><a class="dropdown-item" href="#" onclick="loadAgent('${agent}')">${agent}</a></li>`);
+          load_menu.append(`<li><a class="dropdown-item" href="#" onclick="loadAgent('${agent}')">${agent}</a></li>`);
+          insert_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertAgent('${agent}')">${agent}</a></li>`);
         });
       }
 
@@ -183,7 +194,8 @@
           }
           
           .select2-selection__rendered {
-            padding-top: 3px;
+            padding-top: 4px;
+            padding-bottom: 4px;
           }
           
           .select2-search__field {
@@ -259,10 +271,13 @@
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="navbarAgent">
                   <li><a class="dropdown-item" href="#" onclick="newAgent()">New</a></li>
+                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#saveAgentDialog">Save</a></li>
                   <li><a class="dropdown-item" id="navbarLoadAgent" href="#">Load</a>
                     <ul class="submenu dropdown-menu" id="navbarLoadAgentMenu" aria-labelledby="navbarLoadAgent"></ul>
                   </li>
-                  <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#saveAgentDialog">Save</a></li>
+                  <li><a class="dropdown-item" id="navbarInsertAgent" href="#">Insert</a>
+                    <ul class="submenu dropdown-menu" id="navbarInsertAgentMenu" aria-labelledby="navbarInsertAgent"></ul>
+                  </li>
                 </ul>
               </li>
               <li class="nav-item">

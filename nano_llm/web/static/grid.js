@@ -18,7 +18,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
+          'layout_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
       }});
     });
   });
@@ -29,7 +29,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'web_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
+          'layout_grid': {'x': item.x, 'y': item.y, 'w': item.w, 'h': item.h}
       }});
     });
   });
@@ -40,7 +40,7 @@ function addGrid() {
       sendWebsocket({
         'config_plugin': {
           'name': item.id,
-          'web_grid': {} 
+          'layout_grid': {} 
       }});
     });
   });
@@ -137,9 +137,9 @@ function addGridWidget(id, title, html, titlebar_html, grid_options) {
   }
   
   addStateListener(plugin, function(state_dict) {
-    if( 'web_grid' in state_dict ) {
-      console.log(`updating ${plugin} grid widget`, state_dict['web_grid']);
-      grid.update(widget, state_dict['web_grid']);
+    if( 'layout_grid' in state_dict ) {
+      console.log(`updating ${plugin} grid widget`, state_dict['layout_grid']);
+      grid.update(widget, state_dict['layout_grid']);
     }
   });
   
@@ -373,14 +373,10 @@ function addChatWidget(name, id, title, grid_options) {
   document.getElementById(input_id).addEventListener('keydown', onkeydown);
   document.getElementById(submit_id).addEventListener('click', onsubmit);
 
-  addStateListener(name, function(state_dict) {
-    console.log(`${name}.stateListener()`, state_dict);
-    if( 'history' in state_dict ) {
-      updateChatHistory(history_id, state_dict['history']);
-    }
+  addOutputListener(name, 4, function(history) {
+    updateChatHistory(history_id, history);
   });
-  
-  sendWebsocket({'get_state_dict': name});
+
   return widget;
 }
 
@@ -522,13 +518,13 @@ function addPlugin(plugin) {
   
   const plugin_name = plugin['name'];
   const plugin_title = plugin['title'];
-  const web_grid = plugin['web_grid'];
-  const web_node = plugin['web_node'];
+  const layout_grid = plugin['layout_grid'];
+  const layout_node = plugin['layout_node'];
   const nodes = document.querySelectorAll('.drawflow-node');
 
-  if( ('x' in web_node) && ('y' in web_node) ) {
-    var x = web_node['x'];
-    var y = web_node['y'];
+  if( ('x' in layout_node) && ('y' in layout_node) ) {
+    var x = layout_node['x'];
+    var y = layout_node['y'];
   }
   else
   {
@@ -592,8 +588,8 @@ function addPlugin(plugin) {
   if( has_config_dialog )
     addPluginDialog(plugin_name, 'config', plugin_title, null, plugin['parameters']);
     
-  if( Object.keys(web_grid).length > 0 ) {
-    addPluginGridWidget(plugin_name, plugin['type'], plugin_title, web_grid);
+  if( Object.keys(layout_grid).length > 0 ) {
+    addPluginGridWidget(plugin_name, plugin['type'], plugin_title, layout_grid);
   }
 }
 
@@ -629,18 +625,33 @@ function addPluginGridWidget(name, type, title, grid_options) {
   }
 }
 
+function connectPlugins(connections) {
+  if( !Array.isArray(connections) )
+    connections = [connections];
+    
+  ignoreGraphEvents = true;
+  
+  connections.forEach((connection) => {
+    const from_id = drawflow.getNodesFromName(connection['from'])[0];
+    const to_id = drawflow.getNodesFromName(connection['to'])[0];
+    console.log(`connecting plugin ${connection['from']} (id=${from_id}, channel=${connection['output']}) => ${connection['to']} (id=${to_id}, channel=${connection['input']})`);
+    drawflow.addConnection(from_id, to_id, `output_${connection['output']+1}`, `input_${connection['input']+1}`);
+  });
+
+  ignoreGraphEvents = false;
+}
+
 function removePlugins(plugins) {
   if( !Array.isArray(plugins) )
     plugins = [plugins];
     
   ignoreGraphEvents = true;
   
-  for( i in plugins ) {
-    let plugin = plugins[i];
+  plugins.forEach((plugin) => {
     const id = drawflow.getNodesFromName(plugin)[0];
     console.log(`removing plugin ${plugin} (id=${id})`);
     drawflow.removeNodeId(`node-${id}`);
-  }
+  });
 
   ignoreGraphEvents = false;
 }
@@ -652,7 +663,7 @@ function addPlugins(plugins) {
   for( i in plugins ) {
     let plugin = plugins[i];
     if( ('global' in plugin) ) {
-      addPluginGridWidget(plugin['name'], null, ('web_grid' in plugin) ? plugin['web_grid'] : null);
+      addPluginGridWidget(plugin['name'], null, ('layout_grid' in plugin) ? plugin['layout_grid'] : null);
     }
     else
       addPlugin(plugin);
@@ -820,7 +831,7 @@ function onNodeMoved(id) {
   sendWebsocket({
     'config_plugin': {
       'name': node['name'],
-      'web_node': {'x': node['pos_x'], 'y': node['pos_y']}
+      'layout_node': {'x': node['pos_x'], 'y': node['pos_y']}
     } 
   });
 }
@@ -942,27 +953,32 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     if( 'help' in param )
       help = `<div id="${id}_help" class="form-text">${param['help']}</div>`;
     
-    switch(param['type']) {
-      case 'number':
-      case 'integer':
-        var type='number'; break;
-      default:
-        var type='text';
+    if( param['type'] == 'boolean' ) {
+      param['options'] = [true, false]
     }
     
-    if( 'options' in param /*|| has_suggestions*/ ) {
-      //if( has_options ) {
-      let options = param['options'];
-      //}
-      /*else if( has_suggestions ) {
-        var options = param['suggestions'];
-        select2_args[id] = {tags: true, placeholder: 'enter'};
-      }*/
+    const has_options = ('options' in param);
+    const has_suggestions = ('suggestions' in param);
+    
+    if( has_options || has_suggestions ) {
+      var input_html = '';
       
-      var input_html = `<select id="${id}" class="form-control">\n`
+      if( has_options ) {
+        var options = param['options'];
+        if( options.length > 8 )
+          select2_args[id] = {};
+        else
+          select2_args[id] = {minimumResultsForSearch: Infinity};
+      }
+      else if( has_suggestions ) {
+        var options = param['suggestions'];
+        select2_args[id] = {tags: true, placeholder: 'enter'}; //tags: true, placeholder: 'enter'};
+      }
+      
+      input_html += `<br/><select id="${id}" class="form-control select2" style="width: 100%;">\n`
       
       for( i in options ) {
-        if( i == 0 )
+        if( options[i] == value )
           var selected = ` selected="selected"`;
         else
           var selected = '';
@@ -972,7 +988,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
       
       input_html += `</select>\n`;
     }
-    else if( 'suggestions' in param ) {
+    /*else if( 'suggestions' in param ) {
       const list_id = `${id}_list`;
       var input_html = `<input id="${id}" type="${type}" class="form-control" list="${list_id}"/>`;
       
@@ -983,7 +999,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
       }
       
       input_html += `</datalist>`; 
-    }
+    }*/
     else if( 'multiline' in param ) {
       var input_html = `<textarea id="${id}" class="form-control" aria-describedby="${id}_help" rows=${param['multiline']}>${value}</textarea>`;
     }
@@ -991,6 +1007,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
       var input_html = `<input id="${id}" type="color" class="form-control" aria-describedby="${id}_help" ${value_html}/>`;
     }
     else {
+      const type = (param['type'] == 'integer') ? 'number' : param['type'];
       var input_html = `<input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value_html}>`;
     }
 
@@ -1044,9 +1061,11 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
 
   addDialog(dialog_id, title, html, dialog_xl, onsubmit);
   
-  //for( select2_id in select2_args )
-  //  $(`#${select2_id}`).select2(select2_args[select2_id]);
-
+  for( select2_id in select2_args ) {
+    select2_args[select2_id]['dropdownParent'] = $(`#${dialog_id}`);
+    $(`#${select2_id}`).select2(select2_args[select2_id]);
+  }
+  
   return dialog_id;
 }
 

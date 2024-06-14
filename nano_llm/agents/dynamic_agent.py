@@ -53,14 +53,18 @@ class DynamicAgent(Agent):
         if load:
             self.load(load)
             
-    def add_plugin(self, type='', wait=False, **kwargs):
+    def add_plugin(self, type='', wait=False, state_dict={}, **kwargs):          
         if not wait:
-            threading.Thread(target=self.add_plugin, kwargs={**kwargs, 'type': type, 'wait': True}).run()
+            threading.Thread(target=self.add_plugin, kwargs={'type': type, 'wait': True, 'state_dict': state_dict, **kwargs}).run()
             return
             
         load_begin = time.perf_counter()
-        plugin = DynamicPlugin(type, **kwargs)
-            
+        init_kwargs = {**state_dict.get('init_kwargs', {}), **kwargs}
+        
+        # create the desired plugin type with the specified init args
+        plugin = DynamicPlugin(type, **init_kwargs)
+        
+        # rename the plugin if one already exists by that name
         plugin_name = plugin.name
         plugin_idx = 1
         
@@ -68,15 +72,17 @@ class DynamicAgent(Agent):
             plugin.name = f"{plugin_name}_{plugin_idx}"
             plugin_idx += 1
         
-        self.plugins.append(plugin)     
+        # update with runtime params and start threads
+        self.plugins.append(plugin)
+        plugin.set_parameters(**state_dict)     
         plugin.start()
         self.webserver.send_message({'plugin_added': [plugin.state_dict(config=True)]})
 
         load_time = time.perf_counter() - load_begin
         
-        #if load_time > 1:  # don't show alert if model was cached
-        args_str = pprint.pformat(kwargs, indent=2, width=80).replace('\n', '<br/>')
-        self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
+        if load_time > 1:  # don't show alert if model was cached
+            args_str = pprint.pformat(init_kwargs, indent=2, width=80).replace('\n', '<br/>')
+            self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
         
         return plugin
         
@@ -119,14 +125,16 @@ class DynamicAgent(Agent):
      
     def reset(self, plugins=True, globals=True):
         if plugins:
-            for plugin in self.plugins:
+            for plugin in self.plugins.copy():
                 self.remove_plugin(plugin)
         
         if globals:    
             self.global_states = {
-                'GraphEditor': {'web_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
-                'TerminalPlugin': {'web_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}},
+                'GraphEditor': {'layout_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
+                'TerminalPlugin': {'layout_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}},
             }
+        
+        logging.debug(f"{self.__class__.__name__} issued reset (plugins={plugins}, globals={globals})")
         
     def add_connection(self, input='', input_channel=0, output='', output_channel=0):
         input_plugin = self.find_plugin(input)
@@ -135,7 +143,7 @@ class DynamicAgent(Agent):
         if input_plugin is None or output_plugin is None:
             return
         
-        output_plugin.add(input_plugin, channel=output_channel)
+        output_plugin.connect(input_plugin, channel=output_channel)
 
     def remove_connection(self, input='', input_channel=0, output='', output_channel=0):
         input_plugin = self.find_plugin(input)
@@ -155,7 +163,7 @@ class DynamicAgent(Agent):
             }
             
             for plugin in self.plugins:
-                plugin_state = plugin.state_dict(connections=True)
+                plugin_state = plugin.state_dict(connections=True, hidden=True)
 
                 if hasattr(plugin, 'init_kwargs'): 
                     plugin_state['init_kwargs'] = plugin.init_kwargs
@@ -203,10 +211,10 @@ class DynamicAgent(Agent):
 
         for plugin in plugins:
             try:
-                instance = self.add_plugin(type=plugin['type'], wait=True, **plugin.get('init_kwargs', {}))
-                instance.set_parameters(**plugin)
+                instance = self.add_plugin(type=plugin['type'], wait=True, state_dict=plugin)
                 plugin['original_name'] = plugin['name']
                 plugin['name'] = instance.name
+                print(f"{instance.name} layout_node", instance.layout_node)
             except Exception as error:
                 logging.error(f"Exception occurred during adding plugin:\n{pprint.pformat(plugin, indent=2)}\n\n{traceback.format_exc()}")
         
@@ -223,13 +231,19 @@ class DynamicAgent(Agent):
                     
                 input_plugin = self.find_plugin(connection['to'])
                 
-                if output_plugin is None:
+                if input_plugin is None:
                     logging.warning(f"could not find plugin '{connection['to']}' when loading config (skipping connections)")
                     continue  
                     
-                output_plugin.add(input_plugin, channel=connection['output'])
-                # TODO send add_connection message to server
-                                 
+                output_plugin.connect(input_plugin, channel=connection['output'])
+                
+                self.webserver.send_message({
+                    'plugin_connected': {
+                        'from': output_plugin.name,
+                        **connection
+                    }
+                })
+                  
     def save(self, path):
         if not path:
             return
@@ -253,10 +267,10 @@ class DynamicAgent(Agent):
             else:
                 raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
                 
-        logging.info(f"{self.__class__.__name__} saved agent to {path}")
+        self.webserver.send_alert(f"saved agent to {path}", level='success')
         self.webserver.send_message({'agents': self.get_agents_list()})
     
-    def load(self, path):
+    def load(self, path, reset=True):
         if not path:
             return
       
@@ -291,12 +305,15 @@ class DynamicAgent(Agent):
                 else:
                     raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
 
-            self.set_state_dict(state_dict, reset=True)
+            self.set_state_dict(state_dict, reset=reset)
         except Exception as error:
             self.webserver.send_alert(f"Exception occurred loading agent '{path}'\n\n{traceback.format_exc()}", level='error')
         else:
             self.webserver.send_alert(f"Loaded agent {path} ({len(self.plugins)} nodes)", level='success')
 
+    def insert(self, path):
+        return self.load(path, reset=False)
+        
     def get_agents_list(self, agent_dir=None, remove_extensions=True):
         if not agent_dir:
             agent_dir = self.agent_dir
