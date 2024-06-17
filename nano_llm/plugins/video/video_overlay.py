@@ -7,7 +7,7 @@ import traceback
 from nano_llm import Plugin, StopTokens
 from nano_llm.utils import is_image, cuda_image, wrap_text
 
-from jetson_utils import cudaFont, cudaMemcpy
+from jetson_utils import cudaFont, cudaMemcpy, cudaEventRecord
 
 
 class VideoOverlay(Plugin):
@@ -100,12 +100,13 @@ class VideoOverlay(Plugin):
             text = text.replace(stop_token, '')
         
         input = cuda_image(input)
+        stream = input.stream
         
         if return_copy is None:
             return_copy = self.return_copy
             
         if return_copy:
-            input = cudaMemcpy(input)
+            input = cudaMemcpy(input, stream=stream)
             
         alpha = int(self.opacity * 255)
         color = PIL.ImageColor.getcolor(self.color, 'RGB')
@@ -127,7 +128,12 @@ class VideoOverlay(Plugin):
             font_kwargs['line_length'] = self.line_length
             
         font_kwargs.update(kwargs)
-        wrap_text(self._font, input, **font_kwargs)
+        wrap_text(self._font, input, stream=stream, **font_kwargs)
+        
+        if stream:
+            input.event = cudaEventRecord(stream=stream)
+            input.stream = stream
+            
         self.output(input)
 
             

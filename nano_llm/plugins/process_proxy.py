@@ -133,11 +133,11 @@ class ProcessProxy(Plugin):
             
         self.control_child.send({
             'status': 'initialized',
-            'output_channels': self.plugin.output_channels,
+            'output_channels': len(self.plugin.outputs),
         })
         
         # forward outputs back to parent process
-        for i in range(self.plugin.output_channels):
+        for i in range(len(self.plugin.outputs)):
             self.plugin.add(OutputProxy(self.data_child, i), i)
             
         # start the plugin processing

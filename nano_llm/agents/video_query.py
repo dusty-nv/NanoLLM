@@ -41,7 +41,7 @@ class VideoQuery(Agent):
             vision_scaling = 'resize'
             
         #: The model plugin (ChatQuery)
-        self.llm = ProcessProxy('ChatQuery', model=model, drop_inputs=True, vision_scaling=vision_scaling, warmup=True, **kwargs)
+        self.llm = ChatQuery(model=model, drop_inputs=True, vision_scaling=vision_scaling, warmup=True, **kwargs) #ProcessProxy('ChatQuery', model=model, drop_inputs=True, vision_scaling=vision_scaling, warmup=True, **kwargs)
         self.llm.add(PrintStream(color='green', relay=True).add(self.on_text))
         self.llm.start()
 
@@ -49,8 +49,8 @@ class VideoQuery(Agent):
         self.eos = False
 
         # create video streams    
-        self.video_source = VideoSource(**kwargs)  #: The video source plugin
-        self.video_output = VideoOutput(**kwargs)  #: The video output plugin
+        self.video_source = VideoSource(**kwargs, cuda_stream=0)  #: The video source plugin
+        self.video_output = VideoOutput(**kwargs, cuda_stream=0)  #: The video output plugin
         
         self.video_source.add(self.on_video, threaded=False)
         self.video_output.start()

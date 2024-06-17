@@ -152,8 +152,8 @@ function websocketListener(event) {
 			payload.text().then((text) => {
 				json = JSON.parse(text);
 				
-				if( Array.isArray(json) || Object.keys(json).length > 1 || ! ('stats' in json) )
-				    console.log('recieved json websocket message:', json);
+				//if( Array.isArray(json) || Object.keys(json).length > 1 || ! ('stats' in json) )
+				//    console.debug('recieved json websocket message:', json);
 				
 				if( websocketCallback != undefined )
 						websocketCallback(json, msg_type);
@@ -161,7 +161,7 @@ function websocketListener(event) {
 		}
 		if( msg_type == MESSAGE_TEXT ) { // TEXT message
 			payload.text().then((text) => {
-				console.log(`recieved text websocket message: ${text}`);
+				//console.debug(`recieved text websocket message: ${text}`);
 				if( websocketCallback != undefined )
 					websocketCallback(text, msg_type);
 			});

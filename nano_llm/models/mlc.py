@@ -264,7 +264,7 @@ class MLCModel(NanoLLM):
             cmd += f"&& mlc_chat compile {quant_path} --device cuda --opt O3 --output {quant_path}/{model_name + '-' + method}-cuda.so"
         else:
             cmd = f"python3 -m mlc_llm.build --model {model_path} --quantization {method} "
-            cmd += f"--target cuda --use-flash-attn-mqa --sep-embed " # --use-cuda-graph 
+            cmd += f"--target cuda --use-cuda-graph --use-flash-attn-mqa --sep-embed " 
             cmd += f"--max-seq-len {max_context_len} --artifact-path {os.path.join(output,f'{model_name}-ctx{max_context_len}')} "
 
             if len(glob.glob(os.path.join(model_path, '*.safetensors'))) > 0:
@@ -528,7 +528,7 @@ class MLCModel(NanoLLM):
             stream = self.queue.get()
             self._generate(stream)
         
-    def _create_kv_cache(self, use_cache=False): #True):
+    def _create_kv_cache(self, use_cache=True):
         """
         Allocate or return a free KV cache available to use. If use_cache is true, then an existing
         KV cache that isn't in use is returned, because KV caches take ~100ms to allocate.

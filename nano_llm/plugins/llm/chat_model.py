@@ -32,7 +32,8 @@ class ChatModel(Plugin):
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
                  max_context_len : int = None, drop_inputs : bool = False,
-                 chat_template : str = None, system_prompt : str = None, **kwargs):
+                 chat_template : str = None, system_prompt : str = None, 
+                 tools : list = [], **kwargs):
         """
         Load an LLM and run generation on chat requests.
         
@@ -43,7 +44,8 @@ class ChatModel(Plugin):
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
           drop_inputs (bool): If true, only the latest message from the input queue will be used (older messages dropped)
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
-          system_prompt (str):  Set the system prompt (changing this will reset the chat)           
+          system_prompt (str):  Set the system prompt (changing this will reset the chat)     
+          tools (list): The set of tools to enable the model with for function calling.      
         """
         super().__init__(outputs=['delta', 'partial', 'final', 'words', 'history'], drop_inputs=drop_inputs, **kwargs)
 
@@ -75,6 +77,7 @@ class ChatModel(Plugin):
         self.add_parameter('repetition_penalty', type=float, default=kwargs.get('repetition_penalty', 1.0), help="The parameter for repetition penalty. 1.0 means no penalty")
         self.add_parameter('drop_inputs', default=drop_inputs)
         self.add_parameter('system_prompt', default=system_prompt)
+        self.add_parameter('toolset', name='tools', default=tools, kwarg='tools')
         
         self.max_context_len = self.model.config.max_length
         self.wrap_tokens = kwargs.get('wrap_tokens', 512)
@@ -112,7 +115,11 @@ class ChatModel(Plugin):
     @system_prompt.setter
     def system_prompt(self, value):
         self.history.system_prompt = value
-        
+
+    @property
+    def chat_tokens(self):
+        return self.history.num_tokens
+           
     @classmethod
     def type_hints(cls):
         return {
@@ -171,11 +178,11 @@ class ChatModel(Plugin):
             x = input.lower()
             if any([x == y for y in ('/reset', '/clear', '<reset>', '<clear>')]):
                 self.history.reset()
-                self.send_state()
+                #self.send_state()
                 return
-            elif any([x == y for y in ('/refresh', '<refresh>')]):
-                self.send_state()
-                return
+            #elif any([x == y for y in ('/refresh', '<refresh>')]):
+            #    self.send_state()
+            #    return
                 
         # add prompt to chat history
         if isinstance(input, str) or isinstance(input, dict) or isinstance(input, ImageTypes):
@@ -206,11 +213,7 @@ class ChatModel(Plugin):
                 wrap_tokens=self.wrap_tokens,
                 use_cache=self.model.has_embed and chat_history.kv_cache,
             )
-            
-            # output vision features
-            if chat_history.image_embedding is not None:
-                self.output(chat_history.image_embedding, ChatModel.OutputEmbed)
-                
+
             # start generating output
             self.stream = self.model.generate(
                 embedding, 

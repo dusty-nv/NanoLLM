@@ -47,14 +47,14 @@ class VideoOutput(Plugin):
         self.time_last = time.perf_counter()
         self.framerate = 0
         
-    def process(self, input, **kwargs):
+    def process(self, image, **kwargs):
         """
         Input should be a jetson_utils.cudaImage, np.ndarray, torch.Tensor, or have __cuda_array_interface__
         """
-        input = cuda_image(input)
-        shape = input.shape
+        image = cuda_image(image)
+        shape = image.shape
         
-        self.stream.Render(input)
+        self.stream.Render(image, stream=image.stream)
         
         curr_time = time.perf_counter()
         self.framerate = self.framerate * 0.9 + (1.0 / (curr_time - self.time_last)) * 0.1

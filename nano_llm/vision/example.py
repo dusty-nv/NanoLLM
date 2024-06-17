@@ -55,7 +55,7 @@ assert(model.has_vision)
 chat_history = ChatHistory(model, args.chat_template, args.system_prompt)
 
 # open the video stream
-video_source = VideoSource(**vars(args))
+video_source = VideoSource(**vars(args), cuda_stream=0)
 
 # apply the prompts to each frame
 while True:

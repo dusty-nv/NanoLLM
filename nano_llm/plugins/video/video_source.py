@@ -9,8 +9,10 @@ import numpy as np
 from nano_llm import Plugin
 from nano_llm.utils import cuda_image
 
-from jetson_utils import videoSource, videoOutput, cudaDeviceSynchronize, cudaMemcpy, cudaToNumpy
-
+from jetson_utils import (
+    videoSource, videoOutput, cudaMemcpy, cudaEventRecord, 
+    cudaStreamCreate, cudaStreamSynchronize, cudaToNumpy,
+)
 
 class VideoSource(Plugin):
     """
@@ -57,6 +59,11 @@ class VideoSource(Plugin):
             options['numBuffers'] = num_buffers
             
         self.stream = videoSource(video_input, options=options)
+        self.cuda_stream = kwargs.get('cuda_stream')
+        
+        if self.cuda_stream is None:
+            self.cuda_stream = cudaStreamCreate(nonblocking=True)
+        
         self.file = (self.stream.GetOptions()['resource']['protocol'] == 'file')
         self.options = options
         self.resource = video_input  # self.stream.GetOptions().resource['string']
@@ -65,43 +72,52 @@ class VideoSource(Plugin):
         self.time_last = time.perf_counter()
         self.framerate = 0
         
-    def capture(self, timeout=2500, retries=8, return_copy=None, return_tensors=None, **kwargs):
+    def capture(self, timeout=2500, retries=8, cuda_stream=None, return_copy=None, return_tensors=None, **kwargs):
         """
         Capture images from the video source as long as it's streaming
         """
-        if not return_copy:
+        if return_copy is None:
             return_copy = self.return_copy
             
-        if not return_tensors:
+        if return_tensors is None:
             return_tensors = self.return_tensors
             
+        if cuda_stream is None:
+            cuda_stream = self.cuda_stream
+
         retry = 0
         
         while retry < retries:
-            image = self.stream.Capture(format='rgb8', timeout=timeout)
-            shape = image.shape
-            
+            image = self.stream.Capture(format='rgb8', timeout=timeout, stream=cuda_stream)
+
             if image is None:
                 if self.file:
                     break
                 logging.warning(f"video source {self.resource} timed out during capture, re-trying...")
                 retry = retry + 1
                 continue
-   
+
+            shape = image.shape
+               
             if return_copy:
-                image = cudaMemcpy(image)
+                image = cudaMemcpy(image, stream=cuda_stream)
+            
+            if cuda_stream:
+                image.event = cudaEventRecord(stream=cuda_stream)
+                image.stream = cuda_stream
                 
             if return_tensors == 'pt':
                 image = torch.as_tensor(image, device='cuda')
             elif return_tensors == 'np':
                 image = cudaToNumpy(image)
-                cudaDeviceSynchronize()
+                cudaStreamSynchronize(cuda_stream)
             elif return_tensors != 'cuda':
                 raise ValueError(f"return_tensors should be 'np', 'pt', or 'cuda' (was '{return_tensors}')")
                 
             self.output(image)
             
             curr_time = time.perf_counter()
+            
             self.framerate = self.framerate * 0.9 + (1.0 / (curr_time - self.time_last)) * 0.1
             self.time_last = curr_time
             self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])

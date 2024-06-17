@@ -6,7 +6,7 @@ import logging
 import traceback
 
 from nano_llm.web import WebServer
-from nano_llm.utils import inspect_function, json_type, python_type
+from nano_llm.utils import AttributeDict, inspect_function, json_type, python_type
 
 
 class Plugin(threading.Thread):
@@ -46,6 +46,7 @@ class Plugin(threading.Thread):
         self.interrupted = False
         self.processing = False
         self.parameters = {}
+        self.tools = {}
         
         inputs = kwargs.get('input_channels', inputs)
         outputs = kwargs.get('output_channels', outputs)
@@ -98,7 +99,7 @@ class Plugin(threading.Thread):
           Plugins should return their output data to be sent to downstream plugins.
           You can also call :func:`output()` as opposed to returning it.
         """
-        raise NotImplementedError(f"plugin {self.name} has not implemented process()")
+        logging.warning(f"plugin {self.name} did not implement process() - dropping input")
     
     def connect(self, plugin, channel=0, **kwargs):
         """
@@ -342,7 +343,39 @@ class Plugin(threading.Thread):
                     return plugin
             
         return None
-    
+
+    def add_tool(self, func, doc_templates={}): 
+        """
+        Register a function that is able to be called by function-calling models.
+        
+        Args:
+          func (callable|str): The function or name of the function.
+          doc_templates (dict): Substitute the keys with their values in the help docs.
+        """
+        if not callable:
+            if isinstance(func, str):
+                name = func
+                func = getattr(self, name, None)
+                
+                if func is None:
+                    raise ValueError(f"class method {self.__class__.__name__}.{name}() does not exist")
+                elif not callable(func):
+                    raise ValueError(f"{self.__class__.__name__}.{name} was not a callable function")
+            else:
+                raise ValueError(f"expected either a string or callable function (was {type(func)})")
+        else:
+            name = func.__name__
+                    
+        self.tools[name] = AttributeDict(
+            func=func, name=name, 
+            class_name=self.name,
+            doc_templates=doc_templates,
+            signature=inspect_function(func),
+            openai=inspect_function(func, style='openai'),
+        )
+        
+        return self.tools[name]
+        
     def add_parameter(self, attribute: str, name=None, type=None, const=False,
                       default=None, hidden=False, help=None, kwarg=None, end=None, **kwargs):
         """

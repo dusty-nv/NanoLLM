@@ -186,7 +186,7 @@ function addTextInputWidget(name, id, title, grid_options) {
 
 function scrollBottom(container) {  // https://stackoverflow.com/a/21067431
   container.scrollTop = container.scrollHeight - container.clientHeight;
-  console.log(`scrolling to bottom ${container.scrollTop} ${container.scrollHeight} ${container.clientHeight}`);
+  //console.log(`scrolling to bottom ${container.scrollTop} ${container.scrollHeight} ${container.clientHeight}`);
 }
 
 function addTextStreamWidget(name, id, title, grid_options) {
@@ -272,7 +272,7 @@ function escapeHTML(unsafe) {
 }
 
 function updateNanoDB(gallery_id, search_results) { 
-  console.log(`updateNanoDB(${gallery_id}) => `, search_results, window.location);
+  //console.log(`updateNanoDB(${gallery_id}) => `, search_results, window.location);
   
   let obj = $(`#${gallery_id}`);
   obj.empty();
@@ -575,7 +575,7 @@ function addPlugin(plugin) {
   const has_config_dialog = (Object.keys(plugin['parameters']).length > 0);
   
   $(`.${plugin_name}`).on('dblclick', function () {
-    console.log(`double-click ${plugin_name}`);
+    //console.log(`double-click ${plugin_name}`);
     if( addPluginGridWidget(plugin_name, plugin['type'], plugin_title) == null ) {
       if( has_config_dialog ) {
         sendWebsocket({'get_state_dict': plugin_name});
@@ -786,12 +786,12 @@ function addGraphEditor(name, id, grid_options) {
   let editor = document.getElementById("drawflow");
   
   editor.addEventListener('mouseenter', (event) => {
-    console.log('onmouseleave(drawflow) => disabling grid move/resize');
+    //console.log('onmouseleave(drawflow) => disabling grid move/resize');
     grid.disable();
   });
   
   editor.addEventListener('mouseleave', (event) => {
-    console.log('onmouseleave(drawflow) => enabling grid move/resize');
+    //console.log('onmouseleave(drawflow) => enabling grid move/resize');
     grid.enable();
   });
   
@@ -827,7 +827,7 @@ function addGraphEditor(name, id, grid_options) {
 
 function onNodeMoved(id) {
   const node = drawflow.getNodeFromId(id);
-  console.log('node moved', id, node);
+  //console.log('node moved', id, node);
   sendWebsocket({
     'config_plugin': {
       'name': node['name'],
@@ -1025,7 +1025,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
   html += `</div></div></div>`;
   
   let onsubmit = function() {
-    console.log(`onsubmit(${plugin_name})`);
+    //console.log(`onsubmit(${plugin_name})`);
     let args = {};
     
     for( param_name in parameters ) {

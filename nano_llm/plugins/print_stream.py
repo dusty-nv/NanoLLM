@@ -18,7 +18,7 @@ class PrintStream(Plugin):
           prefix (str): Text to print out before incoming text.
           color (str): The color to print the output stream (or None for no colors)
         """
-        super().__init__(output_channels=0, **kwargs)
+        super().__init__(**kwargs)
         
         self.partial = partial
         self.prefix = prefix

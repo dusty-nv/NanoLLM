@@ -55,7 +55,7 @@ def ends_with_token(input, tokens, tokenizer=None):
     return False
     
     
-def wrap_text(font, image, text='', x=5, y=5, **kwargs):
+def wrap_text(font, image, text='', x=5, y=5, stream=0, **kwargs):
     """"
     Utility for cudaFont that draws text on a image with word wrapping.
     Returns the new y-coordinate after the text wrapping was applied.
@@ -73,11 +73,11 @@ def wrap_text(font, image, text='', x=5, y=5, **kwargs):
             current_line = current_line + word + " "
             
             if n == len(text) - 1:
-                font.OverlayText(image, text=current_line, x=x, y=y, color=text_color, background=background_color)
+                font.OverlayText(image, text=current_line, x=x, y=y, color=text_color, background=background_color, stream=stream)
                 return y + line_spacing
         else:
             current_line = current_line.strip()
-            font.OverlayText(image, text=current_line, x=x, y=y, color=text_color, background=background_color)
+            font.OverlayText(image, text=current_line, x=x, y=y, color=text_color, background=background_color, stream=stream)
             current_line = word + " "
             y=y+line_spacing
     return y

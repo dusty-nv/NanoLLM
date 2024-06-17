@@ -73,7 +73,7 @@ def on_video(image):
         wrap_text(font, image, text=font_text, x=5, y=5, color=(120,215,21), background=font.Gray50)
     video_output(image)
     
-video_source = VideoSource(**vars(args))
+video_source = VideoSource(**vars(args), cuda_stream=0)
 video_source.add(on_video, threaded=False)
 video_source.start()
 
