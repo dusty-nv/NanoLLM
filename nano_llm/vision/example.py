@@ -17,12 +17,15 @@
 # For example, `--video-input /dev/video0` will capture from a V4L2 webcam. See here:
 # https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
 #
+import time
+import termcolor
+
 from nano_llm import NanoLLM, ChatHistory
 from nano_llm.utils import ArgParser, load_prompts
 from nano_llm.plugins import VideoSource
 
-from termcolor import cprint
 from jetson_utils import cudaMemcpy, cudaToNumpy
+
 
 # parse args and set some defaults
 args = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input']).parse_args()
@@ -55,7 +58,7 @@ assert(model.has_vision)
 chat_history = ChatHistory(model, args.chat_template, args.system_prompt)
 
 # open the video stream
-video_source = VideoSource(**vars(args), cuda_stream=0)
+video_source = VideoSource(**vars(args), cuda_stream=0, return_copy=False)
 
 # apply the prompts to each frame
 while True:
@@ -65,9 +68,10 @@ while True:
         continue
 
     chat_history.append('user', image=img)
+    time_begin = time.perf_counter()
     
     for prompt in prompts:
-        chat_history.append('user', prompt)
+        chat_history.append('user', prompt, use_cache=True)
         embedding, _ = chat_history.embed_chat()
         
         print('>>', prompt)
@@ -84,10 +88,13 @@ while True:
         )
         
         for token in reply:
-            cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
+            termcolor.cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
 
         chat_history.append('bot', reply)
-        
+      
+    time_elapsed = time.perf_counter() - time_begin
+    print(f"time:  {time_elapsed*1000:.2f} ms  rate:  {1.0/time_elapsed:.2f} FPS")
+    
     chat_history.reset()
     
     if video_source.eos:
