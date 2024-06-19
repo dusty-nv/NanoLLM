@@ -9,7 +9,7 @@ import numpy as np
 from .message import ChatMessage
 from .stream import StreamingResponse
 from .templates import ChatTemplate, ChatTemplates, StopTokens
-from ..utils import AttributeDict, code_tags
+from ..utils import AttributeDict, escape_html, code_tags
                         
 class ChatHistory():
     """
@@ -93,8 +93,14 @@ class ChatHistory():
         if system_prompt:
             self.template['system_prompt'] = system_prompt
 
+        # try to determine the function-calling style
+        if 'tool_spec' not in self.template:
+            if 'tool_call' in self.template:
+                self.template.tool_spec = 'openai'
+            else:
+                self.template.tool_spec = kwargs.get('tool_spec')
+
         self.print_stats = kwargs.get('print_stats', kwargs.get('debug', False))
-        self.tool_style = 'openai' if 'tool_call' in self.template else 'python'
         
         self.web_regex = [
             (re.compile(r'`(.*?)`'), r'<code>\1</code>'),  # code blocks
@@ -224,7 +230,7 @@ class ChatHistory():
         del self.messages[start:stop]       
         self.reindex()
        
-    def reset(self, add_system_prompt=True, use_cache=True, wrap_tokens=None):
+    def reset(self, system_prompt=True, use_cache=True, wrap_tokens=None):
         """
         Reset the chat history, and optionally add the system prompt to the new chat.
         If ``use_cache=True``, then the system prompt tokens/embedding will be cached.
@@ -244,7 +250,9 @@ class ChatHistory():
         self.kv_cache = None
         self.image_embedding = None
         
-        if add_system_prompt:
+        if isinstance(system_prompt, str):
+            self.add_system_prompt(system_prompt=system_prompt, use_cache=use_cache)
+        elif system_prompt:
             self.add_system_prompt(use_cache=use_cache)
 
     def turn(self, role='user'):
@@ -284,7 +292,7 @@ class ChatHistory():
             
         return messages
 
-    def add_system_prompt(self, use_cache=True):
+    def add_system_prompt(self, system_prompt=None, use_cache=True):
         """
         Add the system prompt message to the chat, containing :attr:`ChatHistory.system_prompt`
         appended by the tool function descriptions if tools are enabled.  If the ``system`` role
@@ -301,7 +309,10 @@ class ChatHistory():
         if 'system' not in self.template:
             return None
 
-        return self.append(role='system', text=self.system_prompt, use_cache=use_cache)
+        if system_prompt is not None:
+            self.template.system_prompt = system_prompt
+        
+        return self.append(role='system', text=self.template.system_prompt, use_cache=use_cache)
             
     @property
     def system_prompt(self):
@@ -322,9 +333,8 @@ class ChatHistory():
             
         if self.template['system_prompt'] == instruction:
             return
-            
-        self.template['system_prompt'] = instruction
-        self.reset()
+
+        self.reset(system_prompt=instruction)
 
     def embed_chat(self, use_cache=True, max_tokens=None, wrap_tokens=None, **kwargs):
         """
@@ -426,13 +436,7 @@ class ChatHistory():
                 text = text.replace('\n', '')
 
             text = text.replace('<s>', '')
-            text = text.replace('&', '&amp;')
-            text = text.replace('<', '&lt;')
-            text = text.replace('>', '&gt;')
-            text = text.replace('\\n', '\n')
-            text = text.replace('\n', '<br/>')
-            text = text.replace('\\"', '\"')
-            text = text.replace("\\'", "\'")
+            text = escape_html(text)
             
             for regex, replace in self.web_regex:
                 text = regex.sub(replace, text)
@@ -461,4 +465,35 @@ class ChatHistory():
                     del entry['image']
                 
         return messages
-                
+     
+    def run_tools(self, message, tools={}, append=True):
+        """
+        Invoke any function calls in the output text and return the results.
+        """  
+        if not tools:
+            return None
+              
+        if isinstance(message, ChatMessage):
+            text = message.content if message.is_type('text') else None
+        elif isinstance(message, dict):
+            text = message.get('text')
+        elif isinstance(message, str):
+            text = message
+        else:
+            raise ValueError("expected a message dict or string (was {type(message)})")
+            
+        if not text:
+            return None
+            
+        from nano_llm import BotFunctions    
+        
+        tool_response = BotFunctions.run(text, template=self.template, functions=tools)
+
+        if not tool_response:
+            return None
+            
+        if append:
+            self.append('tool_response', tool_response)
+            
+        return tool_response
+

@@ -92,7 +92,7 @@ class WebChat(VoiceChat):
                 if msg['client_state'] == 'connected':
                     client_init_msg = {
                         'system_prompt': self.llm.history.system_prompt,
-                        'bot_functions': BotFunctions.generate_docs(style=self.llm.history.tool_style, prologue=False, epilogue=False),
+                        'bot_functions': BotFunctions.generate_docs(spec=self.llm.history.template.tool_spec, prologue=False, epilogue=False),
                         'user_profile': '\n'.join(self.user_profile),
                     }
                     

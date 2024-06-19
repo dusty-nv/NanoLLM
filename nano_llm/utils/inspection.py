@@ -166,13 +166,13 @@ def convert_to_openai_tool(
     
     return desc
 
-def inspect_function(func, style=None):
+def inspect_function(func, return_spec=None):
     """
     Returns a dict with function name, description, and signature information.
     """
     desc = convert_to_openai_tool(func)   
 
-    if style == 'openai':
+    if return_spec == 'openai':
         return desc
         
     for param_name, param in desc['parameters']['properties'].items():

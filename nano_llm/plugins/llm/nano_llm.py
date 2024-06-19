@@ -3,12 +3,12 @@ import os
 import time
 import logging
 
-from nano_llm import Plugin, NanoLLM, ChatHistory 
+from nano_llm import Plugin, BotFunctions, ChatHistory, NanoLLM as NanoModel
 from nano_llm.web import WebServer
 from nano_llm.utils import ImageTypes, print_table, update_default
 
 
-class ChatModel(Plugin):
+class NanoLLM(Plugin):
     """
     Plugin that feeds incoming text or ChatHistory to LLM and generates the reply.
     It can either internally manage the ChatHistory, or that can be done externally.
@@ -21,19 +21,20 @@ class ChatModel(Plugin):
               channel 1 (str) -- the partially-generated output text, word-by-word
               channel 2 (str) -- the entire final output text, after generation is complete
               channel 3 (StreamingReponse) -- the stream iterator from generate()    
-              channel 4 (ndarray) -- the last CLIP image features/embeddings
+              channel 4 (list[dict]) -- the list of messages in the chat history
+              channel 5 (None) -- plugins that provide tool functions that the model can call
     """
     OutputDelta = 0
     OutputPartial = 1
     OutputFinal = 2
     OutputWords = 3
     OutputHistory = 4
+    OutputTools = 5
     
     def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
                  api : str = "mlc", quantization : str = "q4f16_ft", 
                  max_context_len : int = None, drop_inputs : bool = False,
-                 chat_template : str = None, system_prompt : str = None, 
-                 tools : list = [], **kwargs):
+                 chat_template : str = None, system_prompt : str = None, **kwargs):
         """
         Load an LLM and run generation on chat requests.
         
@@ -44,16 +45,15 @@ class ChatModel(Plugin):
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
           drop_inputs (bool): If true, only the latest message from the input queue will be used (older messages dropped)
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
-          system_prompt (str):  Set the system prompt (changing this will reset the chat)     
-          tools (list): The set of tools to enable the model with for function calling.      
+          system_prompt (str):  Set the system prompt (changing this will reset the chat)          
         """
-        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'history'], drop_inputs=drop_inputs, **kwargs)
+        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'history', 'tools'], drop_inputs=drop_inputs, **kwargs)
 
         load_time = time.perf_counter()
         
         if isinstance(model, str):
             self.model_name = model
-            self.model = NanoLLM.from_pretrained(
+            self.model = NanoModel.from_pretrained(
                 model, api=api, 
                 quantization=quantization, 
                 max_context_len=max_context_len, 
@@ -65,8 +65,7 @@ class ChatModel(Plugin):
 
         self.title = os.path.basename(self.model_name)
         self.stream = None
-        self.functions = None
-        
+
         self.history = ChatHistory(self.model, chat_template=chat_template, system_prompt=system_prompt, **kwargs)
 
         self.add_parameter('max_new_tokens', type=int, default=kwargs.get('max_new_tokens', 128), help="The number of tokens to output in addition to the prompt.")
@@ -76,9 +75,10 @@ class ChatModel(Plugin):
         self.add_parameter('top_p', type=float, default=kwargs.get('top_p', 0.95), help="If set to < 1 and do_sample=True, only the smallest set of most probable tokens with probabilities that add up to top_p or higher are kept.")
         self.add_parameter('repetition_penalty', type=float, default=kwargs.get('repetition_penalty', 1.0), help="The parameter for repetition penalty. 1.0 means no penalty")
         self.add_parameter('drop_inputs', default=drop_inputs)
-        self.add_parameter('system_prompt', default=system_prompt)
-        self.add_parameter('toolset', name='tools', default=tools, kwarg='tools')
-        
+        self.add_parameter('system_prompt', default=self.history.system_prompt)
+
+        #self.add_parameter('tool_docs', type=str, read_only=True, hidden=True)
+
         self.max_context_len = self.model.config.max_length
         self.wrap_tokens = kwargs.get('wrap_tokens', 512)
         self.print_stats = kwargs.get('print_stats', True) #kwargs.get('debug', False))
@@ -90,7 +90,8 @@ class ChatModel(Plugin):
             self.history.append(role='user', text=warmup)
             logging.info(f"Warming up LLM with query '{warmup}'")
             logging.info(f"Warmup response:  '{self.model.generate(self.history.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
-            self.history.reset()
+            
+        self.reset()
                       
     @property
     def chat_history(self):
@@ -110,16 +111,35 @@ class ChatModel(Plugin):
 
     @property
     def system_prompt(self):
-        return self.history.system_prompt
+        return self._system_prompt
         
     @system_prompt.setter
     def system_prompt(self, value):
-        self.history.system_prompt = value
+        self._system_prompt = value
+        self.reset()
 
     @property
-    def chat_tokens(self):
-        return self.history.num_tokens
-           
+    def toolset(self):
+        tools = {}
+        
+        for output in self.outputs[NanoLLM.OutputTools]:
+            tools.update(output.tools)
+            
+        return tools
+
+    @property
+    def tool_docs(self):
+        if self.tool_spec == 'openai':
+            return str([x.openai for x in self.toolset.values() if x.enabled])
+        elif self.tool_spec == 'python':
+            return '\n'.join(['* ' + x.docs for x in self.toolset.values() if x.enabled])
+        else:
+            return ''
+            
+    @property
+    def tool_spec(self):
+        return self.history.template.tool_spec
+            
     @classmethod
     def type_hints(cls):
         return {
@@ -137,15 +157,6 @@ class ChatModel(Plugin):
             },
         }
 
-    '''
-    def state_dict(self, html=True, **kwargs):
-        return {
-            **super().state_dict(**kwargs),
-            'model': self.model_name,
-            'history': self.history.to_list(html=html),
-       }
-    '''
-      
     def process(self, input, **kwargs):
         """
         Generate the reply to a prompt or the latest ChatHistory.
@@ -177,41 +188,38 @@ class ChatModel(Plugin):
         if isinstance(input, str):
             x = input.lower()
             if any([x == y for y in ('/reset', '/clear', '<reset>', '<clear>')]):
-                self.history.reset()
-                #self.send_state()
+                self.reset()
                 return
-            #elif any([x == y for y in ('/refresh', '<refresh>')]):
-            #    self.send_state()
-            #    return
+            input = self.apply_substitutions(input)
+            if any([x == y for y in ('/refresh', '<refresh>')]):
+                self.send_history()
+                return
                 
         # add prompt to chat history
         if isinstance(input, str) or isinstance(input, dict) or isinstance(input, ImageTypes):
             self.history.append(role='user', msg=input)
-            chat_history = self.history
-        elif isinstance(input, ChatHistory):
-            chat_history = input  # TODO also recieve chat history as list for cross-process
         else:
             raise TypeError(f"ChatModel plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
 
         # images should be followed by text prompts
-        if chat_history[-1].is_type('image'):
+        if self.history[-1].is_type('image'):
             logging.debug("image message, waiting for user prompt")
             return
         
         # support both inline and multi-generation tools
-        if chat_history.tool_style == 'openai':
-            tool_functions = self.functions
-            inline_functions = None
+        if self.tool_spec == 'openai':
+            tool_functions, inline_functions = self.toolset, None
+        elif self.tool_spec == 'python':
+            tool_functions, inline_functions = None, self.toolset
         else:
-            tool_functions = None
-            inline_functions = self.functions
+            tool_functions, inline_functions = None, None
 
         while True:
             # get the latest chat embeddings
-            embedding, position = chat_history.embed_chat(
+            embedding, position = self.history.embed_chat(
                 max_tokens=self.model.config.max_length - self.max_new_tokens,
                 wrap_tokens=self.wrap_tokens,
-                use_cache=self.model.has_embed and chat_history.kv_cache,
+                use_cache=self.model.has_embed and self.history.kv_cache,
             )
 
             # start generating output
@@ -219,9 +227,9 @@ class ChatModel(Plugin):
                 embedding, 
                 streaming=True, 
                 functions=inline_functions,
-                kv_cache=chat_history.kv_cache,
+                kv_cache=self.history.kv_cache,
                 cache_position=position,
-                stop_tokens=chat_history.template.stop,
+                stop_tokens=self.history.template.stop,
                 max_new_tokens=self.max_new_tokens,
                 min_new_tokens=self.min_new_tokens,
                 do_sample=self.do_sample,
@@ -230,12 +238,9 @@ class ChatModel(Plugin):
                 top_p=self.top_p,
                 **kwargs
             )
-            
-            # output the stream iterator on channel 3
-            #self.output(self.stream, ChatModel.OutputStream)
 
             # output the generated tokens on channel 0
-            bot_reply = chat_history.append(role='bot', text='', cached=True)
+            bot_reply = self.history.append(role='bot', text='', cached=True)
             words = ''
             
             for token in self.stream:
@@ -249,18 +254,16 @@ class ChatModel(Plugin):
                 bot_reply.tokens = self.stream.tokens
                 
                 # output stream of raw tokens
-                self.output(token, ChatModel.OutputDelta, delta=True, partial=True)
-                self.output(bot_reply.content, ChatModel.OutputPartial, partial=True)
-                
-                if self.outputs[ChatModel.OutputHistory]:
-                    self.output(chat_history.to_list(html=True), ChatModel.OutputHistory, partial=True)
+                self.output(token, NanoLLM.OutputDelta, delta=True, partial=True)
+                self.output(bot_reply.content, NanoLLM.OutputPartial, partial=True)
+                self.send_history(partial=True)
 
                 # if a space was added, emit new word(s)
                 words += token
                 last_space = words.rfind(' ')
                 
                 if last_space >= 0:
-                    self.output(words[:last_space+1], ChatModel.OutputWords, delta=True, partial=True)
+                    self.output(words[:last_space+1], NanoLLM.OutputWords, delta=True, partial=True)
                     if last_space < len(words) - 1:
                         words = words[last_space+1:]
                     else:
@@ -277,35 +280,52 @@ class ChatModel(Plugin):
                 )
                 
             if len(words) > 0:
-                self.output(words, ChatModel.OutputWords, delta=True, partial=True)
+                self.output(words, NanoLLM.OutputWords, delta=True, partial=True)
                 
             bot_reply.content = self.stream.text
             bot_reply.tokens = self.stream.tokens
-            chat_history.kv_cache = self.stream.kv_cache
+            self.history.kv_cache = self.stream.kv_cache
             self.stream = None
 
             # output the final generated text on channel 2
-            self.output(bot_reply.content, ChatModel.OutputFinal)
+            self.output(bot_reply.content, NanoLLM.OutputFinal) 
+            self.send_history()
             
-            if self.outputs[ChatModel.OutputHistory]:
-                self.output(chat_history.to_list(html=True), ChatModel.OutputHistory, partial=True)
-
             if self.print_stats:
                 print_table(self.model.stats)
                 
             # run bot functions
-            if tool_functions is None:
-                return
+            tool_response = self.history.run_tools(bot_reply, tools=tool_functions)
             
-            from nano_llm import BotFunctions
-               
-            tool_response = BotFunctions.run(
-                bot_reply.content, template=chat_history.template, functions=tool_functions
-            )
-            
-            if tool_response:
-                chat_history.append('tool_response', tool_response)
-            else:
+            if tool_response is None:
                 return
+
+            if self.outputs[NanoLLM.OutputHistory]:
+                self.output(self.history.to_list(html=True), NanoLLM.OutputHistory)
                 
+            if not tool_functions:
+                return
+
+    def start(self):
+        """
+        Reset the chat on plugin start so references to other plugins are resolved
+        for variable substitution (this gets called after all plugins have been created)
+        """
+        super().start()
+        self.reset()
+
+    def reset(self):
+        """
+        Reset the chat history and re-apply variable substitution to the system prompt
+        """
+        self.history.reset(system_prompt=self.apply_substitutions(self._system_prompt))
+        self.send_history()
+        
+    def send_history(self, html=True, **kwargs):
+        """
+        Output the chat history (typically with HTML formatting applied for web clients)
+        """
+        if self.outputs[NanoLLM.OutputHistory]:
+            self.output(self.history.to_list(html=html), NanoLLM.OutputHistory, **kwargs)
+                       
             

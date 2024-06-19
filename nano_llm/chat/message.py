@@ -91,7 +91,7 @@ class ChatMessage():
                 raise ValueError(f"couldn't find valid message content in {kwargs}, please specify its type")
 
         # Apply variable substitutions
-        self.apply_substitutions(kwargs.get('substitutions'))
+        #self.apply_substitutions(kwargs.get('substitutions'))
         
     @property
     def num_tokens(self):
@@ -144,6 +144,7 @@ class ChatMessage():
         """
         return (self.type == type)
     
+    '''
     def apply_substitutions(self, substitutions=None):
         """
         Apply variable substitutions to the message content, like "Today's date is ${DATE}".
@@ -165,12 +166,13 @@ class ChatMessage():
            
         if "${TOOLS}" in self.content:
             from nano_llm import BotFunctions
-            self.content = self.content.replace("${TOOLS}", BotFunctions.generate_docs(style=self.history.tool_style))
+            self.content = self.content.replace("${TOOLS}", BotFunctions.generate_docs(spec=self.history.template.tool_spec))
           
         if "${LOCATION}" in self.content:
             from nano_llm.plugins.bot_functions.location import LOCATION
             self.content = self.content.replace("${LOCATION}", LOCATION())
-               
+    '''
+              
     def embed(self, return_tensors='np', **kwargs):
         """
         Apply message templates, tokenization, and generate the embedding.

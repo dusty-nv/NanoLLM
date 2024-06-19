@@ -53,7 +53,7 @@ class DynamicAgent(Agent):
         if load:
             self.load(load)
             
-    def add_plugin(self, type='', wait=False, state_dict={}, **kwargs):          
+    def add_plugin(self, type='', wait=False, start=True, state_dict={}, **kwargs):          
         if not wait:
             threading.Thread(target=self.add_plugin, kwargs={'type': type, 'wait': True, 'state_dict': state_dict, **kwargs}).run()
             return
@@ -74,8 +74,11 @@ class DynamicAgent(Agent):
         
         # update with runtime params and start threads
         self.plugins.append(plugin)
-        plugin.set_parameters(**state_dict)     
-        plugin.start()
+        plugin.set_parameters(**state_dict)  
+         
+        if start:  
+            plugin.start()
+            
         self.webserver.send_message({'plugin_added': [plugin.state_dict(config=True)]})
 
         load_time = time.perf_counter() - load_begin
@@ -120,7 +123,7 @@ class DynamicAgent(Agent):
         self.webserver.send_message({'plugin_removed': plugin.name});              
         self.plugins.remove(plugin)
         
-        plugin.stop()
+        plugin.destroy()
         del plugin
      
     def reset(self, plugins=True, globals=True):
@@ -194,7 +197,7 @@ class DynamicAgent(Agent):
             ).run()
             return
         
-        print('SET STATE DICT', state_dict, name, wait, reset, kwargs)
+        #print('SET STATE DICT', state_dict, name, wait, reset, kwargs)
            
         state_dict.update(kwargs)
         
@@ -208,13 +211,14 @@ class DynamicAgent(Agent):
         self.global_states.update(state_dict.get('globals', {}))
         
         plugins = state_dict.get('plugins', [])
-
+        instances = []
+        
         for plugin in plugins:
             try:
-                instance = self.add_plugin(type=plugin['type'], wait=True, state_dict=plugin)
+                instance = self.add_plugin(type=plugin['type'], wait=True, start=False, state_dict=plugin)
                 plugin['original_name'] = plugin['name']
                 plugin['name'] = instance.name
-                print(f"{instance.name} layout_node", instance.layout_node)
+                instances.append(instance)
             except Exception as error:
                 logging.error(f"Exception occurred during adding plugin:\n{pprint.pformat(plugin, indent=2)}\n\n{traceback.format_exc()}")
         
@@ -243,7 +247,10 @@ class DynamicAgent(Agent):
                         **connection
                     }
                 })
-                  
+    
+        for plugin in instances:
+            plugin.start()
+            
     def save(self, path):
         if not path:
             return

@@ -22,18 +22,21 @@ class Plugin(threading.Thread):
       * outputs:  print to stdout, save images/video
       
     Inherited plugins should implement the :func:`process` function to handle incoming data.
-    
-    Args:
-    
-      output_channels (int): the number of sets of output connections the plugin has
-      relay (bool): if true, will relay any inputs as outputs after processing
-      drop_inputs (bool): if true, only the most recent input in the queue will be used
-      threaded (bool): if true, will spawn independent thread for processing the queue.
+
     """
+    Instances = []  #: Global list of plugin instances
+        
     def __init__(self, name=None, title=None, inputs=1, outputs=1,
                  relay=False, drop_inputs=False, threaded=True, **kwargs):
         """
-        Initialize plugin
+        Base initializer for Plugin implementations.
+        
+        Args:
+            name (str):  specify the name of this plugin instance (otherwise initialized from class name)
+            output_channels (int): the number of sets of output connections the plugin has
+            relay (bool): if true, will relay any inputs as outputs after processing
+            drop_inputs (bool): if true, only the most recent input in the queue will be used
+            threaded (bool): if true, will spawn independent thread for processing the queue.
         """
         super().__init__(daemon=True)
 
@@ -69,7 +72,7 @@ class Plugin(threading.Thread):
         elif isinstance(outputs, int):
             self.output_names = [str(x) for x in range(outputs)]
         elif outputs is None:
-            self.output_names = ['0']
+            self.output_names = [] #['0']
             outputs = 0
         else:
             raise TypeError(f"outputs should have been int, str, list[str], or None  (was {type(outputs)})")
@@ -82,6 +85,14 @@ class Plugin(threading.Thread):
         if threaded:
             self.input_queue = queue.Queue()
             self.input_event = threading.Event()
+
+        Plugin.Instances.append(self)
+     
+    def __del__(self):
+        """
+        Stop the plugin from running and unregister it.
+        """
+        self.destroy()
 
     def process(self, input, **kwargs):
         """
@@ -237,7 +248,18 @@ class Plugin(threading.Thread):
         """
         self.stop_flag = True
         logging.debug(f"stopping plugin {self.name} (thread {self.native_id})")
-               
+     
+    def destroy(self):
+        """
+        Stop a plugin thread's running, and unregister it from the global instances.
+        """ 
+        self.stop()
+        
+        try:
+            Plugin.Instances.remove(self)
+        except ValueError:
+            logging.warning(f"Plugin {getattr(self, 'name', '')} wasn't in global instances list when being deleted")
+            
     def run(self):
         """
         Processes the queue forever and automatically run when created with ``threaded=True``
@@ -259,7 +281,7 @@ class Plugin(threading.Thread):
                 logging.error(f"Exception occurred during processing of {self.name}\n\n{traceback.format_exc()}")
 
         logging.debug(f"{self.name} plugin stopped (thread {self.native_id})")
-        
+
     def dispatch(self, input, **kwargs):
         """
         Invoke the process() function on incoming data
@@ -344,7 +366,7 @@ class Plugin(threading.Thread):
             
         return None
 
-    def add_tool(self, func, doc_templates={}): 
+    def add_tool(self, function, enabled=True, **kwargs): 
         """
         Register a function that is able to be called by function-calling models.
         
@@ -353,31 +375,31 @@ class Plugin(threading.Thread):
           doc_templates (dict): Substitute the keys with their values in the help docs.
         """
         if not callable:
-            if isinstance(func, str):
-                name = func
-                func = getattr(self, name, None)
+            if isinstance(function, str):
+                name = function
+                function = getattr(self, name, None)
                 
-                if func is None:
+                if function is None:
                     raise ValueError(f"class method {self.__class__.__name__}.{name}() does not exist")
-                elif not callable(func):
+                elif not callable(function):
                     raise ValueError(f"{self.__class__.__name__}.{name} was not a callable function")
             else:
-                raise ValueError(f"expected either a string or callable function (was {type(func)})")
+                raise ValueError(f"expected either a string or callable function (was {type(function)})")
         else:
-            name = func.__name__
+            name = function.__name__
                     
         self.tools[name] = AttributeDict(
-            func=func, name=name, 
-            class_name=self.name,
-            doc_templates=doc_templates,
-            signature=inspect_function(func),
-            openai=inspect_function(func, style='openai'),
+            name=name, class_name=self.name,
+            function=function, enabled=True,
+            signature=inspect_function(function),
+            openai=inspect_function(function, return_spec='openai'),
+            docs=f"`{name}()` - {function.__doc__.strip()}",
         )
         
         return self.tools[name]
         
-    def add_parameter(self, attribute: str, name=None, type=None, const=False,
-                      default=None, hidden=False, help=None, kwarg=None, end=None, **kwargs):
+    def add_parameter(self, attribute: str, name=None, type=None, default=None,
+                      read_only=False, hidden=False, help=None, kwarg=None, end=None, **kwargs):
         """
         Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
         These will automatically show up in the studio web UI and can be sync'd over websockets.
@@ -388,8 +410,8 @@ class Plugin(threading.Thread):
             
         init = inspect_function(self.__init__)['parameters'].get(kwarg, {})
         
-        #if not hasattr(self, attribute):
-        setattr(self, attribute, default)
+        if not read_only: #if not hasattr(self, attribute):
+            setattr(self, attribute, default)
             
         if name is None:
             name = attribute.replace('_', ' ').title()
@@ -402,7 +424,7 @@ class Plugin(threading.Thread):
         param = {
             'display_name': name,
             'type': type,
-            'const': const,
+            'read_only': read_only,
             'hidden': hidden,
         }
         
@@ -566,4 +588,76 @@ class Plugin(threading.Thread):
         web_client.start()
          
         self.connect(web_client, channel=channel)
-           
+
+    def apply_substitutions(self, text):
+        """
+        Perform variable substitution on a string of text by looking up values from other plugins.
+        
+        References can be scoped to a plugin's name:  "The date is ${Clock.date}"
+        Or if left unscoped, find the first plugin with it:  "The date is ${date}"
+        Both plugins and attributes are case-insensitive:  "The date is ${DATE}"
+        
+        These can also refer to getter functions or properties that require no positional arguments,
+        and if found the associate function will be called and its return value substituted instead.
+        """
+        splits = text.split('${')
+        string = ''
+        
+        if len(splits) <= 1:
+            return text
+            
+        def find_closing_bracket(s : str):
+            for i, c in enumerate(s):
+                if c == '}':
+                    return i
+                elif c.isalnum() or c == '_' or c == '.':
+                    continue
+         
+        def read_param(var : str):
+            period = var.find('.')
+            
+            if period > 0 and period < len(var) - 1:
+                plugin_name = var[:period].lower()
+                plugin_attr = var[period+1:]
+            else:
+                plugin_name = None
+                plugin_attr = var
+                
+            for plugin in [self] + Plugin.Instances:  # resolve unclassed references to this plugin first
+                if plugin_name and plugin_name != plugin.name.lower():
+                    continue
+                    
+                if not hasattr(plugin, plugin_attr):
+                    plugin_attr_lower = plugin_attr.lower()
+                    if hasattr(plugin, plugin_attr_lower):
+                        plugin_attr = plugin_attr_lower
+                    else:
+                        continue
+                        
+                value = getattr(plugin, plugin_attr)
+                
+                if callable(value):
+                    value = value()
+                    
+                return str(value)
+          
+            logging.warning(f"{self.name} could not find variable ${{{var}}} for substitution")
+            return f"${{{var}}}"
+            
+        for split in splits:
+            if not split:
+                continue
+                
+            end = find_closing_bracket(split)
+            
+            if end is None:
+                string = string + split
+                continue
+                
+            var = split[:end].strip()
+            string = string + read_param(var) 
+        
+            if end < len(split)-1:
+                string = string + split[end+1:]
+            
+        return string     

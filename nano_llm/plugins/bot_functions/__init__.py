@@ -7,7 +7,7 @@ import functools
 import traceback
 
 from decorator_args import decorator_args
-from nano_llm.utils import convert_to_openai_tool
+from ...utils import convert_to_openai_tool
 
 
 @decorator_args(optional=True)        
@@ -128,13 +128,16 @@ class BotFunctions:
         """
         if functions is None:
             functions = cls.functions
-            
+        
+        if isinstance(functions, dict):
+            return functions.get(name)
+                
         for function in functions:
             if function.name == name:
                 return function
     
     @classmethod
-    def generate_docs(cls, prologue=True, epilogue=True, style='python', functions=None):
+    def generate_docs(cls, prologue=True, epilogue=True, spec='python', functions=None):
         """
         Collate the documentation strings from all the enabled functions
         """
@@ -145,7 +148,7 @@ class BotFunctions:
             if prologue is None or prologue == False:
                 prologue = ''
             elif prologue == True:
-                if style == 'python':
+                if spec == 'python':
                     prologue = "You are able to call the Python functions defined below, and the returned values will be added to the chat:\n\n"
                 else:
                     prologue = ''
@@ -154,15 +157,15 @@ class BotFunctions:
             if epilogue is None or epilogue == False:
                 epilogue = ''
             elif epilogue == True:
-                if style == 'python':
+                if spec == 'python':
                     epilogue = "\n\nFor example, if the user asks for the temperature, call the WEATHER() function."
                 else:
                     epilogue = ''
                     
-        if style == 'python':          
-            docs = '\n'.join(['* ' + x.docs for x in functions if x.style == 'python'])
-        elif style == 'openai':
-            docs = str([x.docs for x in functions if x.style == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
+        if spec == 'python':          
+            docs = '\n'.join(['* ' + x.docs for x in functions if x.spec == 'python'])
+        elif spec == 'openai':
+            docs = str([x.docs for x in functions if x.spec == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
             
         if prologue:
             docs = prologue + docs
@@ -207,7 +210,7 @@ class BotFunctions:
 
         wrapper.name = name
         wrapper.docs = ''
-        wrapper.style = None
+        wrapper.spec = None
         wrapper.enabled = enabled
         wrapper.function = func
         wrapper.regex = regex
@@ -229,10 +232,10 @@ class BotFunctions:
                     wrapper.docs = wrapper.__doc__.strip()
             else:
                 wrapper.docs = name + '() '
-            wrapper.style = 'python'
+            wrapper.spec = 'python'
         elif docs.startswith('openai') or not docs:
             wrapper.docs = convert_to_openai_tool(func)
-            wrapper.style = 'openai'
+            wrapper.spec = 'openai'
         elif docs:
             wrapper.docs = docs
             
@@ -262,9 +265,7 @@ class BotFunctions:
                 function_text = ' ' + output
             return function_text if function_text else None
 
-        if 'tool_call' in template and 'tool_response' in template:
-            style = 'openai'
-        else:
+        if template.tool_spec != 'openai':
             raise RuntimeError("to run tools, the chat template needs to have keys for 'tool_call' and 'tool_response'")
          
         if 'tool_regex' not in template:
@@ -284,7 +285,7 @@ class BotFunctions:
              
         logging.debug(f'invoking tool call {call}')
                
-        if style == 'openai':
+        if template.tool_spec == 'openai':
             func_name = call['name']
             func_args = call.get('arguments', {})
         else:
@@ -300,11 +301,11 @@ class BotFunctions:
         try:
             response = func.function(**func_args)
         except Exception as error:
-            error = f"Exception occurred running tool {func_name}({func_args})\n\n{traceback.format_exc()}"
-            logging.error(error)
+            error = f"Exception occurred running tool {func_name}({func_args}) - {error}"
+            logging.error(f"{error}\n\n{traceback.format_exc()}")
             return error
                 
-        if style == 'openai':  
+        if template.tool_spec == 'openai':  
             response = json.dumps({"name": func_name, "content": response})
 
         return response

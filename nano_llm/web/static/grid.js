@@ -246,7 +246,7 @@ function addTerminalWidget(name, id, title, grid_options) {
     const level = log_entry['level'];
     const msg = log_entry['message'];
 
-    const html = `<p class="m-0 p-0" style="color: ${terminalTextColor(level)}">${msg}</p>`;
+    const html = `<p class="m-0 p-0" style="color: ${terminalTextColor(level)}">${escapeHTML(msg)}</p>`;
     
     if( chc.innerHTML.length < 10000 )
       chc.innerHTML += html;
@@ -268,7 +268,8 @@ function escapeHTML(unsafe) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+    .replaceAll("'", '&#039;')
+    .replaceAll('\n', '<br/>');
 }
 
 function updateNanoDB(gallery_id, search_results) { 
@@ -376,6 +377,10 @@ function addChatWidget(name, id, title, grid_options) {
   addOutputListener(name, 4, function(history) {
     updateChatHistory(history_id, history);
   });
+  
+  msg = {};
+  msg[name] = {'input': '/refresh'};
+  sendWebsocket(msg);
 
   return widget;
 }
@@ -610,7 +615,7 @@ function addPluginGridWidget(name, type, title, grid_options) {
       return addTextInputWidget(name, id, title, grid_options);
     case 'TextStream':
       return addTextStreamWidget(name, id, title, grid_options);
-    case 'ChatModel':
+    case 'NanoLLM':
       return addChatWidget(name, id, title, grid_options);
     case 'VideoOutput':
       return addVideoOutputWidget(name, id, title, grid_options);

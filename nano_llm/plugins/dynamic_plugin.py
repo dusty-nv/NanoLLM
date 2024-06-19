@@ -71,7 +71,7 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register_all(cls):
         from nano_llm.plugins import (
-            ChatModel, VideoSource, VideoOutput,
+            NanoLLM, VideoSource, VideoOutput,
             UserPrompt, AutoPrompt, VADFilter,
             TextStream, VideoOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder, 
@@ -85,8 +85,10 @@ class DynamicPlugin(Plugin):
 
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
+        from nano_llm.plugins.tools.clock import Clock
+        
         # LLM
-        DynamicPlugin.register(ChatModel)   
+        DynamicPlugin.register(NanoLLM)   
         DynamicPlugin.register(UserPrompt)
         DynamicPlugin.register(AutoPrompt)   
         DynamicPlugin.register(TextStream)
@@ -116,6 +118,9 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(DataTable)
         DynamicPlugin.register(DataLogger)
         DynamicPlugin.register(EventFilter)
+        
+        # tools
+        DynamicPlugin.register(Clock)
         
         logging.info(f"Registered dynamic plugin types:\n\n{pprint.pformat(DynamicPlugin.TypeInfo, indent=2)}")
 

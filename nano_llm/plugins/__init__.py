@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from .bot_functions import BotFunctions, bot_function
+
 from .llm import *
 from .speech import *
 from .audio import *
