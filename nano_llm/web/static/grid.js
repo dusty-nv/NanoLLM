@@ -779,6 +779,16 @@ function pluginContextMenu() {
   return html; 
 }  
 
+function nodeLayoutInsertPos() {
+  var contextMenu = document.getElementById('plugin_context_menu');
+  var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
+  
+  return {
+    'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
+    'y': parseInt(contextMenu.style.top) - nodeEditor.top,
+  };
+}
+
 function addGraphEditor(name, id, grid_options) {
 
   let titlebar_html = pluginMenuBar();
@@ -835,15 +845,10 @@ function addGraphEditor(name, id, grid_options) {
       }
       else {
         pluginMenu.addEventListener('click', (event) => {
-          var contextMenu = document.getElementById('plugin_context_menu');
-          var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
           sendWebsocket({
             'add_plugin': {
               'type': plugin['name'],
-              'layout_node': {
-                'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
-                'y': parseInt(contextMenu.style.top) - nodeEditor.top,
-              }
+              'layout_node': nodeLayoutInsertPos(),
             }
           });
         });
@@ -1122,15 +1127,8 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     console.log(args);
 
     args['name'] = plugin_name;
+    args['layout_node'] = nodeLayoutInsertPos();
     
-    var contextMenu = document.getElementById('plugin_context_menu');
-    var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
-     
-    args['layout_node'] = {
-      'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
-      'y': parseInt(contextMenu.style.top) - nodeEditor.top,
-    };
- 
     let msg = {};
     
     if( stage == 'init' ) {
