@@ -31,10 +31,10 @@ class AutoASR(Plugin):
             return None
         
         if asrl.startswith('riva'):
-            from nano_llm.plugins.audio.riva_asr import RivaASR
+            from nano_llm.plugins.speech.riva_asr import RivaASR
             return RivaASR(**kwargs)
         elif asrl.startswith('whisper'):
-            from nano_llm.plugins.audio.whisper_asr import WhisperASR
+            from nano_llm.plugins.speech.whisper_asr import WhisperASR
             return WhisperASR(**{**kwargs, 'model' : asr})
         else:
             raise ValueError(f"ASR model type should be 'riva'")

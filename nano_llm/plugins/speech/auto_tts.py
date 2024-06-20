@@ -41,9 +41,9 @@ class AutoTTS(Plugin):
         The `tts` param should either be 'riva' or 'xtts' (or name/path of XTTS model)
         The kwargs are forwarded to the TTS plugin implementing the model.
         """
-        from nano_llm.plugins.audio.riva_tts import RivaTTS
-        from nano_llm.plugins.audio.piper_tts import PiperTTS
-        from nano_llm.plugins.audio.fastpitch_tts import FastPitchTTS
+        from nano_llm.plugins.speech.riva_tts import RivaTTS
+        from nano_llm.plugins.speech.piper_tts import PiperTTS
+        from nano_llm.plugins.speech.fastpitch_tts import FastPitchTTS
         
         try:
             from nano_llm.plugins import XTTS
