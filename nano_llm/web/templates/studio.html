@@ -1,251 +1,27 @@
 <!doctype html>
 
 <html>
-	<head>
+<head>
     <meta charset="utf-8">
     <title>{{ title }}</title>
 
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
-    
     <link rel="stylesheet" href="/static/bootstrap.css">
-    <link rel="stylesheet" href="/static/select2.min.css">
-    <link rel="stylesheet" href="/static/chat.css">
-    
-    <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.min.js"></script>
-    <script type='text/javascript' src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
-    
-    <script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
-    <script type='text/javascript' src='/static/bootstrap.bundle.min.js'></script>
-    <script type='text/javascript' src="/static/select2.min.js"></script>
-    <script type='text/javascript' src='/static/webrtc.js'></script>
-    <script type='text/javascript' src='/static/websocket.js'></script>
-    <script type='text/javascript' src='/static/debounce.js'></script>
-    <script type='text/javascript' src='/static/audio.js'></script>
-    <script type='text/javascript' src='/static/grid.js'></script>
+    <link rel="stylesheet" href="/static/studio.css">
+
+    <script type='text/javascript' src="/static/studio.js"></script>
     
     <script type="text/javascript">
-
-      function onWebsocketMsg(payload, type) {
-        if( type == MESSAGE_JSON ) {     
-          if( 'modules' in payload ) {
-            addModules(payload['modules']);
-          }
-          
-          if( 'plugin_types' in payload ) {
-            addPluginTypes(payload['plugin_types']);
-          }
-          
-          if( 'plugin_added' in payload ) {
-            addPlugins(payload['plugin_added']);
-          }
-          
-          if( 'plugin_connected' in payload ) {
-            connectPlugins(payload['plugin_connected']);
-          }
-          
-          if( 'plugin_removed' in payload ) {
-            removePlugins(payload['plugin_removed']);
-          }
-          
-          if( 'send_output' in payload ) {
-            sendOutput(payload['send_output']);
-          }
-          
-          if( 'state_dict' in payload ) {
-            setStateDict(payload['state_dict']);
-          }
-          
-          if( 'stats' in payload ) {
-            setStats(payload['stats']);
-          }
-          
-          if( 'agents' in payload ) {
-            setAgents(payload['agents']);
-          }
-          
-          if( 'alert' in payload ) {
-            addAlert(payload['alert']);
-          }
-        }
-        else if( type == MESSAGE_AUDIO ) {
-          onAudioOutput(payload);
-        }
-      }
-      
-      function newAgent(name) {
-        sendWebsocket({'reset': {'plugins': true, 'globals': true}});
-      }
-      
-      function saveAgent(name) {
-        sendWebsocket({'save': name});
-      }
-      
-      function loadAgent(name) {
-        sendWebsocket({'load': name});
-      }
-      
-      function insertAgent(name) {
-        sendWebsocket({'insert': name});
-      }
-      
-      function setAgents(agents) {
-        console.log('setting agents list', agents);
-        
-        let load_menu = $('#navbarLoadAgentMenu');
-        let insert_menu = $('#navbarInsertAgentMenu');
-        
-        load_menu.empty();
-        insert_menu.empty();
-        
-        agents.forEach((agent) => {
-          load_menu.append(`<li><a class="dropdown-item" href="#" onclick="loadAgent('${agent}')">${agent}</a></li>`);
-          insert_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertAgent('${agent}')">${agent}</a></li>`);
+      window.onload = function() {
+        loadStudio({
+            ws_port: {{ws_port}}
         });
       }
+    </script>
+</head>
 
-      window.onload = function() {
-
-        connectWebsocket(onWebsocketMsg, port={{ ws_port }});
-        
-        enumerateAudioDevices();
-        openAudioDevices();
-
-        //window.setInterval(generateAudio, 100);
-        //window.setInterval(testWebsocketSend, 500);
-        addGrid();
-
-      }
-      </script>
-      <script type="text/javascript">
-        // https://bootstrap-menu.com/detail-multilevel.html
-        document.addEventListener("DOMContentLoaded", function(){
-        // make it as accordion for smaller screens
-        if (window.innerWidth < 992) {
-
-          // close all inner dropdowns when parent is closed
-          document.querySelectorAll('.navbar .dropdown').forEach(function(everydropdown){
-            everydropdown.addEventListener('hidden.bs.dropdown', function () {
-              // after dropdown is hidden, then find all submenus
-                this.querySelectorAll('.submenu').forEach(function(everysubmenu){
-                  // hide every submenu as well
-                  everysubmenu.style.display = 'none';
-                });
-            })
-          });
-
-          document.querySelectorAll('.dropdown-menu a').forEach(function(element){
-            element.addEventListener('click', function (e) {
-                let nextEl = this.nextElementSibling;
-                if(nextEl && nextEl.classList.contains('submenu')) {	
-                  // prevent opening link if link needs to open dropdown
-                  e.preventDefault();
-                  if(nextEl.style.display == 'block'){
-                    nextEl.style.display = 'none';
-                  } else {
-                    nextEl.style.display = 'block';
-                  }
-
-                }
-            });
-          })
-        }
-        // end if innerWidth
-        }); 
-      </script>
-      <style>
-          #alert_container {
-            z-index: 100;
-            position: fixed;
-            max-width: max-content;
-            height:50px;
-            left:100%;
-            transform:translateX(-100%);
-            top:85px;
-          }
-
-          .gear-button {
-            color: #888888;
-            font-size: 150%;
-          }
-          
-          .gear-button:hover {
-            color: #cccccc;
-          }
-          
-          .select2-container--default .select2-selection--multiple, .select2-results {
-            color: #222222;
-            scrollbar-color: #AAAAAA #EEEEEE;
-          }
-          
-          .select2-container--default .select2-selection--single {
-            height: 120%;
-            line-height: 120%;
-            vertical-align : middle;
-          }
-          
-          .select2-selection__arrow {
-            padding-top: 35px;
-            padding-right: 25px;
-          }
-          
-          .select2-selection__rendered {
-            padding-top: 4px;
-            padding-bottom: 4px;
-          }
-          
-          .select2-search__field {
-            color: #222222;
-            background-color: #EEEEEE;
-          }
-      
-          @media (min-width: 768px) {
-            .modal-dialog {
-              width: 90%;
-              max-width:600px;
-            }
-          
-            .modal-xl {
-              width: 90%;
-              max-width:1200px;
-            }
-          }
-
-          /* ============ desktop view ============ */
-          @media all and (min-width: 992px) {
-	          .dropdown-menu li{ position: relative; 	}
-	          .nav-item .submenu{ 
-		          display: none;
-		          position: absolute;
-		          left:100%; top:-7px;
-	          }
-	          .nav-item .submenu-left{ 
-		          right:100%; left:auto;
-	          }
-	          .dropdown-menu > li:hover{ background-color: #f1f1f1 }
-	          .dropdown-menu > li:hover > .submenu{ display: block; }
-          }	
-          /* ============ desktop view .end// ============ */
-
-          /* ============ small devices ============ */
-          @media (max-width: 991px) {
-            .dropdown-menu .dropdown-menu{
-                margin-left:0.7rem; margin-right:0.7rem; margin-bottom: .5rem;
-            }
-          }	
-          /* ============ small devices .end// ============ */
-          /*.grid-stack-item {
-            background-color: #1FAD32;
-          }*/
-      </style>
-
-	</head>
-	<!-- bg-medium-gray -->
-	<body class="bg-dark-gray" data-bs-theme="dark" height="100%">
+<body class="bg-dark-gray" data-bs-theme="dark" height="100%">
     <!-- Navbar + main body -->
     <div class="d-flex flex-column">
       <nav class="navbar navbar-expand-lg navbar-dark bg-sage-green p-0"> <!-- fixed-top will let rest of body scroll -->
@@ -352,57 +128,9 @@
         <div id="alert_messages" class="me-3"></div>
         <a href="#" class="btn-close" style="position: absolute; right: 5px; top: 5px; font-size: 80%" onclick="onHideAlerts()"></a>
       </div>
-      
-      <script type='text/javascript'>
-        function alertColor(level) {
-          if( level == 'success' ) return 'limegreen';
-          else if( level == 'error' ) return 'orange';
-          else if( level == 'warning' ) return 'orange';
-          else return 'rgb(200,200,200)';
-        
-        }
-        function toTimeString(timestamp) {
-          return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', hour12: true, minute: '2-digit', second: '2-digit' }).slice(0,-3); // remove AM/PM
-        }
-          
-        function onHideAlerts() {
-          $('#alert_window').fadeOut('slow', function() {
-            $(`#alert_messages pre`).remove();
-          });
-        }
-        
-        function removeAlert(id) {
-          $(`#alert_messages #alert-${id}`).remove();
-        }
-        
-        function addAlert(alert) {
-          // supress other messages from the same category that may still be showing
-          if( alert['category'].length > 0 )
-            $(`#alert_messages .alert-category-${alert['category']}`).remove();
-            
-          // add a new element containing the alert message, and show the window if needed
-          $('#alert_messages').append(`<pre id="alert-${alert['id']}" class="align-middle m-0 alert-category-${alert['category']}" style="color: ${alertColor(alert['level'])}">[${alert['time']}] ${alert['message']}\n</pre>`);
-          $('#alert_window:hidden').fadeIn('fast');
-
-          // automatically remove the messages (if this is the last message, hide the window too)
-          if( alert['timeout'] > 0 ) {
-            const alert_id = alert['id'];
-            setTimeout(function() {
-              if( $('#alert_messages pre').length > 1 ) {
-                $(`#alert_messages #alert-${alert_id}`).remove();
-                console.log('removing alerts due to timeout');
-                console.log(`#alert_messages #alert-${alert_id}`);
-              }
-              else if( $(`#alert_messages #alert-${alert['id']}`).length > 0 ) {
-                onHideAlerts();
-              }
-            }, alert['timeout']);
-          }
-        }
-      </script>
     </div>
-
+    
     <link rel="stylesheet" href="/static/drawflow.css">
     
-	</body>
+</body>
 </html>

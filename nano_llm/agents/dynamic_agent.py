@@ -53,9 +53,9 @@ class DynamicAgent(Agent):
         if load:
             self.load(load)
             
-    def add_plugin(self, type='', wait=False, start=True, state_dict={}, **kwargs):          
+    def add_plugin(self, type='', wait=False, start=True, state_dict={}, layout_node=None, **kwargs):          
         if not wait:
-            threading.Thread(target=self.add_plugin, kwargs={'type': type, 'wait': True, 'state_dict': state_dict, **kwargs}).run()
+            threading.Thread(target=self.add_plugin, kwargs={'type': type, 'wait': True, 'state_dict': state_dict, 'layout_node': layout_node, **kwargs}).run()
             return
             
         load_begin = time.perf_counter()
@@ -76,6 +76,11 @@ class DynamicAgent(Agent):
         self.plugins.append(plugin)
         plugin.set_parameters(**state_dict)  
          
+        if layout_node:
+            plugin.layout_node['x'] = plugin.layout_node.get('x', 0) + layout_node['x']
+            plugin.layout_node['y'] = plugin.layout_node.get('y', 0) + layout_node['y']
+            logging.debug(f"offset {plugin.name} node layout by {layout_node} to {plugin.layout_node}")
+            
         if start:  
             plugin.start()
             
@@ -186,14 +191,14 @@ class DynamicAgent(Agent):
         if state_dict is not None: 
             return {'state_dict': {name: state_dict}}
     
-    def set_state_dict(self, state_dict={}, name='', wait=None, reset=False, **kwargs):
+    def set_state_dict(self, state_dict={}, name='', wait=None, reset=False, layout_node=None, **kwargs):
         if wait is None:
             wait = True if name else False
 
         if not wait:
             threading.Thread(
                 target=self.set_state_dict, 
-                kwargs={**kwargs, 'name': name, 'state_dict': state_dict, 'wait': True}
+                kwargs={**kwargs, 'name': name, 'state_dict': state_dict, 'layout_node': layout_node, 'wait': True}
             ).run()
             return
         
@@ -213,9 +218,21 @@ class DynamicAgent(Agent):
         plugins = state_dict.get('plugins', [])
         instances = []
         
+        layout_node_origin = {'x': 999999, 'y': 999999}
+
+        for plugin in plugins:
+            layout_node_origin['x'] = min(layout_node_origin['x'], plugin.get('layout_node', {}).get('x', 0))
+            layout_node_origin['y'] = min(layout_node_origin['y'], plugin.get('layout_node', {}).get('y', 0))
+         
+        if layout_node:
+            layout_node['x'] -= layout_node_origin['x']
+            layout_node['y'] -= layout_node_origin['y']
+            
+        logging.debug(f"{name} agent node layout origin:  {layout_node_origin}")
+               
         for plugin in plugins:
             try:
-                instance = self.add_plugin(type=plugin['type'], wait=True, start=False, state_dict=plugin)
+                instance = self.add_plugin(type=plugin['type'], wait=True, start=False, state_dict=plugin, layout_node=layout_node)
                 plugin['original_name'] = plugin['name']
                 plugin['name'] = instance.name
                 instances.append(instance)
@@ -277,10 +294,12 @@ class DynamicAgent(Agent):
         self.webserver.send_alert(f"saved agent to {path}", level='success')
         self.webserver.send_message({'agents': self.get_agents_list()})
     
-    def load(self, path, reset=True):
+    def load(self, path, reset=True, layout_node=None):
         if not path:
             return
-      
+
+        logging.info(f"loading {path} agent  (reset={reset}, layout_node={layout_node})")
+        
         found_path = None
         
         possible_files = [
@@ -300,7 +319,7 @@ class DynamicAgent(Agent):
         if not found_path:
            self.webserver.send_alert(f"Couldn't find agent '{path}' on server", level='error')
            return
-        
+
         try:   
             ext = os.path.splitext(found_path)[1].lower()
             
@@ -312,14 +331,14 @@ class DynamicAgent(Agent):
                 else:
                     raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
 
-            self.set_state_dict(state_dict, reset=reset)
+            self.set_state_dict(state_dict, reset=reset, layout_node=layout_node)
         except Exception as error:
             self.webserver.send_alert(f"Exception occurred loading agent '{path}'\n\n{traceback.format_exc()}", level='error')
         else:
             self.webserver.send_alert(f"Loaded agent {path} ({len(self.plugins)} nodes)", level='success')
 
-    def insert(self, path):
-        return self.load(path, reset=False)
+    def insert(self, path=None, layout_node=None):
+        return self.load(path, reset=False, layout_node=layout_node)
         
     def get_agents_list(self, agent_dir=None, remove_extensions=True):
         if not agent_dir:

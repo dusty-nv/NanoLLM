@@ -726,7 +726,7 @@ function capitalizeTitle(string) {
       return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function pluginMenuList() {
+function pluginMenuBar() {
   if( moduleTypes == undefined )
     return '';
  
@@ -747,36 +747,41 @@ function pluginMenuList() {
 
     html += `</ul></span></span>`;
   }
-  
-  /*html = `
-  <div class="btn-group">
-    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-      Dropdown
-    </button>
-    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-      <li><a class="dropdown-item" href="#">Menu item</a></li>
-      <li><a class="dropdown-item" href="#">Menu item</a></li>
-      <li><a class="dropdown-item" href="#">Menu item</a></li>
-    </ul>
-  </div>
-  <div class="btn-group">
-    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-      Dropdown2
-    </button>
-    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-      <li><a class="dropdown-item" href="#">Menu item2</a></li>
-      <li><a class="dropdown-item" href="#">Menu item3</a></li>
-      <li><a class="dropdown-item" href="#">Menu item4</a></li>
-    </ul>
-  </div>
-  `;*/
-  
+
+  return html; 
+}  
+
+// <li class="divider">
+function pluginContextMenu() {
+  if( moduleTypes == undefined )
+    return '';
+ 
+  let html = `
+    <ul id="plugin_context_menu" class="nav-item dropdown-menu" role="menu" style="display:none">
+      <li><a class="dropdown-item" href="#">Agents</a>
+          <ul class="submenu dropdown-menu" id="plugin_context_menu_agents"></ul>
+      </li> 
+  `;
+
+  for( module in moduleTypes ) {
+    html += `
+      <li><a class="dropdown-item" href="#">${capitalizeTitle(module)}</a>
+        <ul class="submenu dropdown-menu">
+    `;
+    
+    for( plugin in moduleTypes[module] )
+      html += `<li><a class="dropdown-item" id="plugin_context_menu_${plugin}" href="#">${plugin}</a></li>`;
+
+    html += `</ul></li>`;
+  }
+    
+  html += `</ul>`;
   return html; 
 }  
 
 function addGraphEditor(name, id, grid_options) {
 
-  let titlebar_html = pluginMenuList();
+  let titlebar_html = pluginMenuBar();
   
   let html = `
     <div id="drawflow" class="mt-1 flex-grow-1 w-100"></div>
@@ -800,7 +805,7 @@ function addGraphEditor(name, id, grid_options) {
     grid.enable();
   });
   
-  drawflow = new Drawflow(document.getElementById("drawflow"));
+  drawflow = new Drawflow(editor);
   drawflow.start();
   
   drawflow.on('nodeMoved', onNodeMoved);
@@ -809,24 +814,51 @@ function addGraphEditor(name, id, grid_options) {
   drawflow.on('connectionCreated', onNodeConnectionCreated);
   drawflow.on('connectionRemoved', onNodeConnectionRemoved);
   
+  //drawflow.on('contextmenu', onNodeContextMenu);
+  document.body.appendChild(fromHTML(pluginContextMenu()));
+
   for( pluginName in pluginTypes ) {
     const plugin = pluginTypes[pluginName];
-    let pluginMenu = document.getElementById(`menu_create_plugin_${pluginName}`);
     
-    if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
-      pluginMenu.addEventListener('click', (event) => {
-        console.log(`opening init dialog for ${plugin['name']}`);
-        const modal = new bootstrap.Modal(`#${plugin['name']}_init_dialog`);
-        modal.show();
-      });
-    }
-    else {
-      pluginMenu.addEventListener('click', (event) => {
-        sendWebsocket({'add_plugin': {'type': plugin['name']}});
-      });
-    }
+    let pluginMenus = [
+      document.getElementById(`menu_create_plugin_${pluginName}`),
+      document.getElementById(`plugin_context_menu_${pluginName}`),
+    ];
+    
+    pluginMenus.forEach(pluginMenu => {
+      if( 'init' in plugin && Object.keys(plugin['init']['parameters']).length > 0 ) {
+        pluginMenu.addEventListener('click', (event) => {
+          console.log(`opening init dialog for ${plugin['name']}`);
+          const modal = new bootstrap.Modal(`#${plugin['name']}_init_dialog`);
+          modal.show();
+        });
+      }
+      else {
+        pluginMenu.addEventListener('click', (event) => {
+          var contextMenu = document.getElementById('plugin_context_menu');
+          var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
+          sendWebsocket({
+            'add_plugin': {
+              'type': plugin['name'],
+              'layout_node': {
+                'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
+                'y': parseInt(contextMenu.style.top) - nodeEditor.top,
+              }
+            }
+          });
+        });
+      }
+    });
   }
   
+  $("#drawflow").contextMenu({
+    menuSelector: "#plugin_context_menu",
+    menuSelected: function (invokedOn, selectedMenu) {
+        //var msg = "You selected the menu item '" + selectedMenu.text() + "' on the value '" + invokedOn.text() + "'";
+        console.log('selected context menu', selectedMenu, msg);
+    }
+  });
+
   return widget;
 }
 
@@ -880,6 +912,47 @@ function onNodeConnectionRemoved(event) {
       'output_channel': Number(event['output_class'].split('_').at(-1)) - 1
     } 
   });
+}
+
+/*function onNodeContextMenu(event) {
+  if( event.target.className != "drawflow" ) {
+    console.log(`ignoring contextmenu event from '${event.srcElement.className}'`);
+    return;
+  }
+  
+  // return native menu if pressing control
+  if( event.ctrlKey ) 
+    return;
+                
+  console.log('onNodeContextMenu', event);
+  //addNodeContextMenu(event.clientX, event.clientY);
+  
+  //$('#contextMenu').show().css({position: "absolute", left: event.clientX, top: event.clientY});
+  //openContextMenu('#contextMenu', event);
+  
+  return false;
+}*/
+
+function addNodeContextMenu(x, y) {
+  let html = `
+    <ul class="dropdown-menu" id="node_context_menu" style="position: absolute; left: 0; top: 0;">
+      <li><a class="dropdown-item">ABC</a></li>
+    </ul>
+  `;
+   
+  html = `
+    <ul id="node_context_menu" style="position: absolute; left: ${x}; top: ${y};">
+      <li><a>ABC</a></li>
+    </ul>
+  `;
+  
+  //html = `<p style="position: absolute; left: 100; top: 100;">ABC123</p>`;
+   
+  let contextMenu = fromHTML(html);
+  //document.getElementById("drawflow").appendChild(contextMenu);
+  document.body.appendChild(contextMenu);
+  console.log('opening node editor context menu', contextMenu);
+  return contextMenu;
 }
 
 function addDialog(id, title, html, xl, onsubmit, oncancel) {
@@ -1050,6 +1123,14 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
 
     args['name'] = plugin_name;
     
+    var contextMenu = document.getElementById('plugin_context_menu');
+    var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
+     
+    args['layout_node'] = {
+      'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
+      'y': parseInt(contextMenu.style.top) - nodeEditor.top,
+    };
+ 
     let msg = {};
     
     if( stage == 'init' ) {
@@ -1107,4 +1188,26 @@ function fitGridWidgetContents(el) {
   //el.querySelector('.collapse').style.height = `${el.offsetHeight-150}px`;
 }
 
+
+/**
+ * https://stackoverflow.com/a/35385518
+ * @param {String} HTML representing a single element.
+ * @param {Boolean} flag representing whether or not to trim input whitespace, defaults to true.
+ * @return {Element | HTMLCollection | null}
+ */
+function fromHTML(html, trim = true) {
+  // Process the HTML string.
+  html = trim ? html.trim() : html;
+  if (!html) return null;
+
+  // Then set up a new template element.
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const result = template.content.children;
+
+  // Then return either an HTMLElement or HTMLCollection,
+  // based on whether the input HTML had one or more roots.
+  if (result.length === 1) return result[0];
+  return result;
+}
 
