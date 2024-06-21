@@ -97,8 +97,9 @@ def _get_python_function_arguments(function: Callable, arg_descriptions: dict) -
     """
     properties = {}
     annotations = inspect.getfullargspec(function).annotations
+    
     for arg, arg_type in annotations.items():
-        if arg == "return":
+        if arg == "return" or arg == "self":
             continue
         #if isinstance(arg_type, type) and issubclass(arg_type, BaseModel):
             # Mypy error:
@@ -122,6 +123,7 @@ def _get_python_function_arguments(function: Callable, arg_descriptions: dict) -
             if arg not in properties:
                 properties[arg] = {}
             properties[arg]["description"] = arg_descriptions[arg]
+            
     return properties
     
 def _get_python_function_required_args(function: Callable) -> List[str]:
@@ -130,6 +132,11 @@ def _get_python_function_required_args(function: Callable) -> List[str]:
     required = spec.args[: -len(spec.defaults)] if spec.defaults else spec.args
     required += [k for k in spec.kwonlyargs if k not in (spec.kwonlydefaults or {})]
 
+    try:
+        required.remove('self')
+    except ValueError:
+        pass
+        
     is_function_type = isinstance(function, FunctionType)
     is_method_type = isinstance(function, MethodType)
     if required and is_function_type and required[0] == "self":

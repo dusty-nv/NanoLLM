@@ -90,7 +90,7 @@ class DynamicAgent(Agent):
         
         if load_time > 1:  # don't show alert if model was cached
             args_str = pprint.pformat(init_kwargs, indent=2, width=80).replace('\n', '<br/>')
-            self.webserver.send_alert(f"Created {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
+            self.webserver.send_alert(f"Loaded {plugin.name} in {load_time:.1f} seconds<br/>&nbsp;&nbsp;{args_str}", level='success')
         
         return plugin
         

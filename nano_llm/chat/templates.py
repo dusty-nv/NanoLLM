@@ -76,6 +76,7 @@ ChatTemplates = {
         'bot': "${MESSAGE}\n",  # <|im_end|> is after $MESSAGE, but is already included in bot output
         'tool_call': "<tool_call>(.*?)</tool_call>",
         'tool_response': "<|im_start|>tool\n<tool_response>\n${MESSAGE}\n</tool_response>\n<|im_end|>\n<|im_start|>assistant\n",
+        'stop': ['<|im_end|>', '</tool_call>'],
     },
 
     # https://github.com/NousResearch/Obsidian/blob/e09c51d88d74657f442a898e3c4607a5b961f0b3/llava/llava/conversation.py#L385

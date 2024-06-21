@@ -3,9 +3,9 @@ import os
 import time
 import logging
 
-from nano_llm import Plugin, BotFunctions, ChatHistory, NanoLLM as NanoModel
+from nano_llm import Plugin, BotFunctions, ChatHistory, ChatTemplates, NanoLLM as NanoModel
 from nano_llm.web import WebServer
-from nano_llm.utils import ImageTypes, print_table, update_default
+from nano_llm.utils import ImageTypes, load_prompts, print_table
 
 
 class NanoLLM(Plugin):
@@ -63,6 +63,11 @@ class NanoLLM(Plugin):
             self.model = model
             self.model_name = self.config.name
 
+        try:
+            system_prompt = load_prompts(system_prompt, concat=True)
+        except Exception as error:
+            self.send_alert(f"Failed to load system prompt from {system_prompt} ({error})", level="error")
+            
         self.title = os.path.basename(self.model_name)
         self.stream = None
 
@@ -124,11 +129,12 @@ class NanoLLM(Plugin):
         
         for output in self.outputs[NanoLLM.OutputTools]:
             tools.update(output.tools)
-            
+        print('TOOLSET', tools)    
         return tools
 
     @property
     def tool_docs(self):
+        print('TOOL_DOCS', self.tool_spec)
         if self.tool_spec == 'openai':
             return str([x.openai for x in self.toolset.values() if x.enabled])
         elif self.tool_spec == 'python':
@@ -152,11 +158,19 @@ class NanoLLM(Plugin):
                     "Efficient-Large-Model/Llama-3-VILA1.5-8B",
                 ]
             },
+            
+            'chat_template': {
+                'suggestions': list(ChatTemplates.keys())
+            },
+            
             'system_prompt': {
                 'multiline': 3,
             },
         }
 
+    def state_dict(self, **kwargs):
+        return {**super().state_dict(**kwargs), 'model': self.model_name}
+     
     def process(self, input, **kwargs):
         """
         Generate the reply to a prompt or the latest ChatHistory.
