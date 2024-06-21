@@ -11,7 +11,7 @@
       .nav-item .submenu-left{ 
           right:100%; left:auto;
       }
-      .dropdown-menu > li:hover{ background-color: #f1f1f1 }
+      .dropdown-menu > li:hover{ background-color: #536c54; }
       .dropdown-menu > li:hover > .submenu{ display: block; }
   }	
   /* ============ desktop view .end// ============ */

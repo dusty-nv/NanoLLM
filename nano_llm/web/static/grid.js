@@ -758,9 +758,11 @@ function pluginContextMenu() {
  
   let html = `
     <ul id="plugin_context_menu" class="nav-item dropdown-menu" role="menu" style="display:none">
-      <li><a class="dropdown-item" href="#">Agents</a>
+      <li><a class="dropdown-item" href="#">Load</a>
           <ul class="submenu dropdown-menu" id="plugin_context_menu_agents"></ul>
-      </li> 
+      </li>
+      <li><a class="dropdown-item" href="#" onclick="newAgent()">Clear</a></li>
+      <li><hr class="dropdown-divider"></li> 
   `;
 
   for( module in moduleTypes ) {
@@ -783,10 +785,31 @@ function nodeLayoutInsertPos() {
   var contextMenu = document.getElementById('plugin_context_menu');
   var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
   
-  return {
-    'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
-    'y': parseInt(contextMenu.style.top) - nodeEditor.top,
+  var pos = {
+    x: parseInt(contextMenu.style.left) - nodeEditor.left, 
+    y: parseInt(contextMenu.style.top) - nodeEditor.top,
   };
+  
+  if( isNaN(pos.x) || isNaN(pos.y) ) {
+    const nodes = document.querySelectorAll('.drawflow-node');
+
+    var x = 10;
+    var y = 10;
+      
+    if( nodes.length > 0 ) {
+      const node = nodes[nodes.length-1];
+      const abs_rect = node.getBoundingClientRect();
+      pos.x = node.offsetLeft + abs_rect.width + 60;
+      pos.y = node.offsetTop;
+    }
+    else
+    {
+      pos.x = 10;
+      pos.y = 10;
+    }
+  }
+  console.log('node layout pos', pos);  
+  return pos;
 }
 
 function addGraphEditor(name, id, grid_options) {

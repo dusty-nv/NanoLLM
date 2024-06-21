@@ -33,6 +33,8 @@ function loadStudio(config) {
   openAudioDevices();
 
   addGrid();
+  
+  //setTimeout( ()=>{ debugger }, 5000);
 }
 
 function onWebsocketMsg(payload, type) {
@@ -101,13 +103,11 @@ function insertAgent(name) {
 function insertAgentContext(name) {
   var contextMenu = document.getElementById('plugin_context_menu');
   var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
+  
   sendWebsocket({
     'insert': {
       'path': name, 
-      'layout_node': {
-        'x': parseInt(contextMenu.style.left) - nodeEditor.left, 
-        'y': parseInt(contextMenu.style.top) - nodeEditor.top
-      }
+      'layout_node': nodeLayoutInsertPos()
     }
   });
 }
