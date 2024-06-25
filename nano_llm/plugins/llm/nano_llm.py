@@ -31,17 +31,17 @@ class NanoLLM(Plugin):
     OutputHistory = 4
     OutputTools = 5
     
-    def __init__(self, model : str = "princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
-                 api : str = "mlc", quantization : str = "q4f16_ft", 
-                 max_context_len : int = None, drop_inputs : bool = False,
-                 chat_template : str = None, system_prompt : str = None, **kwargs):
+    def __init__(self, model: str="princeton-nlp/Sheared-LLaMA-2.7B-ShareGPT", 
+                 api: str="mlc", quantization: str="q4f16_ft", 
+                 max_context_len: int=None, drop_inputs: bool=False,
+                 chat_template: str=None, system_prompt: str=None, **kwargs):
         """
         Load an LLM and run generation on chat requests.
         
         Args:
           model (str): Either the path to the model, or HuggingFace model repo/name.
-          api (str): The model backend API to use:  'mlc', 'awq', or 'hf' (by default, it will attempt to be automatically determined)
-          quantization (str): For MLC, 'q4f16_ft', 'q4f16_1', 'q8f16_ft', 'q8f16_1'. For AWQ, the path to the fully-quantized AWQ weights.
+          api (str): The model backend to use (MLC - fastest, AWQ - accurate quantization, HF - compatability)
+          quantization (str): For MLC: recommend q4f16_ft or 8f16_ft. For AWQ: the path to the quantized weights.
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
           drop_inputs (bool): If true, only the latest message from the input queue will be used (older messages dropped)
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
@@ -120,6 +120,11 @@ class NanoLLM(Plugin):
         
     @system_prompt.setter
     def system_prompt(self, value):
+        try:
+            value = load_prompts(value, concat=True)
+        except Exception as error:
+            self.send_alert(f"Failed to load system prompt from {value} ({error})", level="error")
+            
         self._system_prompt = value
         self.reset()
 
@@ -129,12 +134,14 @@ class NanoLLM(Plugin):
         
         for output in self.outputs[NanoLLM.OutputTools]:
             tools.update(output.tools)
-        print('TOOLSET', tools)    
+        
+        for function in BotFunctions():
+            tools[function.name] = function
+          
         return tools
 
     @property
     def tool_docs(self):
-        print('TOOL_DOCS', self.tool_spec)
         if self.tool_spec == 'openai':
             return str([x.openai for x in self.toolset.values() if x.enabled])
         elif self.tool_spec == 'python':
@@ -159,6 +166,15 @@ class NanoLLM(Plugin):
                 ]
             },
             
+            'api': {
+                'display_name': 'API',
+                'options': ['MLC', 'AWQ', 'HF'],
+            },
+            
+            'quantization': {
+                'suggestions': ['q3f16_0', 'q3f16_1', 'q4f16_0', 'q4f16_1', 'q4f16_2', 'q4f16_ft', 'q4f16_ft_group', 'q4f32_0', 'q4f32_1', 'q8f16_ft', 'q8f16_ft_group', 'q8f16_1'],
+            },
+            
             'chat_template': {
                 'suggestions': list(ChatTemplates.keys())
             },
@@ -166,12 +182,16 @@ class NanoLLM(Plugin):
             'system_prompt': {
                 'multiline': 3,
             },
+            
+            'max_context_len': {
+                'display_name': 'Max Context Length',
+            },
         }
 
     def state_dict(self, **kwargs):
         return {**super().state_dict(**kwargs), 'model': self.model_name}
      
-    def process(self, input, **kwargs):
+    def process(self, input, partial=False, **kwargs):
         """
         Generate the reply to a prompt or the latest ChatHistory.
         
@@ -211,7 +231,11 @@ class NanoLLM(Plugin):
                 
         # add prompt to chat history
         if isinstance(input, str) or isinstance(input, dict) or isinstance(input, ImageTypes):
-            self.history.append(role='user', msg=input)
+            if partial:
+                self.send_history(append=dict(role='user', text=str(input), partial=True))
+                return
+            else:
+                self.history.append(role='user', msg=input)
         else:
             raise TypeError(f"ChatModel plugin expects inputs of type str, dict, image, or ChatHistory (was {type(input)})")
 
@@ -309,6 +333,9 @@ class NanoLLM(Plugin):
                 print_table(self.model.stats)
                 
             # run bot functions
+            if not tool_functions:
+                return
+                
             tool_response = self.history.run_tools(bot_reply, tools=tool_functions)
             
             if tool_response is None:
@@ -317,8 +344,6 @@ class NanoLLM(Plugin):
             if self.outputs[NanoLLM.OutputHistory]:
                 self.output(self.history.to_list(html=True), NanoLLM.OutputHistory)
                 
-            if not tool_functions:
-                return
 
     def start(self):
         """
@@ -335,11 +360,16 @@ class NanoLLM(Plugin):
         self.history.reset(system_prompt=self.apply_substitutions(self._system_prompt))
         self.send_history()
         
-    def send_history(self, html=True, **kwargs):
+    def send_history(self, html=True, append=None, **kwargs):
         """
         Output the chat history (typically with HTML formatting applied for web clients)
         """
         if self.outputs[NanoLLM.OutputHistory]:
-            self.output(self.history.to_list(html=html), NanoLLM.OutputHistory, **kwargs)
+            history = self.history.to_list(html=html)
+            if append:
+                if not isinstance(append, list):
+                    append = [append]
+                history.extend(append)
+            self.output(history, NanoLLM.OutputHistory, **kwargs)
                        
             

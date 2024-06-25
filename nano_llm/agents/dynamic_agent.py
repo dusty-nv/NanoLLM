@@ -21,15 +21,15 @@ class DynamicAgent(Agent):
     Agent that is dynamically configured at runtime by adding/removing plugins and their connections.
     It also provides a websocket API that automatically routes messages to plugin functions and attributes.
     """
-    def __init__(self, load=None, agent_dir='/data/nano_llm/agents', **kwargs):
+    def __init__(self, load=None, preset_dir='/data/nano_llm/presets', **kwargs):
         super().__init__(**kwargs)
         
         DynamicPlugin.register_all()
 
         self.plugins = []
-        self.agent_dir = agent_dir
+        self.preset_dir = preset_dir
         
-        os.makedirs(agent_dir, exist_ok=True)
+        os.makedirs(preset_dir, exist_ok=True)
         
         if not kwargs.get('web_trace', False):
             self.tegrastats = Tegrastats()
@@ -279,7 +279,7 @@ class DynamicAgent(Agent):
             path = path + ext
             
         if not os.path.dirname(path):
-            path = os.path.join(self.agent_dir, path)
+            path = os.path.join(self.preset_dir, path)
 
         state_dict = self.get_state_dict()
         
@@ -291,17 +291,17 @@ class DynamicAgent(Agent):
             else:
                 raise ValueError(f"supported extensions are .json, .yml, .yaml (was {ext})")
                 
-        self.webserver.send_alert(f"saved agent to {path}", level='success')
-        self.webserver.send_message({'agents': self.get_agents_list()})
+        self.webserver.send_alert(f"saved preset to {path}", level='success')
+        self.webserver.send_message({'presets': self.list_presets()})
     
     def load(self, path, reset=True, layout_node=None):
         if not path:
             return
 
-        logging.info(f"loading {path} agent  (reset={reset}, layout_node={layout_node})")
+        logging.info(f"loading {path}   (reset={reset}, layout_node={layout_node})")
         
         found_path = None
-        
+        previous_nodes = len(self.plugins)
         possible_files = [
             path,
             path + '.json',
@@ -309,7 +309,7 @@ class DynamicAgent(Agent):
             path + '.yml',
         ]
         
-        possible_files += [os.path.join(self.agent_dir, x) for x in possible_files]
+        possible_files += [os.path.join(self.preset_dir, x) for x in possible_files]
 
         for possible_file in possible_files:
             if os.path.isfile(possible_file):
@@ -317,7 +317,7 @@ class DynamicAgent(Agent):
                 break
                 
         if not found_path:
-           self.webserver.send_alert(f"Couldn't find agent '{path}' on server", level='error')
+           self.webserver.send_alert(f"Couldn't find preset '{path}' on server", level='error')
            return
 
         try:   
@@ -333,22 +333,22 @@ class DynamicAgent(Agent):
 
             self.set_state_dict(state_dict, reset=reset, layout_node=layout_node)
         except Exception as error:
-            self.webserver.send_alert(f"Exception occurred loading agent '{path}'\n\n{traceback.format_exc()}", level='error')
+            self.webserver.send_alert(f"Exception occurred loading preset '{path}'\n\n{traceback.format_exc()}", level='error')
         else:
-            self.webserver.send_alert(f"Loaded agent {path} ({len(self.plugins)} nodes)", level='success')
+            self.webserver.send_alert(f"Loaded preset {path} ({len(self.plugins)-previous_nodes} nodes)", level='success')
 
     def insert(self, path=None, layout_node=None):
         return self.load(path, reset=False, layout_node=layout_node)
         
-    def get_agents_list(self, agent_dir=None, remove_extensions=True):
-        if not agent_dir:
-            agent_dir = self.agent_dir
+    def list_presets(self, preset_dir=None, remove_extensions=True):
+        if not preset_dir:
+            preset_dir = self.preset_dir
 
         files = []
         extensions = ['.json', '.yaml', '.yml']
         
         for ext in extensions:
-            files.extend(glob.glob(f'**{ext}', root_dir=agent_dir))
+            files.extend(sorted(glob.glob(f'**{ext}', root_dir=preset_dir)))
 
         if remove_extensions:
             for ext in extensions:
@@ -361,7 +361,7 @@ class DynamicAgent(Agent):
         init_msg = {
             'modules': DynamicPlugin.modules(),
             'plugin_types': DynamicPlugin.TypeInfo,
-            'agents': self.get_agents_list(),
+            'presets': self.list_presets(),
         }
         
         init_msg['plugin_added'] = [{'name': name, 'global': True, **state} for name, state in self.global_states.items()]

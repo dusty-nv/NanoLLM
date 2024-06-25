@@ -46,7 +46,7 @@
                   Agent
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="navbarAgent">
-                  <li><a class="dropdown-item" href="#" onclick="newAgent()">New</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="removeAll()">New</a></li>
                   <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#saveAgentDialog">Save</a></li>
                   <li><a class="dropdown-item" id="navbarLoadAgent" href="#">Load</a>
                     <ul class="submenu dropdown-menu" id="navbarLoadAgentMenu" aria-labelledby="navbarLoadAgent"></ul>
@@ -89,7 +89,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="saveAgent(document.getElementById('saveAgentName').value)">Save</button>
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="savePreset(document.getElementById('saveAgentName').value)">Save</button>
           </div>
         </div>
       </div>

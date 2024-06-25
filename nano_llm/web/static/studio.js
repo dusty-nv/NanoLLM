@@ -71,8 +71,8 @@ function onWebsocketMsg(payload, type) {
       setStats(payload['stats']);
     }
     
-    if( 'agents' in payload ) {
-      setAgents(payload['agents']);
+    if( 'presets' in payload ) {
+      setPresets(payload['presets']);
     }
     
     if( 'alert' in payload ) {
@@ -84,49 +84,47 @@ function onWebsocketMsg(payload, type) {
   }
 }
 
-function newAgent(name) {
+function removeAll(name) {
   sendWebsocket({'reset': {'plugins': true, 'globals': true}});
 }
 
-function saveAgent(name) {
+function savePreset(name) {
   sendWebsocket({'save': name});
 }
 
-function loadAgent(name) {
+function loadPreset(name) {
   sendWebsocket({'load': name});
 }
 
-function insertAgent(name) {
-  sendWebsocket({'insert': name});
+function insertPreset(name, context=true) {
+  if( context ) {
+    sendWebsocket({
+      'insert': {
+        'path': name, 
+        'layout_node': nodeLayoutInsertPos()
+      }
+    });
+  }
+  else {
+    sendWebsocket({'insert': name});
+  }
 }
 
-function insertAgentContext(name) {
-  var contextMenu = document.getElementById('plugin_context_menu');
-  var nodeEditor = document.getElementById('drawflow').getBoundingClientRect();
-  
-  sendWebsocket({
-    'insert': {
-      'path': name, 
-      'layout_node': nodeLayoutInsertPos()
-    }
-  });
-}
-
-function setAgents(agents) {
-  console.log('setting agents list', agents);
+function setPresets(presets) {
+  console.log('setting presets list', presets);
   
   let load_menu = $('#navbarLoadAgentMenu');
   let insert_menu = $('#navbarInsertAgentMenu');
-  let context_menu = $('#plugin_context_menu_agents');
+  let context_menu = $('#plugin_context_menu_presets');
   
   load_menu.empty();
   insert_menu.empty();
   context_menu.empty();
   
-  agents.forEach((agent) => {
-    load_menu.append(`<li><a class="dropdown-item" href="#" onclick="loadAgent('${agent}')">${agent}</a></li>`);
-    insert_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertAgent('${agent}')">${agent}</a></li>`);
-    context_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertAgentContext('${agent}')">${agent}</a></li>`);
+  presets.forEach((preset) => {
+    load_menu.append(`<li><a class="dropdown-item" href="#" onclick="loadPreset('${preset}')">${preset}</a></li>`);
+    insert_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertPreset('${preset}')">${preset}</a></li>`);
+    context_menu.append(`<li><a class="dropdown-item" href="#" onclick="insertPreset('${preset}', true)">${preset}</a></li>`);
   });
 }
 

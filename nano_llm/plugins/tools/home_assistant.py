@@ -26,16 +26,16 @@ class HomeAssistant(Plugin):
             'switch': ['turn_on', 'turn_off', 'toggle']
         }
         
-        self.devices = ['switch.zooz_plug']
+        self.devices = ['switch.zooz_lights', 'switch.zooz_fan']
         
-        self.add_tool('control_device')
+        self.add_tool(self.control_device)
        
-    def control_device(name : str, state : str) -> str:
+    def control_device(self, name : str, state : str) -> str:
         """
         Controls a smart home device, for example turning a light switch on or off.
 
         Args:
-            name (str): The name of the device. These devices are available: switch.zooz_plug
+            name (str): The name of the device. These devices are available: ${HOMEASSISTANT.DEVICES}
             state (str): The operation to perform. For switches, this can be 'turn_on', 'turn_off', or 'toggle'.
             
         Returns:
@@ -63,3 +63,9 @@ class HomeAssistant(Plugin):
             
         return response.text #.replace('\\"', '\"').replace("\\'", "\'")
 
+    @classmethod
+    def type_hints(cls):
+        return {
+            'url': {'display_name': 'URL'},
+            'api_key': {'display_name': 'API Key', 'password': True},
+        }

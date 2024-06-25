@@ -758,10 +758,10 @@ function pluginContextMenu() {
  
   let html = `
     <ul id="plugin_context_menu" class="nav-item dropdown-menu" role="menu" style="display:none">
-      <li><a class="dropdown-item" href="#">Load</a>
-          <ul class="submenu dropdown-menu" id="plugin_context_menu_agents"></ul>
+      <li><a class="dropdown-item" href="#">Presets</a>
+          <ul class="submenu dropdown-menu" id="plugin_context_menu_presets"></ul>
       </li>
-      <li><a class="dropdown-item" href="#" onclick="newAgent()">Clear</a></li>
+      <li><a class="dropdown-item" href="#" onclick="removeAll()">Remove All</a></li>
       <li><hr class="dropdown-divider"></li> 
   `;
 
@@ -808,7 +808,7 @@ function nodeLayoutInsertPos() {
       pos.y = 10;
     }
   }
-  console.log('node layout pos', pos);  
+
   return pos;
 }
 
@@ -821,7 +821,7 @@ function addGraphEditor(name, id, grid_options) {
   `;
 
   let widget = addGridWidget(
-     id, "Graph Editor", 
+     id, "Node Editor", 
      html, titlebar_html, 
      Object.assign({w: 8, h: 11}, grid_options)
   );
@@ -879,7 +879,7 @@ function addGraphEditor(name, id, grid_options) {
     });
   }
   
-  $("#drawflow").contextMenu({
+  $(".drawflow").contextMenu({
     menuSelector: "#plugin_context_menu",
     menuSelected: function (invokedOn, selectedMenu) {
         //var msg = "You selected the menu item '" + selectedMenu.text() + "' on the value '" + invokedOn.text() + "'";
@@ -1113,7 +1113,11 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
       var input_html = `<input id="${id}" type="color" class="form-control" aria-describedby="${id}_help" ${value_html}/>`;
     }
     else {
-      const type = (param['type'] == 'integer') ? 'number' : param['type'];
+      var type = (param['type'] == 'integer') ? 'number' : param['type'];
+      
+      if( param.password )
+        type = 'password';
+        
       var input_html = `<input id="${id}" type="${type}" class="form-control" aria-describedby="${id}_help" ${value_html}>`;
     }
 

@@ -107,6 +107,9 @@ class ChatHistory():
             (re.compile(r'\*(.*?)\*'), r'*<i>\1</i>*'),    # emotives inside asterisks
         ]
         
+        from nano_llm import BotFunctions
+        self.BotFunctions = BotFunctions
+        
         self.reset()
 
     @property
@@ -484,10 +487,8 @@ class ChatHistory():
             
         if not text:
             return None
-            
-        from nano_llm import BotFunctions    
-        
-        tool_response = BotFunctions.run(text, template=self.template, functions=tools)
+
+        tool_response = self.BotFunctions.run(text, template=self.template, functions=tools)
 
         if not tool_response:
             return None

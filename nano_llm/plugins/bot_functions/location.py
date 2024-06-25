@@ -4,23 +4,22 @@ from nano_llm.utils import WebRequest
 
 
 @bot_function
-def LOCATION(return_type='str'):
-    """ 
+def geolocation():
+    """
     Returns the current location, like the name of the city.
+    This function takes no arguments.
     """
     response = WebRequest.get("http://ip-api.com/json", ttl=600)  # zip, lat/lon, timezone, query (IP)
-    text = f"{response['city']}, {response['regionName']}"
-    return response.to(return_type, text)
+    return f"{response['city']}, {response['regionName']}"
 
 
-@bot_function(docs='openai', enabled=False)
 def get_current_location():
     """
     Returns the current location, like the name of the city.
     This function takes no arguments.
     """
     r = WebRequest.get("http://ip-api.com/json", ttl=600).to_dict()
-    
+
     return {
         'city': r['city'],
         'state': r['regionName'],
@@ -31,8 +30,8 @@ def get_current_location():
         'lat': r['lat'],
         'lon': r['lon'],
      }
-    
-    
+
+        
 """
 Returns the current location, like the name of the city.
 

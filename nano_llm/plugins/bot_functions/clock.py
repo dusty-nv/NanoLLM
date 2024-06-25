@@ -4,7 +4,7 @@ from nano_llm import bot_function
 
 
 @bot_function
-def TIME():
+def time():
     """
     Returns the current time.
     """
@@ -12,7 +12,7 @@ def TIME():
 
 
 @bot_function
-def DATE():
+def date():
     """
     Returns the current date.
     """

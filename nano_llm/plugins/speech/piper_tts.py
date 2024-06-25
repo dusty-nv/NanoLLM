@@ -24,9 +24,9 @@ class PiperTTS(AutoTTS):
     You can get the list of voices with tts.voices, and list of languages with tts.languages
     The speed can be set with tts.rate (1.0 = normal). The default voice is '...' with rate 1.0
     """
-    def __init__(self, voice: str = 'en_US-libritts-high', voice_speaker: str = None,
-                 voice_rate: float = 1.0, sample_rate_hz: int = 22050, 
-                 model_cache: str = os.environ.get('PIPER_CACHE'), **kwargs):
+    def __init__(self, voice: str='en_US-libritts-high', voice_speaker: str='p339',
+                 voice_rate: float=1.0, sample_rate_hz: int=22050, 
+                 model_cache: str=os.environ.get('PIPER_CACHE'), **kwargs):
         """
         Load Piper TTS model with ONNX Runtime using CUDA.
         

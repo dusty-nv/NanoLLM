@@ -86,6 +86,9 @@ class Plugin(threading.Thread):
             self.input_queue = queue.Queue()
             self.input_event = threading.Event()
 
+        from nano_llm import BotFunctions
+        self.BotFunctions = BotFunctions
+        
         Plugin.Instances.append(self)
      
     def __del__(self):
@@ -600,12 +603,6 @@ class Plugin(threading.Thread):
         These can also refer to getter functions or properties that require no positional arguments,
         and if found the associate function will be called and its return value substituted instead.
         """
-        splits = text.split('${')
-        string = ''
-        
-        if len(splits) <= 1:
-            return text
-            
         def find_closing_bracket(s : str):
             for i, c in enumerate(s):
                 if c == '}':
@@ -622,8 +619,10 @@ class Plugin(threading.Thread):
             else:
                 plugin_name = None
                 plugin_attr = var
-                
-            for plugin in [self] + Plugin.Instances:  # resolve unclassed references to this plugin first
+            
+            bot_functions = self.BotFunctions()
+
+            for plugin in [self] + Plugin.Instances + self.BotFunctions():  # resolve unclassed references to this plugin first
                 if plugin_name and plugin_name != plugin.name.lower():
                     continue
                     
@@ -631,6 +630,8 @@ class Plugin(threading.Thread):
                     plugin_attr_lower = plugin_attr.lower()
                     if hasattr(plugin, plugin_attr_lower):
                         plugin_attr = plugin_attr_lower
+                    elif hasattr(plugin, 'function') and getattr(plugin, 'name', '').lower() == plugin_attr_lower:
+                        return str(plugin.function())
                     else:
                         continue
                         
@@ -644,6 +645,13 @@ class Plugin(threading.Thread):
             logging.warning(f"{self.name} could not find variable ${{{var}}} for substitution")
             return f"${{{var}}}"
             
+        #while True:
+        splits = text.split('${')
+        string = ''
+    
+        if len(splits) <= 1:
+            return text
+        
         for split in splits:
             if not split:
                 continue
@@ -659,5 +667,12 @@ class Plugin(threading.Thread):
         
             if end < len(split)-1:
                 string = string + split[end+1:]
-            
-        return string     
+                
+        return string
+        '''                
+            if text != string:
+                text = string
+                continue
+            else:        
+                return string  
+        '''   

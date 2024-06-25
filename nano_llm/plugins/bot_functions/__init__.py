@@ -7,11 +7,11 @@ import functools
 import traceback
 
 from decorator_args import decorator_args
-from ...utils import convert_to_openai_tool
+from ...utils import inspect_function
 
 
 @decorator_args(optional=True)        
-def bot_function(func, name=None, docs='pydoc', enabled=True):
+def bot_function(func, name=None, docs=None, enabled=True):
     """
     Decorator for exposing a function to be callable by the LLM.
     This will create wrapper functions that do the parsing to
@@ -32,18 +32,10 @@ def bot_function(func, name=None, docs='pydoc', enabled=True):
     you can then add to the chat history.
             
     Args:
-    
       func (Callable):  The function to be called by the model.
-      
       name (str):  The function name that the model should refer to.
                    By default, it will be the actual Python function name.
-                   
-      docs (str):  Description of the function that is added to the model's
-                   system prompt.  If ``docs='pydoc'``, then the Python docstring 
-                   is extracted from the function's comment block with its signature.
-                   If ``docs='openai'`` or ``None``, then the docs will be generated 
-                   with in the pydantic OpenAI tool-calling style.
-
+      docs (str):  Description of the function that overrides its pydoc string.
       enabled (bool):  Boolean that toggles whether this function is added
                        to the system prompt and able to be called or not.
     """                   
@@ -176,7 +168,7 @@ class BotFunctions:
         return docs
 
     @classmethod
-    def register(cls, func, name=None, docs='pydoc', enabled=True):
+    def register(cls, func, name=None, docs=None, enabled=True):
         """
         See the docs for :func:`bot_function`
         """
@@ -208,37 +200,20 @@ class BotFunctions:
                 logging.error(f"Exception occurred executing generated code {code_str}\n\n{traceback.format_exc()}")
                 return None
 
+        if not docs:
+            if wrapper.__doc__:
+                wrapper.docs = f"`{name}()` - " + wrapper.__doc__.strip()
+            else:
+                wrapper.docs = name + '() '
+                
         wrapper.name = name
-        wrapper.docs = ''
+        wrapper.docs = docs
         wrapper.spec = None
         wrapper.enabled = enabled
         wrapper.function = func
         wrapper.regex = regex
-        
-        if docs is None:
-            docs = ''
-            
-        if docs == 'nosig':
-            docs = 'pydoc_nosig'
-         
-        if docs == 'python':
-            docs = 'pydoc'
-               
-        if docs.startswith('pydoc'):
-            if wrapper.__doc__:
-                if docs == 'pydoc':
-                    wrapper.docs = f"`{name}()` - " + wrapper.__doc__.strip()
-                elif docs == 'pydoc_nosig':
-                    wrapper.docs = wrapper.__doc__.strip()
-            else:
-                wrapper.docs = name + '() '
-            wrapper.spec = 'python'
-        elif docs.startswith('openai') or not docs:
-            wrapper.docs = convert_to_openai_tool(func)
-            wrapper.spec = 'openai'
-        elif docs:
-            wrapper.docs = docs
-            
+        wrapper.openai = inspect_function(func, return_spec='openai')
+
         cls.functions.append(wrapper)
         func._bot_function = wrapper
         
@@ -321,8 +296,8 @@ class BotFunctions:
         # TODO: automate this
         from . import clock
         from . import location
-        from . import weather
-        from . import home_assistant
+        #from . import weather
+        #from . import home_assistant
         
         assert(cls.functions)
         cls.builtins = True

@@ -30,6 +30,7 @@ class AutoTTS(Plugin):
         self.filter_regex = [
             (re.compile(r'`(.*?)`'), r''),   # filter out code blocks
             (re.compile(r'\*(.*?)\*'), r''), # filter out emotives between asterisks
+            #(re.compile(r'<tool_call>(.*?)</tool_call>'), r''),
         ]
         
         self.add_parameter('buffering', name='TTS Buffering', default=tts_buffering, end=True, help="If 'punctuation', the TTS will wait to generate until the end of sentences for better dynamics.  If 'time', TTS will wait until audio gap-out approaches as to accumulate the most text.  If 'time,punctuation', it will wait for both.")
@@ -179,9 +180,20 @@ class AutoTTS(Plugin):
             return None
             
         # text = text.strip()
+        tool_call = text.find('<tool_call>')
+        
+        if tool_call >= 0:
+            print('found tool call at index', tool_call)
+            text = text[:tool_call]
+            
+        tool_call = text.find('</tool_call>')
+        
+        if tool_call >= 0:
+            text = text[tool_call+12:]
+            
         for stop_token in StopTokens:
             text = text.replace(stop_token, '')
-            
+       
         #text = text.replace('</s>', '')
         text = text.replace('\n', ' ')
         text = text.replace('...', ' ')    

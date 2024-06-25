@@ -10,10 +10,12 @@
                 // return native menu if pressing control
                 if( e.ctrlKey ) 
                   return;
-                
+
                 // ignore clicks on child elements
-                //if( e.target !== this )
-                //  return;
+                if( e.target !== this ) {
+                  $(settings.menuSelector).hide();
+                  return;
+                }
                   
                 // open menu
                 var $menu = $(settings.menuSelector)

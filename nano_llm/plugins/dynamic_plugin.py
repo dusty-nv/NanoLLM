@@ -85,7 +85,8 @@ class DynamicPlugin(Plugin):
 
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
-        from nano_llm.plugins.tools.clock import Clock
+        from nano_llm.plugins.tools.accuweather import AccuWeather
+        from nano_llm.plugins.tools.home_assistant import HomeAssistant
         
         # LLM
         DynamicPlugin.register(NanoLLM)   
@@ -120,7 +121,8 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(EventFilter)
         
         # tools
-        DynamicPlugin.register(Clock)
+        DynamicPlugin.register(AccuWeather)
+        DynamicPlugin.register(HomeAssistant)
         
         logging.info(f"Registered dynamic plugin types:\n\n{pprint.pformat(DynamicPlugin.TypeInfo, indent=2)}")
 

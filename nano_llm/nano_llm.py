@@ -52,6 +52,8 @@ class NanoLLM():
         if not api:
             api = default_model_api(model_path, kwargs.get('quantization'))
         
+        api = api.lower()
+        
         kwargs['name'] = model_name
         kwargs['api'] = api
         
