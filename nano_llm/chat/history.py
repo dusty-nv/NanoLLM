@@ -59,7 +59,7 @@ class ChatHistory():
         self.kv_cache = None
         
         # look-up or load the chat template
-        if not chat_template:
+        if not chat_template or chat_template == 'auto':
             self.template = ChatTemplate(model)
             if self.template is None:
                 raise RuntimeError(f"Couldn't automatically determine model type from {model.config.name}, please set the --chat-template argument")

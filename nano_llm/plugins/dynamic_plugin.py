@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+import gc
 import pprint
 import logging
 
-from nano_llm import Plugin
+from nano_llm import Plugin, NanoLLM
 from nano_llm.utils import inspect_function
 
 
@@ -49,7 +50,19 @@ class DynamicPlugin(Plugin):
             modules[plugin['module']][plugin['name']] = plugin
  
         return modules
+     
+    @classmethod
+    def clear_cache(cls):
+        NanoLLM.ModelCache = {}
+        
+        for name, plugin in cls.Types.items():
+            if hasattr(plugin, 'ModelCache'):
+                if plugin.ModelCache:
+                    logging.info(f"clearing {name} model cache  {list(plugin.ModelCache.keys())}")
+                    plugin.ModelCache = {}
          
+        gc.collect()
+               
     @classmethod
     def register(cls, plugin, **kwargs):
         info = {
@@ -75,7 +88,7 @@ class DynamicPlugin(Plugin):
             UserPrompt, AutoPrompt, VADFilter,
             TextStream, VideoOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder, 
-            NanoDB, DataTable, DataLogger, EventFilter,
+            NanoDB, Deduplicate, DataTable, DataLogger, EventFilter,
         )
 
         from nano_llm.plugins.speech.riva_asr import RivaASR
@@ -85,6 +98,9 @@ class DynamicPlugin(Plugin):
 
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
         
+        from nano_llm.plugins.tools.clock import Clock
+        from nano_llm.plugins.tools.location import Location
+        from nano_llm.plugins.tools.notification import Notification
         from nano_llm.plugins.tools.accuweather import AccuWeather
         from nano_llm.plugins.tools.home_assistant import HomeAssistant
         
@@ -116,11 +132,15 @@ class DynamicPlugin(Plugin):
         
         # database
         DynamicPlugin.register(NanoDB)
-        DynamicPlugin.register(DataTable)
-        DynamicPlugin.register(DataLogger)
+        DynamicPlugin.register(Deduplicate)
+        #DynamicPlugin.register(DataTable)
+        #DynamicPlugin.register(DataLogger)
         DynamicPlugin.register(EventFilter)
         
         # tools
+        DynamicPlugin.register(Clock)
+        DynamicPlugin.register(Location)
+        DynamicPlugin.register(Notification)
         DynamicPlugin.register(AccuWeather)
         DynamicPlugin.register(HomeAssistant)
         

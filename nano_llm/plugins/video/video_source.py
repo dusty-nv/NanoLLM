@@ -19,22 +19,25 @@ class VideoSource(Plugin):
     Captures or loads a video/camera stream or sequence of images
     https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
     """
-    def __init__(self, video_input : str = '/dev/video0', 
-                 video_input_width : int = 640, video_input_height : int = 480, 
-                 video_input_codec : str = None, video_input_framerate : float = None, 
-                 video_input_save : str = None, num_buffers : int = None, 
-                 return_copy : bool = True, return_tensors : str = 'cuda', **kwargs):
+    def __init__(self, video_input: str='/dev/video0', 
+                 video_input_width: int=640, video_input_height: int=480, 
+                 video_input_codec: str=None, video_input_framerate: float=None, 
+                 video_input_save: str=None, loops: int=None, num_buffers: int=None, 
+                 return_copy: bool=True, return_tensors: str='cuda', **kwargs):
         """
-        Creates a video input source from MIPI CSI or V4L2 camera, RTP/RTSP/WebRTC stream, or video file.
+        Creates a video input stream from MIPI CSI or V4L2 camera, RTP/RTSP/WebRTC stream, or video file (MP4, MKV, AVI, FLV)
         
         Args:
-          video_input (str): Path to video file, directory of images, or stream URL.
+          video_input (str): Camera device, stream URL, path to video file, or directory of images.
           video_input_width (int): The disired width in pixels (by default, uses the stream's native resolution)
           video_input_height (int): The disired height in pixels (by default, uses the stream's native resolution)
-          video_input_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
+          video_input_codec (str): Force a particular codec (H264, H265, VP8, VP9, MJPEG)
+          video_input_framerate (float): Select one of the video stream's supported framerates for capture.
+          video_input_save (str): Dump the incoming compressed stream to disk (only for previously encoded sources)
+          loops (int): For video files: -1 to loop forever, 0 to disable looping, >0 for set number of loops. 
           num_buffers (int): The number of images in the ringbuffer used for capturing (by default, 4 frames)
           return_copy (str): Copy incoming frames to prevent them from being overwritten in the ringbuffer.
-          return_tensors (str): The object datatype of the image to output ('np', 'pt', 'cuda')
+          return_tensors (str): The object datatype of the image to output (np, pt, cuda)
         """
         super().__init__(inputs=0, outputs='image', **kwargs)
         
@@ -54,10 +57,13 @@ class VideoSource(Plugin):
             
         if video_input_save:
             options['save'] = video_input_save
-        
+
         if num_buffers:
             options['numBuffers'] = num_buffers
-            
+     
+        if loops is not None:
+            options['loop'] = loops
+             
         self.stream = videoSource(video_input, options=options)
         self.cuda_stream = kwargs.get('cuda_stream')
         
@@ -121,7 +127,7 @@ class VideoSource(Plugin):
             self.framerate = self.framerate * 0.9 + (1.0 / (curr_time - self.time_last)) * 0.1
             self.time_last = curr_time
             self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])
-            
+
             return image
 
         
@@ -174,5 +180,19 @@ class VideoSource(Plugin):
         Returns true if the stream is currently closed (EOS has been reached)
         """
         return not self.streaming
-        
+       
+    @classmethod
+    def type_hints(cls):
+        """
+        Return static metadata about the plugin settings.
+        """
+        return dict(
+            video_input = dict(display_name='Input'),
+            video_input_width = dict(display_name='Width'),
+            video_input_height = dict(display_name='Height'),
+            video_input_codec = dict(display_name='Codec'),
+            video_input_framerate = dict(display_name='Framerate'),
+            video_input_save = dict(display_name='Save'),
+       )
+
 

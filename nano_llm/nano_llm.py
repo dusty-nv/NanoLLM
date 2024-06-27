@@ -16,8 +16,19 @@ from .utils import AttributeDict, convert_tensor, download_model, default_model_
 
 
 class NanoLLM():
+    """
+    LLM interface that model APIs implement, including:
+    
+      * :func:`generate` for token generation
+      * :func:`tokenize` and :func:`detokenize`
+      * :func:`embed_text`, :func:`embed_tokens`, and :func:`embed_image`
+      
+    The static method :func:`from_pretrained` will load the model using the specified API.
+    """
+    ModelCache={}
+    
     @staticmethod
-    def from_pretrained(model, api=None, **kwargs):
+    def from_pretrained(model, api=None, use_cache=False, **kwargs):
         """
         Load a model from the given path or download it from HuggingFace Hub.
         Various inference and quantization APIs are supported, such as MLC and AWQ.
@@ -42,6 +53,12 @@ class NanoLLM():
         Returns:
           A loaded `NanoLLM` model instance using the determined API.
         """
+        if use_cache:
+            model_config = frozenset({'model': model, 'api': api, **kwargs}.items())
+            cached_model = NanoLLM.ModelCache.get(model_config)
+            if cached_model is not None:
+                return cached_model
+                
         if os.path.isdir(model) or os.path.isfile(model):
             model_path = model
             model_name = os.path.basename(model_path)
@@ -84,6 +101,9 @@ class NanoLLM():
         print_table(model.config)
         print('')
         
+        if use_cache:
+            NanoLLM.ModelCache[model_config] = model
+            
         return model
      
     def generate(self, inputs, streaming=True, **kwargs):

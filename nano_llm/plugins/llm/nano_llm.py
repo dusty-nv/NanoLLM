@@ -57,6 +57,7 @@ class NanoLLM(Plugin):
                 model, api=api, 
                 quantization=quantization, 
                 max_context_len=max_context_len, 
+                use_cache=True,
                 **kwargs
             )
         else:
@@ -135,8 +136,8 @@ class NanoLLM(Plugin):
         for output in self.outputs[NanoLLM.OutputTools]:
             tools.update(output.tools)
         
-        for function in BotFunctions():
-            tools[function.name] = function
+        #for function in BotFunctions():
+        #    tools[function.name] = function
           
         return tools
 
@@ -176,7 +177,7 @@ class NanoLLM(Plugin):
             },
             
             'chat_template': {
-                'suggestions': list(ChatTemplates.keys())
+                'suggestions': ['auto'] + list(ChatTemplates.keys())
             },
             
             'system_prompt': {
@@ -211,18 +212,18 @@ class NanoLLM(Plugin):
             return
             
         if isinstance(input, list):
-            for x in input:
-                self.process(x, **kwargs)
+            for i, x in enumerate(input):
+                self.process(x, queue_depth=(len(input)-i-1), **kwargs)
             return
 
         if self.interrupted:
             return
-            
+
         # handle some special commands
         if isinstance(input, str):
             x = input.lower()
             if any([x == y for y in ('/reset', '/clear', '<reset>', '<clear>')]):
-                self.reset()
+                self.reset(send_history=(kwargs.get('queue_depth', 0) == 0))
                 return
             input = self.apply_substitutions(input)
             if any([x == y for y in ('/refresh', '<refresh>')]):
@@ -353,12 +354,13 @@ class NanoLLM(Plugin):
         super().start()
         self.reset()
 
-    def reset(self):
+    def reset(self, send_history=True):
         """
         Reset the chat history and re-apply variable substitution to the system prompt
         """
         self.history.reset(system_prompt=self.apply_substitutions(self._system_prompt))
-        self.send_history()
+        if send_history:
+            self.send_history()
         
     def send_history(self, html=True, append=None, **kwargs):
         """

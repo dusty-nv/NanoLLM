@@ -19,7 +19,11 @@ class VADFilter(Plugin):
     Inputs:  incoming audio samples (prefer @ 16KHz)
     Output:  audio samples that have voice activity
     """
-    def __init__(self, vad_threshold : float = 0.5, vad_window : float = 0.5, interrupt_after : float = 0.5, audio_chunk : float = 0.1, **kwargs):
+    ModelCache = {}
+    
+    def __init__(self, vad_threshold: float=0.5, vad_window: float=0.5, 
+                 interrupt_after: float=0.5, audio_chunk: float=0.1, 
+                 use_cache: bool=True, **kwargs):
         """
         Voice Activity Detection (VAD) model that filters/drops audio when there is no speaking.
         This is typically used before ASR to reduce erroneous transcripts from background noise.
@@ -31,12 +35,18 @@ class VADFilter(Plugin):
                               If speaking isn't detected for this long, it will be considered silent. 
           interrupt_after (float): Send an interruption signal to mute/silence the bot after this many
                                    seconds of sustained audio activity.                 
-          audio_chunk (float): The duration of time or number of audio samples processed per batch.                     
+          audio_chunk (float): The duration of time or number of audio samples processed per batch.
+          use_cache (bool): If true, reuse the model if it's already in memory (and cache it if it needs to be loaded)                     
         """
         super().__init__(outputs=['audio', 'interrupt'], **kwargs)
         
-        self.vad = load_vad()
-        
+        if use_cache and self.ModelCache:
+            self.vad = self.ModelCache['silero']
+        else:
+            self.vad = load_vad()
+            if use_cache:
+                self.ModelCache['silero'] = self.vad
+
         self.vad_filter = []
         
         self.buffers = []

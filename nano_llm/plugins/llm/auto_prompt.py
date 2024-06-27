@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-import sys
+import re
 import logging
 import threading
 
 from termcolor import cprint
+from pprint import pformat
 
 from nano_llm import Plugin
 from nano_llm.web import WebServer
-from nano_llm.utils import AttributeDict, load_prompts, is_image
+from nano_llm.utils import AttributeDict as AttrDict, load_prompts, is_image
 
 
 class AutoPrompt(Plugin):
@@ -15,7 +16,7 @@ class AutoPrompt(Plugin):
     Apply prompting templates to incoming streams that form a kind of script.
     For example, "<img> Describe the image" will insert the most recent image.
     """
-    def __init__(self, template : str = '<image> Describe the image concisely. <reset>', **kwargs):
+    def __init__(self, template : str = '<reset><image> Describe the image concisely.', **kwargs):
         """
         Apply prompting templates to incoming streams that form a kind of script.
         For example, "<img> Describe the image" will insert the most recent image.
@@ -27,9 +28,25 @@ class AutoPrompt(Plugin):
         """
         super().__init__(outputs='list', **kwargs)
         
-        self.tags = {'text': ['txt', 'msg'], 'image': ['img']}
-        self.vars = {tag: AttributeDict(queue=[], depth=0) for tag in self.tags}
+        self.tag_format = "<{}>"
         
+        self.tags = AttrDict(
+            text = AttrDict(alias=['txt', 'msg']),
+            image = AttrDict(alias=['img']),
+            reset = AttrDict(alias=['clear'], command='/reset'),
+        )
+        
+        self.delimiters = {}
+        
+        for key, tag in self.tags.items():
+            tag.name = key
+            tag.alias = [key] + tag.get('alias', [])
+            for alias in tag.alias:
+                self.delimiters[self.tag_format.format(alias)] = tag
+
+        regex_pattern = '({})'.format('|'.join(map(re.escape, self.delimiters)))
+
+        self.tag_regex = re.compile(regex_pattern)
         self.add_parameter('template', default=template)
 
     @property
@@ -38,6 +55,7 @@ class AutoPrompt(Plugin):
         
     @template.setter
     def template(self, template):
+        '''
         template = template.replace('/reset', '<reset>')
         template = template.replace('/pop', '<pop>')
         
@@ -47,10 +65,34 @@ class AutoPrompt(Plugin):
             
         for tag, var in self.vars.items():
             var.depth = template.count(f"<{tag}>")
+        '''
+        for tag in self.tags.values():
+            tag.depth = 0
+            tag.queue = []
+
+        for delimiter, tag in self.delimiters.items():
+            tag.depth += template.count(delimiter)
+ 
+        counts = {}
+        splits = self.tag_regex.split(template)
         
+        self.splits = []
+        
+        for split in splits:
+            if not split:
+                continue
+                
+            tag = self.delimiters.get(split)
+            
+            if tag:
+                self.splits.append(AttrDict(tag=tag, index=counts.setdefault(tag.name, 0)))
+                counts[tag.name] += 1
+            else:
+                self.splits.append(AttrDict(text=split))
+         
         self._template = template
-        print('AUTOPROMPT TEMPLATE', self._template)
-        
+        logging.debug(f"{self.name} set template to:  `{template}`\n{pformat(self.splits, indent=2)}")
+                   
     @classmethod
     def type_hints(cls):
         return {'template': {'multiline': 4}}
@@ -62,46 +104,82 @@ class AutoPrompt(Plugin):
             tag = 'image'
         else:
             raise TypeError(f"{self.name} expects to recieve str or image (was {type(input)})")
-            
-        var = self.vars[tag]
         
-        if var.depth > 0:
-            var.queue.append(input)
-            if len(var.queue) > var.depth:
-                var.queue = var.queue[len(var.queue)-var.depth : ]
+        tag = self.tags[tag]
             
-        def check_depth(tag):
-            if len(self.vars[tag].queue) < self.vars[tag].depth:
-                logging.warning(f"{self.name} is waiting for {self.vars[tag].depth - len(self.vars[tag].queue)} more <{tag}> inputs")
-                return False
-            return True
-         
-        for tag in self.tags:
-            if not check_depth(tag):
-                return
-                
-        msg = []
-        template = self.template
-           
-        for i in range(self.vars['text'].depth):
-            template = template.replace('<text>', self.vars['text'].queue[i], 1)
-        
-        for i, text in enumerate(template.split('<image>')):
-            if text:
-                cmd_split = text.split('<reset>')
-                if len(cmd_split) > 1:
-                    for cmd_text in cmd_split:
-                        if cmd_text:
-                            msg.append(cmd_text)
-                            msg.append('<reset>')
-                else:
-                    msg.append(text)
-            if i < len(self.vars['image'].queue):
-                msg.append(self.vars['image'].queue[i])
+        if tag.depth > 0:
+            tag.queue.append(input)
+            if len(tag.queue) > tag.depth:
+                tag.queue = tag.queue[len(tag.queue)-tag.depth : ]
 
-        #from pprint import pprint
-        #print('AUTOPROMPT')
-        #pprint(msg, indent=2)
+        for tag in self.tags.values():
+            if len(tag.queue) < tag.depth and not tag.get('command'):
+                logging.warning(f"{self.name} is waiting for {tag.depth - len(tag.queue)} more {tag.name} inputs")
+                return
+
+        msg = [None] * len(self.splits)
+        is_text = [False] * len(self.splits)
         
-        self.output(msg)
+        for index, split in enumerate(self.splits):
+            if 'text' in split:
+                msg[index] = split.text
+                is_text[index] = True
+            elif 'tag' in split:
+                command = split.tag.get('command')
+                if command:
+                    msg[index] = command
+                else:
+                    msg[index] = split.tag.queue[split.index]
+                    is_text[index] = isinstance(msg[index], str)
+
+        i=1
+        
+        while i < len(msg):
+            if is_text[i-1] and is_text[i]:
+                msg[i-1] = msg[i-1] + msg[i]
+                del msg[i]
+            else:
+                i += 1
+                
+        #print('AUTOPROMPT', pformat(msg, indent=2))
+        return msg
+        
+        
+if __name__ == "__main__":
+    from nano_llm.utils import LogFormatter
+    from jetson_utils import cudaImage
     
+    LogFormatter.config(level='debug')
+    
+    auto_prompt = AutoPrompt(threaded=False)
+    test_image = cudaImage(width=320, height=240, format='rgb8')
+    
+    print('TAGS', pformat(auto_prompt.tags, indent=2))
+    print('DELIMITERS', list(auto_prompt.delimiters.keys()))
+
+    def process(input):
+        output = auto_prompt(input)
+        print('\nINPUT', input, 'OUTPUT', pformat(output, indent=2), '\n')
+    
+    def test(template):
+        auto_prompt.template = template
+        process("This is a test")
+        process(test_image)
+        process("This is another test")
+        process(test_image)
+        process("This is a third test")
+        process("This is a fourth test")
+        process("This is a fifth test")
+        
+    test("<image> Describe the image concisely.<reset>")       
+    test("<reset><image> Describe the image concisely.")
+    test("<reset> <image> Describe the image concisely.")
+    test("<reset><image>Describe the image concisely.")
+    test("<reset><image><text>")
+    test("<reset><image><text><text>")
+    test("""<reset>These are the last few descriptions of the scene, from oldest to most recent.  Summarize any noteworthy changes, and if necessary, alert the user.
+
+- <text>
+- <text>
+- <text>""")
+

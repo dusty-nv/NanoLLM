@@ -10,7 +10,6 @@ import numpy as np
 from nano_llm.plugins import AutoASR
 from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
-from whisper_trt.vad import load_vad
 from whisper_trt.model import load_trt_model
 
 
@@ -23,7 +22,10 @@ class WhisperASR(AutoASR):
     Output:  two channels, the first for word-by-word 'partial' transcript strings
              the second is for the full/final sentences
     """
-    def __init__(self, model: str = 'base', language_code: str = 'en_US', partial_transcripts: float = 0.25, **kwargs):
+    ModelCache = {}
+    
+    def __init__(self, model: str='base', language_code: str='en_US', 
+                 partial_transcripts: float=0.25, use_cache: bool=True, **kwargs):
         """
         Whisper streaming voice transcription with TensorRT.
         
@@ -31,6 +33,7 @@ class WhisperASR(AutoASR):
           model (str): The Whisper model to load - 'tiny' (39M), 'base' (74M), 'small' (244M)
           language_code (str): The language to load the models for (currently 'en_US')
           partial_transcripts (float): The update rate for streaming partial ASR results (in seconds, <=0 to disable)
+          use_cache (bool): If true, reuse the model if it's already in memory (and cache it if it needs to be loaded)
         """
         super().__init__(outputs=['final', 'partial'], **kwargs)
         
@@ -53,7 +56,13 @@ class WhisperASR(AutoASR):
         
         logging.info(f"loading Whisper model '{self.model_name}' with TensorRT")
         
-        self.model = load_trt_model(self.model_name, verbose=True)
+        if use_cache and self.model_name in self.ModelCache:
+            self.model = self.ModelCache[self.model_name]
+        else:
+            self.model = load_trt_model(self.model_name, verbose=True)
+            if use_cache:
+                self.ModelCache[self.model_name] = self.model
+                
         self.model.transcribe(np.zeros(1536, dtype=np.float32)) # warmup
     
     @classmethod
@@ -107,7 +116,8 @@ class WhisperASR(AutoASR):
         
         if (self.partial_transcripts > 0 and 
                 current_time - self.last_partial >= self.partial_transcripts and
-                len(self.chunks) > 0 and self.input_queue.empty()
+                len(self.chunks) > 0 and self.input_queue.empty() and
+                len(self.outputs[AutoASR.OutputPartial]) > 0
             ):
             self.last_partial = current_time
             partial_transcript = self.transcribe(self.chunks)

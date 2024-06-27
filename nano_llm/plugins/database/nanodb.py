@@ -14,7 +14,8 @@ class NanoDB(Plugin):
     """
     def __init__(self, path: str = "/data/nanodb/coco/2017", 
                  model: str = "openai/clip-vit-large-patch14-336", dtype: str = 'float16',
-                 reserve: int = 1024, top_k: int = 24, crop: bool = False, **kwargs):
+                 reserve: int = 1024, top_k: int = 16, crop: bool = False, 
+                 drop_inputs: bool=False, **kwargs):
         """
         Multimodal vector database with CUDA and CLIP/SigLIP embeddings.
         
@@ -25,8 +26,9 @@ class NanoDB(Plugin):
           reserve (int):  The number of megabytes (MB) to reserve for the database vectors.
           top_k (int):  The number of search results and top K similar entries to return.
           crop (bool):  Enable or disable cropping of images (CLIP was trained with cropping, SigLIP was not)
+          drop_inputs (bool): If true, only the latest message from the input queue will be used (older messages dropped)
         """
-        super().__init__(inputs='text/image', outputs='search', **kwargs)
+        super().__init__(inputs='text/image', outputs='search', drop_inputs=drop_inputs, **kwargs)
         
         self.db = nanodb.NanoDB(
             path=path, model=model, 
@@ -35,8 +37,10 @@ class NanoDB(Plugin):
         )
         
         self.scans = self.db.scans
+        
         self.add_parameters(top_k=top_k)
-
+        self.add_parameter('drop_inputs', default=drop_inputs)
+        
             
     def process(self, input, add=False, metadata=None, top_k=None, sender=None, **kwargs):
         """

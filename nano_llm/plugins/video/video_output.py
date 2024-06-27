@@ -13,16 +13,17 @@ class VideoOutput(Plugin):
     Saves images to a compressed video or directory of individual images, the display, or a network stream.
     https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md
     """
-    def __init__(self, video_output : str = "webrtc://@:8554/output", 
-                 video_output_codec : str = None, video_output_bitrate : int = None, 
-                 video_output_save : str = None, **kwargs):
+    def __init__(self, video_output: str="webrtc://@:8554/output", 
+                 video_output_codec: str=None, video_output_bitrate: int=None, 
+                 video_output_save: str=None, **kwargs):
         """
         Output video to a network stream (RTP/RTSP/WebRTC), video file, or display.
         
         Args:
-          video_output (str): Stream URL, path to video file, directory of images.
-          video_output_codec (str): Force a particular codec ('h264', 'h265', 'vp8', 'vp9', 'mjpeg', ect)
+          video_output (str): Stream URL, path to video file, or a directory of images.
+          video_output_codec (str): Force a particular codec (H264, H265, VP8, VP9, MJPEG)
           video_output_bitrate (int): The desired bitrate in bits per second (default is 4 Mbps)
+          video_output_save (str): Save the encoded video to disk in MP4, MKV, AVI, or FLV format.
         """
         super().__init__(outputs=0, **kwargs)
         
@@ -61,3 +62,14 @@ class VideoOutput(Plugin):
         self.time_last = curr_time
         self.send_stats(summary=[f"{shape[1]}x{shape[0]}", f"{self.framerate:.1f} FPS"])
             
+    @classmethod
+    def type_hints(cls):
+        """
+        Return static metadata about the plugin settings.
+        """
+        return dict(
+            video_output = dict(display_name='Output'),
+            video_output_codec = dict(display_name='Codec'),
+            video_output_bitrate = dict(display_name='Bitrate'),
+            video_output_save = dict(display_name='Save'),
+       )

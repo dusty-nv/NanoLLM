@@ -88,6 +88,10 @@ function removeAll(name) {
   sendWebsocket({'reset': {'plugins': true, 'globals': true}});
 }
 
+function clearCache(name) {
+  sendWebsocket({'clear_cache': {}})
+}
+
 function savePreset(name) {
   sendWebsocket({'save': name});
 }

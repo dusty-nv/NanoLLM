@@ -84,7 +84,7 @@ class AutoTTS(Plugin):
             else:
                 self._buffering = []
 
-    def buffer_text(self, text):
+    def buffer_text(self, text, final=None, partial=None):
         """
         Wait for punctuation to occur before generating the TTS, and accumulate
         as much text as possible until audio is needed, because it sounds better.
@@ -103,7 +103,12 @@ class AutoTTS(Plugin):
         self.text_buffer += text
             
         # always submit on EOS
-        if any([stop_token in self.text_buffer for stop_token in StopTokens]):
+        eos = any([stop_token in self.text_buffer for stop_token in StopTokens])
+        
+        if final or partial == False:
+            eos = True
+            
+        if eos:
             text = self.text_buffer
             self.text_buffer = ''
             return text
@@ -183,7 +188,6 @@ class AutoTTS(Plugin):
         tool_call = text.find('<tool_call>')
         
         if tool_call >= 0:
-            print('found tool call at index', tool_call)
             text = text[:tool_call]
             
         tool_call = text.find('</tool_call>')

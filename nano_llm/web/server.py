@@ -84,6 +84,8 @@ class WebServer():
             template_folder=os.path.join(self.root, 'templates')
         )
         
+        self.app.use_x_sendfile = True
+        
         # setup default index route
         self.app.add_url_rule('/', view_func=self.send_index, methods=['GET'])
         
@@ -421,7 +423,7 @@ class SendFromDirectory():
         self.root = root
     
     def send(self, path):
-        return flask.send_from_directory(self.root, path)
+        return flask.send_from_directory(self.root, path, conditional=False, max_age=120, use_x_sendfile=True)
         
         
 if __name__ == "__main__":

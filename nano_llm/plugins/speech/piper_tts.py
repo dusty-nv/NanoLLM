@@ -24,9 +24,12 @@ class PiperTTS(AutoTTS):
     You can get the list of voices with tts.voices, and list of languages with tts.languages
     The speed can be set with tts.rate (1.0 = normal). The default voice is '...' with rate 1.0
     """
+    ModelCache = {}
+    
     def __init__(self, voice: str='en_US-libritts-high', voice_speaker: str='p339',
                  voice_rate: float=1.0, sample_rate_hz: int=22050, 
-                 model_cache: str=os.environ.get('PIPER_CACHE'), **kwargs):
+                 model_cache: str=os.environ.get('PIPER_CACHE'),
+                 use_cache: bool=True, **kwargs):
         """
         Load Piper TTS model with ONNX Runtime using CUDA.
         
@@ -36,6 +39,7 @@ class PiperTTS(AutoTTS):
           voice_rate (float):  The speed of the voice (1.0 = 100%)
           sample_rate_hz (int):  Piper generates 16000 KHz for 'low' quality models and 22050 KHz for 'medium' and 'high' quality models.
           model_cache (str):  The directory on the server to save the models that get downloaded.
+          use_cache (bool): If true, reuse the model if it's already in memory (and cache it if it needs to be loaded)
         """
         super().__init__(outputs='audio', **kwargs)
         
@@ -44,6 +48,7 @@ class PiperTTS(AutoTTS):
 
         self.sample_rate = sample_rate_hz
         self.cache_path = model_cache  
+        self.use_cache = use_cache
         self.resampler = None
         self.languages = []
         self.voices = []
@@ -73,15 +78,21 @@ class PiperTTS(AutoTTS):
         if self._voice == voice:
             return
             
-        try:
-            model_path, config_path = find_voice(voice, [self.cache_path])
-        except Exception as error:
-            ensure_voice_exists(voice, self.cache_path, self.cache_path, self.voices_info)
-            model_path, config_path = find_voice(voice, [self.cache_path])
+        if self.use_cache and voice in self.ModelCache:
+            self.model = self.ModelCache[voice]
+        else:
+            try:
+                model_path, config_path = find_voice(voice, [self.cache_path])
+            except Exception as error:
+                ensure_voice_exists(voice, self.cache_path, self.cache_path, self.voices_info)
+                model_path, config_path = find_voice(voice, [self.cache_path])
+                
+            logging.info(f"loading Piper TTS model from {model_path}")
+            self.model = PiperVoice.load(model_path, config_path=config_path, use_cuda=True)
             
-        logging.info(f"loading Piper TTS model from {model_path}")
-        
-        self.model = PiperVoice.load(model_path, config_path=config_path, use_cuda=True)
+            if self.use_cache:
+                self.ModelCache[voice] = self.model
+                
         self.model_sample_rate = self.model.config.sample_rate
         
         if self.sample_rate is None:
@@ -131,14 +142,14 @@ class PiperTTS(AutoTTS):
                 self.voices.append(key)
     '''
     
-    def process(self, text, **kwargs):
+    def process(self, text, final=None, partial=None, **kwargs):
         """
         Inputs text, outputs stream of audio samples (np.ndarray, np.int16)
         
         The input text is buffered by punctuation/phrases as it sounds better,
         and filtered for emojis/ect before being passed to the TTS for generation.
         """
-        text = self.buffer_text(text)    
+        text = self.buffer_text(text, final=final, partial=partial)    
         text = self.filter_text(text)
 
         if not text or self.interrupted:

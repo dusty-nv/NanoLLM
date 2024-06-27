@@ -276,11 +276,13 @@ function updateNanoDB(gallery_id, search_results) {
   //console.log(`updateNanoDB(${gallery_id}) => `, search_results, window.location);
   
   let obj = $(`#${gallery_id}`);
+  let contents = '';
+  
   obj.empty();
   
-   for( let n=0; n < search_results.length; n++ ) {
+  for( let n=0; n < search_results.length; n++ ) {
     const result = search_results[n];
-    let contents = `<div class="me-1" style="position: relative; color: white; display: inline;">`;
+    contents += `<div class="me-1" style="position: relative; color: white; display: inline;">`;
     contents += `<img src="${window.location.origin + '/' + result['metadata']['path']}" style="aspect-ratio: 1.47; width: 24%;" title="&quot;METADATA&quot; : ${escapeHTML(JSON.stringify(result['metadata'], null, 2))}">`;
     contents += `</div>`;
       //contents = '<div style="position: relative; text-align: center; color: white" width="50%">';
@@ -290,8 +292,10 @@ function updateNanoDB(gallery_id, search_results) {
       //contents += `<img src=${search_results[n]['image']} style="aspect-ratio: 1.47; width: 32%;" title="&quot;METADATA&quot; : ${search_results[n]['metadata']}">`;
       //contents += `<div class="ps-1 pe-1" style="position: absolute; top: 0%; right: 0%; transform: translate(0%, -168%); background-color: rgba(0,0,0,0.5)">${search_results[n]['similarity']}</div></div>`;
       //contents += '</div>';
-    obj.append(contents);
+    
   }
+  
+  obj.append(contents);
 }
 
 
@@ -308,7 +312,7 @@ function addNanoDBWidget(name, id, title, grid_options) {
     <div id="${gallery_id}" class="bg-medium-gray p-2 mt-2" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)"></div>
   `;
   
-  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 14}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 10}, grid_options));
 
   let onsubmit = function() {
     const input = document.getElementById(input_id);
@@ -346,7 +350,7 @@ function addChatWidget(name, id, title, grid_options) {
   const html = `
     <div id="${history_id}" class="bg-medium-gray p-2 mb-2" style="font-size: 100%; overflow-y: scroll; flex-grow: 1;" ondrop="onFileDrop(event)" ondragover="onFileDrag(event)"></div>
     <div class="input-group">
-      <textarea id="${input_id}" class="form-control" rows="2" placeholder="Enter to send (Shift+Enter for newline) &nbsp;&nbsp;&nbsp; [Commands: &nbsp; /reset /refresh]"></textarea>
+      <textarea id="${input_id}" class="form-control" rows="1" placeholder="Enter to send (Shift+Enter for newline) &nbsp;&nbsp;&nbsp; [Commands: &nbsp; /reset /refresh]"></textarea>
       <span id="${submit_id}" class="input-group-text bg-light-gray bi bi-arrow-return-left" style="color: #eeeeee;"></span>
     </div>
   `;
@@ -439,7 +443,14 @@ function addVideoOutputWidget(name, id, title, grid_options) {
     grid.update(widget, options);
   });
 
-  playStream(getWebsocketURL('output'), video); // TODO handle actual stream name
+  let streamName = "output";
+  let streamIndex = name.search('_');
+  
+  if( streamIndex >= 0 ) {
+    streamName += name.slice(streamIndex);
+  }
+  
+  playStream(getWebsocketURL(streamName), video); // TODO handle actual stream name
   
   return widget;
 }
@@ -653,9 +664,13 @@ function removePlugins(plugins) {
   ignoreGraphEvents = true;
   
   plugins.forEach((plugin) => {
-    const id = drawflow.getNodesFromName(plugin)[0];
-    console.log(`removing plugin ${plugin} (id=${id})`);
-    drawflow.removeNodeId(`node-${id}`);
+    try {
+      const id = drawflow.getNodesFromName(plugin)[0];
+      console.log(`removing plugin ${plugin} (id=${id})`);
+      if( plugin in outputListeners )
+        delete outputListeners[plugin];
+      drawflow.removeNodeId(`node-${id}`);
+    } catch(e) { console.log(e); }
   });
 
   ignoreGraphEvents = false;

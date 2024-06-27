@@ -279,7 +279,10 @@ class BotFunctions:
             error = f"Exception occurred running tool {func_name}({func_args}) - {error}"
             logging.error(f"{error}\n\n{traceback.format_exc()}")
             return error
-                
+        
+        if response is None:
+            return None
+                    
         if template.tool_spec == 'openai':  
             response = json.dumps({"name": func_name, "content": response})
 
@@ -294,6 +297,7 @@ class BotFunctions:
             return True
             
         # TODO: automate this
+        from . import alert
         from . import clock
         from . import location
         #from . import weather

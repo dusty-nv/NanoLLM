@@ -35,7 +35,7 @@ class HomeAssistant(Plugin):
         Controls a smart home device, for example turning a light switch on or off.
 
         Args:
-            name (str): The name of the device. These devices are available: ${HOMEASSISTANT.DEVICES}
+            name (str): The name of the device. These devices are available: ['switch.zooz_lights', 'switch.zooz_fan']
             state (str): The operation to perform. For switches, this can be 'turn_on', 'turn_off', or 'toggle'.
             
         Returns:

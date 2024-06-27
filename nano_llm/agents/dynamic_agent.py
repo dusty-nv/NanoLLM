@@ -33,7 +33,8 @@ class DynamicAgent(Agent):
         
         if not kwargs.get('web_trace', False):
             self.tegrastats = Tegrastats()
-            self.terminal = TerminalPlugin()
+            self.terminal = None
+            #self.terminal = TerminalPlugin()
         else:
             self.tegrastats = None
             self.terminal = None
@@ -139,11 +140,16 @@ class DynamicAgent(Agent):
         if globals:    
             self.global_states = {
                 'GraphEditor': {'layout_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
-                'TerminalPlugin': {'layout_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}},
             }
+            
+            if self.terminal is not None:
+                self.global_states['TerminalPlugin'] = {'layout_grid': {'x': 0, 'y': 4, 'w': 8, 'h': 6}}
         
         logging.debug(f"{self.__class__.__name__} issued reset (plugins={plugins}, globals={globals})")
-        
+    
+    def clear_cache(self):
+        DynamicPlugin.clear_cache()
+            
     def add_connection(self, input='', input_channel=0, output='', output_channel=0):
         input_plugin = self.find_plugin(input)
         output_plugin = self.find_plugin(output)
@@ -229,12 +235,22 @@ class DynamicAgent(Agent):
             layout_node['y'] -= layout_node_origin['y']
             
         logging.debug(f"{name} agent node layout origin:  {layout_node_origin}")
-               
+        insert = (len(self.plugins) > 0)
+        
         for plugin in plugins:
             try:
-                instance = self.add_plugin(type=plugin['type'], wait=True, start=False, state_dict=plugin, layout_node=layout_node)
-                plugin['original_name'] = plugin['name']
-                plugin['name'] = instance.name
+                instance = self.add_plugin(
+                    type=plugin['type'], 
+                    wait=True, start=False, 
+                    state_dict=plugin, 
+                    layout_node=layout_node
+                )
+                if insert:
+                    plugin['original_name'] = plugin['name']
+                    plugin['name'] = instance.name
+                else:
+                    instance.name = plugin['name']
+
                 instances.append(instance)
             except Exception as error:
                 logging.error(f"Exception occurred during adding plugin:\n{pprint.pformat(plugin, indent=2)}\n\n{traceback.format_exc()}")
@@ -248,7 +264,8 @@ class DynamicAgent(Agent):
             
             for connection in plugin['connections']:
                 for p in plugins:
-                    connection['to'] = connection['to'].replace(p['original_name'], p['name'])
+                    if 'original_name' in p:
+                        connection['to'] = connection['to'].replace(p['original_name'], p['name'])
                     
                 input_plugin = self.find_plugin(connection['to'])
                 

@@ -26,7 +26,7 @@ function addAlert(alert) {
     $(`#alert_messages .alert-category-${alert['category']}`).remove();
     
   // add a new element containing the alert message, and show the window if needed
-  $('#alert_messages').append(`<pre id="alert-${alert['id']}" class="align-middle m-0 alert-category-${alert['category']}" style="color: ${alertColor(alert['level'])}">[${alert['time']}] ${alert['message']}\n</pre>`);
+  $('#alert_messages').append(`<pre id="alert-${alert['id']}" class="align-middle m-0 alert-category-${alert['category']}" style="color: ${alertColor(alert['level'])}; font-size: 115%;">[${alert['time']}] ${alert['message']}\n</pre>`);
   $('#alert_window:hidden').fadeIn('fast');
 
   // automatically remove the messages (if this is the last message, hide the window too)
