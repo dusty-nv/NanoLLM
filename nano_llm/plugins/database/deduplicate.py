@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import os
 import math
 import time
 import logging
+import subprocess
 import numpy as np
 
 from nano_llm import Plugin
@@ -28,20 +30,38 @@ class Deduplicate(Plugin):
         self.last_text = None
         self.last_embed = None
 
-        if not self.EmbeddingsIndex:
-            numberbatch_path = "/data/nano_llm/numberbatch-en.txt"
-            logging.info(f"{self.name} loading {numberbatch_path}")
-            with open(numberbatch_path) as f:
-                for line in f:
-                    values = line.split(' ')
-                    word = values[0]
-                    embedding = np.asarray(values[1:], dtype='float32')
-                    self.EmbeddingsIndex[word] = embedding
-        
         self.add_parameter('similarity_threshold', default=similarity_threshold, end=True)
         self.add_parameter('timeout', default=timeout, end=True)
+        
+        self.load_model()
  
- 
+    def load_model(self, model_cache="/data/models"):
+        """
+        Load word embedding model, download it if needed.
+        """
+        if self.EmbeddingsIndex:
+            return
+            
+        model_url = "https://conceptnet.s3.amazonaws.com/downloads/2017/numberbatch/numberbatch-en-17.06.txt.gz"
+        model_tar = os.path.basename(model_url)
+        model_name = model_tar.replace('.gz', '')
+        model_path = os.path.join(model_cache, model_name)
+        
+        if not os.path.isfile(model_path):
+            os.makedirs(model_cache, exist_ok=True)
+            cmd = f"cd {model_cache} && wget --no-check-certificate {model_url} -O {model_tar} && ls -ll numberbatch* && gzip -d -f {model_tar}"
+            logging.info(f"{self.name} downloading {model_tar} to {model_cache}\n{cmd}")
+            subprocess.run(cmd, executable='/bin/bash', shell=True, check=True)
+
+        logging.info(f"{self.name} loading {model_path}")
+        
+        with open(model_path) as f:
+            for line in f:
+                values = line.split(' ')
+                word = values[0]
+                embedding = np.asarray(values[1:], dtype='float32')
+                self.EmbeddingsIndex[word] = embedding
+                      
     def process(self, input, **kwargs):
         """
         Drop messages that are too similar to the previous.
@@ -71,8 +91,7 @@ class Deduplicate(Plugin):
         self.last_time = current_time
         
         return input
-        
-        
+  
     def cosine_similarity(self, v1, v2):
         """
         Compute cosine similarity of v1 to v2: (v1 dot v2)/{||v1||*||v2||)
@@ -93,7 +112,6 @@ class Deduplicate(Plugin):
             
         return sumxy/math.sqrt(sumxx*sumyy)
 
-
     def embed_text(self, sentence):
         """
         Lookup and assemble the embedding of the given text.
@@ -109,3 +127,11 @@ class Deduplicate(Plugin):
             sent_vector = sent_vector + word_vector
 
         return sent_vector
+        
+        
+if __name__ == "__main__":
+    from nano_llm.utils import LogFormatter
+    LogFormatter.config(level='debug')
+    
+    dedup = Deduplicate()
+    
