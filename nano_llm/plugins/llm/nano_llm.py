@@ -3,7 +3,7 @@ import os
 import time
 import logging
 
-from nano_llm import Plugin, BotFunctions, ChatHistory, ChatTemplates, NanoLLM as NanoModel
+from nano_llm import Plugin, ChatHistory, ChatTemplates, NanoLLM as NanoModel
 from nano_llm.web import WebServer
 from nano_llm.utils import ImageTypes, load_prompts, print_table
 

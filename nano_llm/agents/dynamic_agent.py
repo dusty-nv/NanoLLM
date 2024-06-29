@@ -33,8 +33,7 @@ class DynamicAgent(Agent):
         
         if not kwargs.get('web_trace', False):
             self.tegrastats = Tegrastats()
-            self.terminal = None
-            #self.terminal = TerminalPlugin()
+            self.terminal = TerminalPlugin()
         else:
             self.tegrastats = None
             self.terminal = None
