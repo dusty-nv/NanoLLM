@@ -79,7 +79,7 @@ class ChatQuery(Plugin):
         else:
             self.model = model
 
-        self.history = ChatHistory(self.model, **kwargs)
+        self.history = ChatHistory(self.model, tool_spec='python', **kwargs)
         self.functions = functions
         self.stream = None
         
@@ -177,7 +177,7 @@ class ChatQuery(Plugin):
             return
         
         # support both inline and multi-generation tools
-        if chat_history.tool_style == 'openai':
+        if chat_history.template.tool_spec == 'openai':
             tool_functions = self.functions
             inline_functions = None
         else:

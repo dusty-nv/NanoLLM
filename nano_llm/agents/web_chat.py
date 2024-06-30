@@ -153,7 +153,7 @@ class WebChat(VoiceChat):
         else:
             logging.warning(f"WebChat agent ignoring websocket message with unknown type={msg_type}")
 
-    @bot_function(docs='nosig')
+    @bot_function()
     def SAVE(text=None):
         """
         SAVE("<insert info here>") - save information about the user, for example SAVE("Mary likes to garden")

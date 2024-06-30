@@ -155,10 +155,12 @@ class BotFunctions:
                     epilogue = ''
                     
         if spec == 'python':          
-            docs = '\n'.join(['* ' + x.docs for x in functions if x.spec == 'python'])
+            docs = '\n'.join(['* ' + x.docs for x in functions if x.enabled])
         elif spec == 'openai':
-            docs = str([x.docs for x in functions if x.spec == 'openai']) #str([convert_to_openai_tool(x.function) for x in cls.functions if x.enabled])
-            
+            docs = str([x.docs for x in functions if x.enabled])
+        else:
+            raise ValueError(f"supported function-calling tool specifications are 'openai' and 'python' (was spec={spec})")
+                
         if prologue:
             docs = prologue + docs
             
@@ -202,9 +204,9 @@ class BotFunctions:
 
         if not docs:
             if wrapper.__doc__:
-                wrapper.docs = f"`{name}()` - " + wrapper.__doc__.strip()
+                docs = f"`{name}()` - " + wrapper.__doc__.strip()
             else:
-                wrapper.docs = name + '() '
+                docs = name + '() '
                 
         wrapper.name = name
         wrapper.docs = docs
@@ -216,7 +218,7 @@ class BotFunctions:
 
         cls.functions.append(wrapper)
         func._bot_function = wrapper
-        
+
         return func
     
     @classmethod
