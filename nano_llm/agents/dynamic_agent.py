@@ -364,8 +364,11 @@ class DynamicAgent(Agent):
         extensions = ['.json', '.yaml', '.yml']
         
         for ext in extensions:
-            files.extend(sorted(glob.glob(f'**{ext}', root_dir=preset_dir)))
-
+            files.extend([
+                x.replace(preset_dir + ('/' if preset_dir[-1] != '/' else ''), '')
+                for x in sorted(glob.glob(os.path.join(preset_dir, f'**{ext}')))
+            ])
+            
         if remove_extensions:
             for ext in extensions:
                 for i, file in enumerate(files):
