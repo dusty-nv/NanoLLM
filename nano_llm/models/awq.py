@@ -12,10 +12,15 @@ import numpy as np
 #tinychat.utils.constants.max_batch_size = args.max_batch_size
 #tinychat.utils.constants.max_seq_len = args.max_seq_len
 
-from awq.quantize.quantizer import real_quantize_model_weight
-from tinychat.modules import make_quant_norm, make_quant_attn, make_fused_mlp
-from tinychat.models import FalconForCausalLM, LlamaForCausalLM, MPTForCausalLM
-from tinychat.utils.load_quant import load_awq_model, load_awq_llama_fast
+try:
+    from awq.quantize.quantizer import real_quantize_model_weight
+    from tinychat.modules import make_quant_norm, make_quant_attn, make_fused_mlp
+    from tinychat.models import FalconForCausalLM, LlamaForCausalLM, MPTForCausalLM
+    from tinychat.utils.load_quant import load_awq_model, load_awq_llama_fast
+    HAS_AWQ=True
+except ImportError as error:
+    HAS_AWQ=False
+    logging.warning(f"AWQ not installed (requires JetPack 6 / L4T R36) - AWQ models will fail to initialize")
 
 from accelerate import load_checkpoint_and_dispatch
 from transformers import AutoConfig, modeling_utils
@@ -39,6 +44,9 @@ class AWQModel(NanoLLM):
     def __init__(self, model_path, quantization=None, w_bit=4, q_group_size=128, zero_point=True, **kwargs):
         super(AWQModel, self).__init__(model_path, **kwargs)
 
+        if not HAS_AWQ:
+            raise ImportError("AWQ not installed (requires JetPack 6 / L4T R36)")
+            
         if not quantization:
             raise ValueError(f"AWQ model needs to have the --quantization argument provided, with the path to the quantized model")
             

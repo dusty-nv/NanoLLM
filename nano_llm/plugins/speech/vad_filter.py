@@ -46,7 +46,7 @@ class VADFilter(Plugin):
         super().__init__(outputs=['audio', 'interrupt'], **kwargs)
         
         if not HAS_WHISPER_TRT:
-            raise ImportError("whisper_trt was not installed (minimum BSP version JetPack 6 / L4T R36)")
+            raise ImportError("whisper_trt not installed (minimum BSP version JetPack 6 / L4T R36)")
             
         if use_cache and self.ModelCache:
             self.vad = self.ModelCache['silero']

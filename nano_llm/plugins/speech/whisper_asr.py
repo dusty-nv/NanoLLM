@@ -43,7 +43,7 @@ class WhisperASR(AutoASR):
         super().__init__(outputs=['final', 'partial'], **kwargs)
         
         if not HAS_WHISPER_TRT:
-            raise ImportError("whisper_trt was not installed (requires JetPack 6 / L4T R36)")
+            raise ImportError("whisper_trt not installed (requires JetPack 6 / L4T R36)")
             
         self.language = language_code.lower().replace('-', '_').split('_')[0]  # ignore the country
         
