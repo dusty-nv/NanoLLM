@@ -8,7 +8,12 @@ import numpy as np
 from nano_llm import Plugin
 from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
-from whisper_trt.vad import load_vad
+try:
+    from whisper_trt.vad import load_vad
+    HAS_WHISPER_TRT=True
+except ImportError as error:
+    HAS_WHISPER_TRT=False
+    logging.warning(f"whisper_trt not installed (minimum BSP version JetPack 6 / L4T R36) - VADFilter plugins will fail to initialize")
 
 
 class VADFilter(Plugin):
@@ -40,6 +45,9 @@ class VADFilter(Plugin):
         """
         super().__init__(outputs=['audio', 'interrupt'], **kwargs)
         
+        if not HAS_WHISPER_TRT:
+            raise ImportError("whisper_trt was not installed (minimum BSP version JetPack 6 / L4T R36)")
+            
         if use_cache and self.ModelCache:
             self.vad = self.ModelCache['silero']
         else:

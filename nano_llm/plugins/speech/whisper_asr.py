@@ -10,7 +10,12 @@ import numpy as np
 from nano_llm.plugins import AutoASR
 from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
 
-from whisper_trt.model import load_trt_model
+try:
+    from whisper_trt.model import load_trt_model
+    HAS_WHISPER_TRT=True
+except ImportError as error:
+    HAS_WHISPER_TRT=False
+    logging.warning(f"whisper_trt not installed (requires JetPack 6 / L4T R36) - WhisperASR plugins will fail to initialize")
 
 
 class WhisperASR(AutoASR):
@@ -37,6 +42,9 @@ class WhisperASR(AutoASR):
         """
         super().__init__(outputs=['final', 'partial'], **kwargs)
         
+        if not HAS_WHISPER_TRT:
+            raise ImportError("whisper_trt was not installed (requires JetPack 6 / L4T R36)")
+            
         self.language = language_code.lower().replace('-', '_').split('_')[0]  # ignore the country
         
         if self.language != 'en':
