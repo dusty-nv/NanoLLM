@@ -4,6 +4,7 @@ import re
 import json
 import torch
 import logging
+import collections
 import safetensors
 
 from nano_llm.utils import AttributeDict, download_model
@@ -15,7 +16,7 @@ class MMProjector():
     to map from CLIP vision embedding space to the LLM's word embedding space.
     """
     @staticmethod
-    def from_pretrained(model, dtype=torch.float16):
+    def from_pretrained(model, **kwargs):
         """
         Load the projector from the HuggingFace Transformers model (Llava)
         
@@ -32,15 +33,15 @@ class MMProjector():
         from nano_llm import NanoLLM
         
         if isinstance(model, NanoLLM):
-            return MMProjector(model.config.mm_projector_path, model.config, dtype)
+            return MMProjector(model.config.mm_projector_path, model.config, **kwargs)
         elif isinstance(model, str):
             if not os.path.isdir(model):
                 model = download_model(model)
-            return MMProjector(model)
+            return MMProjector(model, **kwargs)
         else:
             raise ValueError(f"model should either be a string containing the path or name of the HuggingFace model, or a NanoLLM model instance")
             
-    def __init__(self, model_path, config=None, dtype=torch.float16):
+    def __init__(self, model_path, config=None, input_dim=None, output_dim=None, dtype=torch.float16):
         """
         Create the mm_projector network and load its weights
         """
@@ -56,52 +57,76 @@ class MMProjector():
                 self.config = AttributeDict(json.load(config_file))
 
         self.model_path = model_path
-        self.type = 'linear'
         self.dtype = dtype
+        self.type = self.config.get('mm_projector_type', 'linear')
         
-        if hasattr(self.config, 'mm_projector_type'):
-            self.type = self.config.mm_projector_type
+        if any(['openvla' in arch.lower() for arch in config.get('architectures', [])]):
+            self.type = 'openvla'
+            
+        if not input_dim:
+            if 'mm_hidden_size' in self.config:
+                input_dim = self.config.mm_hidden_size
+            else:
+                raise ValueError("specify input_dir - mm_hidden_size not in configuration")
+                
+        if not output_dim:
+            if 'hidden_size' in self.config:
+                output_dim = self.config.hidden_size
+            else:
+                raise ValueError("specify output_dir - hidden_size not in configuration")
 
         # create different types of projector models
         mlp_gelu_match = re.match(r'^mlp(\d+)x_gelu$', self.type)
         
         if mlp_gelu_match:
             mlp_depth = int(mlp_gelu_match.group(1))
-            modules = [torch.nn.Linear(self.config.mm_hidden_size, self.config.hidden_size)]
+            modules = [torch.nn.Linear(input_dim, output_dim)]
             for _ in range(1, mlp_depth):
                 modules.append(torch.nn.GELU())
-                modules.append(torch.nn.Linear(self.config.hidden_size, self.config.hidden_size))
+                modules.append(torch.nn.Linear(output_dim, output_dim))
             self.model = torch.nn.Sequential(*modules)
         elif self.type == 'mlp_downsample':
             self.model = torch.nn.Sequential(
                 DownSampleBlock(),
-                torch.nn.LayerNorm(self.config.mm_hidden_size * 4),
-                torch.nn.Linear(self.config.mm_hidden_size * 4, self.config.hidden_size),
+                torch.nn.LayerNorm(input_dim * 4),
+                torch.nn.Linear(input_dim * 4, output_dim),
                 torch.nn.GELU(),
-                torch.nn.Linear(self.config.hidden_size, self.config.hidden_size)
+                torch.nn.Linear(output_dim, output_dim)
             )
+        elif self.type == 'openvla':
+            hidden_dim = 4 * input_dim
+            self.model = torch.nn.Sequential(collections.OrderedDict([
+                ('fc1', torch.nn.Linear(input_dim, hidden_dim, bias=True)),
+                ('act1', torch.nn.GELU()),
+                ('fc2', torch.nn.Linear(hidden_dim, output_dim, bias=True)),
+                ('act2', torch.nn.GELU()),
+                ('fc3', torch.nn.Linear(output_dim, output_dim, bias=True)),
+            ]))
         elif self.type == 'linear':
-            self.model = torch.nn.Linear(self.config.mm_hidden_size, self.config.hidden_size)
+            self.model = torch.nn.Linear(input_dim, output_dim)
         else:
             raise RuntimeError(f"Unknown vision mm_projector type: {self.type}")
            
         # load projector weights, extracting from the original model if needed
         weights = self.load_torch(os.path.join(self.model_path, 'mm_projector.bin'))
+        weights_key = 'mm_projector' if self.type != 'openvla' else 'projector.'
         
         if not weights:
             weights = self.load_safetensors(os.path.join(self.model_path, 'model.safetensors'))
         
         if not weights:
-            weights = self.load_sharded(self.model_path)
+            weights = self.load_sharded(self.model_path, weights_key=weights_key)
             
         if not weights:
             raise IOError(f"could not mm_projector weights under {self.model_path}")
 
-        weights = {k.replace('model.mm_projector.', ''):v for k,v in weights.items()}  
-        weights = {k.replace('layers.', ''):v for k,v in weights.items()}  
-        
-        print(f"mm_projector ({self.type})", self.model)
-        print("mm_projector weights", weights.keys())
+        weights = {
+            k.replace('model.mm_projector.', '').replace('projector.', '').replace('layers.', '') : v 
+            for k,v in weights.items()
+        }  
+
+        logging.info(f"mm_projector ({self.type})  {self.model}")
+        logging.info(f"mm_projector weights:  {weights.keys()}")
         
         self.model.load_state_dict(weights)
         self.model.to(dtype=self.dtype, device='cuda:0').eval()
@@ -128,7 +153,7 @@ class MMProjector():
         return safetensors.torch.load_file(filename, device='cpu')
 
     @staticmethod
-    def load_sharded(model_path, save='mm_projector.bin'):
+    def load_sharded(model_path, weights_key='mm_projector', save='mm_projector.bin'):
         weight_indexes = [
             os.path.join(model_path, 'pytorch_model.bin.index.json'),
             os.path.join(model_path, 'model.safetensors.index.json'),
@@ -148,7 +173,7 @@ class MMProjector():
         weights_path = None
         
         for key, value in weight_map.items():
-            if 'mm_projector' in key:
+            if weights_key in key:
                 weights_path = os.path.join(model_path, value)
                 break
          
@@ -163,7 +188,7 @@ class MMProjector():
         else:
             weights = torch.load(weights_path, map_location='cpu')
             
-        weights = {k : v for k, v in weights.items() if 'mm_projector' in k}
+        weights = {k : v for k, v in weights.items() if weights_key in k}
         
         if save:
             save_path = os.path.join(model_path, save)

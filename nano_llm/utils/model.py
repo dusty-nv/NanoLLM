@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import os
+import copy
+import json
 import logging
+import safetensors
 
 import numpy as np
 import onnxruntime as ort
@@ -11,7 +14,7 @@ from packaging.version import Version
 from huggingface_hub import snapshot_download, hf_hub_download, login
 
 
-__all__ = ['download_model', 'default_model_api', 'ONNXRuntimeModel']
+__all__ = ['download_model', 'default_model_api', 'rename_weights', 'ONNXRuntimeModel']
 
 
 def download_model(model, type='model', cache_dir='$TRANSFORMERS_CACHE', use_safetensors=False, **kwargs):
@@ -83,7 +86,58 @@ def default_model_api(model_path, quant_path=None):
     else:
         return 'mlc' #'hf'
         
+
+def rename_weights(model_path: str, save_path: str=None, key: callable=None):
+    """
+    Apply a renaming function ``key`` to the layer names in the model's weight files.
+    The updated checkpoints along with the weight index will be saved to ``save_path``,
+    or will overwrite the originals if ``save_path`` is not specified.
+    
+    TODO support pytorch .bin weights in addition to safetensors
+    """
+    if not save_path:
+        save_path = model_path
+    
+    weight_index_file = 'model.safetensors.index.json'   
+    
+    with open(os.path.join(model_path, weight_index_file)) as file:
+        weight_index = json.load(file)
+        weight_index_updated = copy.deepcopy(weight_index)
         
+    weight_map = weight_index['weight_map']
+    weight_files = {}
+                
+    for layer_name, weight_file in weight_map.items():
+        weight_files[weight_file] = weight_files.get(weight_file, []) + [layer_name]
+    
+    for weight_file, layers in weight_files.items():
+        weight_path = os.path.join(model_path, weight_file)
+        weight_save = os.path.join(save_path, weight_file)
+        
+        updated_weights = {}  
+        logging.info(f"loading {weight_path}")   
+                  
+        with safetensors.safe_open(weight_path, framework='pt', device='cpu') as file:
+            for layer in layers:
+                renamed_layer = key(layer)
+                if renamed_layer:
+                    if renamed_layer != layer:
+                        logging.info(f"renaming layer {layer} to {renamed_layer}")
+                    updated_weights[renamed_layer] = file.get_tensor(layer)
+                    weight_index_updated['weight_map'][renamed_layer] = weight_file
+                if not renamed_layer or renamed_layer != layer:
+                    del weight_index_updated['weight_map'][layer]
+                
+        logging.info(f"saving {weight_save}")
+        safetensors.torch.save_file(updated_weights, weight_save)
+        del updated_weights   
+
+    with open(os.path.join(save_path, weight_index_file), 'w') as file:
+        json.dump(weight_index_updated, file, indent=2)
+        
+    return weight_index_updated
+    
+            
 class ONNXRuntimeModel:
     """
     Base class for OnnxRuntime models.

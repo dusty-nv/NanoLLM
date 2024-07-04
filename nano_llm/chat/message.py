@@ -253,9 +253,9 @@ class ChatMessage():
             embeddings.append(model.embed_text(template[0], use_cache=True, return_tensors=return_tensors))
             
         # encode the image
-        image_outputs = model.embed_image(self.content, return_tensors=return_tensors, return_dict=True)
-        self.history.image_embedding = image_outputs.image_embeds # save the unprojected embeddings for RAG
-        embeddings.append(image_outputs.embedding)
+        image_embeds = model.embed_image(self.content, return_tensors=return_tensors)
+        #self.history.image_embedding = image_outputs.image_embeds # save the unprojected embeddings for RAG
+        embeddings.append(image_embeds)
         
         # add the template trailer
         template[1] = '\n' + template[1]
@@ -267,7 +267,8 @@ class ChatMessage():
         self.embedding = np.concatenate(embeddings, axis=1)
         
         if self.history.print_stats:
-            print_table(model.vision.stats)
+            for vision, _ in model.vision:
+                print_table(vision.stats)
             
         #logging.debug(f"chat embed image  shape={self.embedding.shape}  dtype={self.embedding.dtype}  template={template}")
         

@@ -21,7 +21,7 @@ import time
 import termcolor
 
 from nano_llm import NanoLLM, ChatHistory
-from nano_llm.utils import ArgParser, load_prompts
+from nano_llm.utils import ArgParser, load_prompts, print_table
 from nano_llm.plugins import VideoSource
 
 from jetson_utils import cudaMemcpy, cudaToNumpy
@@ -93,7 +93,10 @@ while True:
         chat_history.append('bot', reply)
       
     time_elapsed = time.perf_counter() - time_begin
-    print(f"time:  {time_elapsed*1000:.2f} ms  rate:  {1.0/time_elapsed:.2f} FPS")
+    for vision in model.vision:
+        print_table(vision.stats)
+    print_table(model.stats)
+    print(f"time:  {time_elapsed*1000:.2f} ms  rate:  {1.0/time_elapsed:.2f} FPS\n")
     
     chat_history.reset()
     

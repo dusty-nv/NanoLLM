@@ -60,6 +60,7 @@ def filter_keys(dictionary, keep=None, remove=None):
         if (keep and key not in keep) or (remove and key in remove):
             del dictionary[key]
  
+    return dictionary
  
 def update_default(value, default=None, cast=None):
     """

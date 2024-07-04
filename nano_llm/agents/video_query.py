@@ -92,7 +92,7 @@ class VideoQuery(Agent):
 
         # load vector database
         if nanodb:
-            self.db_share_embed = (self.llm.config.mm_vision_tower == 'openai/clip-vit-large-patch14-336')
+            self.db_share_embed = False #(self.llm.config.mm_vision_tower == 'openai/clip-vit-large-patch14-336')
             
             #: The `NanoDB <https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb>`_ vector database 
             self.db = NanoDB(

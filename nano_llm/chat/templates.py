@@ -114,9 +114,16 @@ ChatTemplates = {
         'bot': "${MESSAGE}",
     },
     
+    # https://huggingface.co/BAAI/Bunny-v1_0-3B
     'bunny': {
-        'user': 'USER: ${MESSAGE}\n',
-        'bot': 'ASSISTANT: ${MESSAGE}\n', # TODO: does output already end in </s> ?
+        'user': "USER: ${MESSAGE}\n",
+        'bot': "ASSISTANT: ${MESSAGE}\n", # TODO: does output already end in </s> ?
+    },
+    
+    # https://huggingface.co/openvla/openvla-7b
+    'open-vla': {
+        'user': "In: ${MESSAGE}\nOut:",
+        'bot': "${MESSAGE}",
     },
 }
 
@@ -185,6 +192,8 @@ def ChatTemplate(model):
             chat_template = 'llava-v1'
         else:
             chat_template = 'llava-v0'
+    elif 'openvla' in model:
+        chat_template = 'open-vla'
     else:
         return None
         

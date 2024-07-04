@@ -3,6 +3,7 @@ import os
 import re
 import time
 import json
+import glob
 import shutil
 import logging
 
@@ -11,8 +12,8 @@ import numpy as np
 
 from transformers import AutoTokenizer
 
-from .vision import CLIPVisionModel, MMProjector
-from .utils import AttributeDict, convert_tensor, download_model, default_model_api, print_table
+from .vision import CLIPVisionModel, TIMMVisionModel, MMProjector
+from .utils import AttributeDict, convert_tensor, download_model, default_model_api, rename_weights, filter_keys, print_table
 
 
 class NanoLLM():
@@ -236,7 +237,7 @@ class NanoLLM():
         """
         raise NotImplementedError("embed_tokens() not implemented for this model")
        
-    def embed_image(self, image, return_tensors='pt', return_dict=False, **kwargs):
+    def embed_image(self, image, return_tensors='pt', **kwargs):
         """
         Compute the embedding of an image (for multimodel models with a vision encoder like CLIP),
         and apply any additional projection layers as specified by the model.
@@ -254,15 +255,25 @@ class NanoLLM():
         """  
         assert(self.has_vision)
 
-        output = self.vision(image, hidden_state=self.config.mm_vision_select_layer, return_dict=return_dict)
+        embeddings = []
         
-        embedding = output.hidden_state if return_dict else output
-        embedding = embedding.to(dtype=torch.float16)
-        embedding = self.mm_projector(embedding if 'mm_projector_cfg' in self.config else embedding[:, 1:])
+        for i, vision in enumerate(self.vision):
+            embedding = vision(
+                image, #embeddings[i-1] if i > 0 else image,
+                hidden_state = self.config.get('mm_vision_select_layer')
+            ).to(dtype=torch.float16)
+            
+            if 'clip' in vision.config.name.lower(): # if not 'mm_projector_cfg' in self.config
+                embedding = embedding[:, 1:]
+            
+            embeddings.append(embedding)
+
+        embedding = torch.cat(embeddings, dim=2)
+        embedding = self.mm_projector(embedding)
 
         logging.debug(f"image embedding  shape={embedding.shape}  dtype={embedding.dtype}  device={embedding.device}")
         
-        if return_dict:
+        if False: #return_dict:
             output.embedding = embedding
             for key in output:
                 output[key] = convert_tensor(output[key], return_tensors=return_tensors)
@@ -286,7 +297,7 @@ class NanoLLM():
         # load the config file
         if os.path.isfile(self.config_path):
             with open(self.config_path) as config_file:
-                self.config = AttributeDict(json.load(config_file))
+                self.config = AttributeDict(filter_keys(json.load(config_file), remove=['norm_stats']))
         else:
             logging.warning(f"could not find model config file at {self.config_path}")
             self.config = AttributeDict()
@@ -312,8 +323,19 @@ class NanoLLM():
         except:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=False, trust_remote_code=True)
             
+    def is_type(self, architectures):
+        # Check the architectures list in the HF config and see if any of these are included.
+        # They are like "LlamaForCausalLM" and get used because model_type may have been patched.
+        if isinstance(architectures, str):
+            architectures = [architectures]
+            
+        for model_arch in self.config.get('architectures', []):
+            model_arch = model_arch.lower()
+            for arch in architectures:
+                if arch.lower() in model_arch:
+                    return arch
         
-    def patch_config(self, **kwargs):
+    def patch_config(self, load=None, save=None, **kwargs):
         # Update the original HF model's config.json with different settings from the provided kwargs.
         # The original will be saved under the same directory to 'config.json.backup'
         backup_path = self.config_path + '.backup'
@@ -324,11 +346,25 @@ class NanoLLM():
             
         logging.info(f"patching model config with {kwargs}")
         
-        patched_config = self.config #.copy()
+        if save:
+            if os.path.isfile(save):
+                with open(save) as config_file:
+                    patched_config = json.load(config_file)
+            else:
+                patched_config = {}
+        else:        
+            patched_config = self.config #.copy()
+        
+        if load:
+            with open(load, 'r') as config_file:
+                patched_config.update(json.load(config_file))
+                
         patched_config.update(kwargs)
 
-        with open(self.config_path, 'w') as config_file:
+        with open(save if save else self.config_path, 'w') as config_file:
             json.dump(patched_config, config_file, indent=2)
+            
+        return patched_config
      
     def config_vision(self, **kwargs):
         # Check the model config for multimodal support (can be in a variety of formats)
@@ -348,16 +384,42 @@ class NanoLLM():
             if name_or_path:
                 has_vision = 'llava' in name_or_path.lower()
 
-        for arch in self.config.get('architectures', []):
-            if 'llava' in arch.lower() or 'bunny' in arch.lower():
-                has_vision = True
+        # check for VLMs in the architectures list, since model_type may have been patched
+        arch = self.is_type(['llava', 'bunny', 'openvla'])
+        
+        if arch:
+            has_vision = True
+         
+        # OpenVLA needs its LLM layer names renamed   
+        if arch == 'openvla':
+            llm_path = os.path.join(self.model_path, 'llm')
+            llm_config = os.path.join(llm_path, 'config.json')
+            
+            if not os.path.isdir(llm_path):
+                os.makedirs(llm_path)
 
+                self.patch_config(
+                    load=download_model(os.path.join(self.config.hf_llm_id, 'config.json')),
+                    save=llm_config, **self.config.text_config,
+                )
+                
+                with open(llm_config) as file:
+                    self.patch_config(**filter_keys(json.load(file), keep=['max_position_embeddings', 'vocab_size']))
+                    
+                for tokenizer in glob.glob(os.path.join(self.model_path, 'tokenizer*')):
+                    shutil.copy(tokenizer, llm_path)
+                    
+                rename_weights(self.model_path, llm_path, lambda layer: layer.replace('language_model.', ''))
+
+            self.model_path = llm_path
+
+        # change model_type back to the base model    
         if self.config.model_type == 'bunny-stablelm':
             self.patch_config(model_type='stablelm_epoch')
         elif self.config.model_type == 'bunny-phi':
             self.patch_config(model_type='phi')
             
-        # support checkpoints with LLM and vision encoder under separate subdirectories
+        # support VILA checkpoints with LLM and vision encoder under separate subdirectories
         if 'vision_tower_cfg' in self.config:
             vision_path = os.path.join(self.model_path, os.path.basename(self.config['vision_tower_cfg']['_name_or_path']))
             if not os.path.isdir(vision_path):
@@ -390,14 +452,45 @@ class NanoLLM():
         if not self.has_vision:
             return
 
-        # load the image embedding model
-        self.vision = CLIPVisionModel.from_pretrained(
-            vision_model if vision_model else self.config.mm_vision_tower,
-            crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
-            use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
-            dtype=torch.float16,
-        ) 
+        self.vision = []  #: list of vision encoders
         
-        # create image embedding projection model
-        self.mm_projector = MMProjector.from_pretrained(self, dtype=torch.float16)
-
+        if self.is_type('openvla'):
+            weights_key = ['vision_backbone.featurizer.', 'vision_backbone.fused_featurizer.']
+            self.vision = [
+                TIMMVisionModel(
+                    timm_model_id, 
+                    weights=self.model_path,
+                    weights_key=lambda layer: layer.replace(weights_key[i], '').replace('scale_factor', 'gamma') if weights_key[i] in layer else None,
+                    img_size=self.config.image_sizes[i], 
+                    act_layer=self.config.timm_override_act_layers[i],
+                    hidden_state=-2,
+                    num_classes=0,
+                )
+                for i, timm_model_id in enumerate(self.config.timm_model_ids)
+            ]
+                
+            llm_hidden_size = self.config.get('hidden_size', 4096)
+            vision_hidden_size = 0
+            
+            for vision in self.vision:
+                vision_hidden_size += vision.config.output_shape[-1]
+                 
+            logging.debug(f"{self.config.name} vision_hidden_size {vision_hidden_size}  llm_hidden_size {llm_hidden_size}")
+            
+            self.mm_projector = MMProjector.from_pretrained(
+                self, dtype=torch.float16, 
+                input_dim=vision_hidden_size, 
+                output_dim=llm_hidden_size
+            )
+        else:
+            # load the image embedding model
+            self.vision = [
+                CLIPVisionModel.from_pretrained(
+                    vision_model if vision_model else self.config.mm_vision_tower,
+                    crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
+                    use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
+                    dtype=torch.float16)
+            ]
+            
+            self.mm_projector = MMProjector.from_pretrained(self, dtype=torch.float16)
+            
