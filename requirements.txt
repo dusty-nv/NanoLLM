@@ -1,19 +1,29 @@
+# ML/AI
 numpy<2
 torch
 torchvision
 torchaudio
 transformers>=4.37.0
+
+# text utils
+decorator-args
+natsort
+inflect
+pyyaml
+
+# webserver
 websockets
+cachetools
+flask
+
+# logging
 termcolor
 tabulate
-inflect
-flask
 tqdm
 getch
-decorator-args
-cachetools
-natsort
-pyyaml
+
+# tensorflow_datasets (don't need tensorflow-gpu)
 tfds-nightly
-tensorflow
 gsutil
+--index-url https://pypi.org/simple
+tensorflow

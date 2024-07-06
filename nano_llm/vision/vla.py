@@ -125,10 +125,10 @@ def tensorflow_disable_gpu():
     if not gpus:
         return
 
-    logging.warning("disabling tensorflow GPUs ({len(gpus)})")
+    logging.warning(f"disabling tensorflow GPUs ({len(gpus)})")
     tf.config.set_visible_devices([], 'GPU')
     logical_gpus = tf.config.list_logical_devices('GPU')
-    logging.info("tensorflow  Physical GPUs: {len(gpus)}  Logical GPUs: {len(logical_gpus)}")
+    logging.info(f"tensorflow  Physical GPUs: {len(gpus)}  Logical GPUs: {len(logical_gpus)}")
 
     
                 
