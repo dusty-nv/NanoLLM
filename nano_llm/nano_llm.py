@@ -126,6 +126,7 @@ class NanoLLM():
 
           max_new_tokens (int): The number of tokens to output in addition to the prompt (default: 128)
           min_new_tokens (int): Force the model to generate a set number of output tokens (default: -1)
+          detokenize (bool): If ``True`` (the default), text will be returned (otherwise ``list[int]`` of token ID's)
           do_sample (bool): If ``True``, temperature/top_p will be used.  Otherwise, greedy search (default: ``False``)
           repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty (default: 1.0)
           temperature (float): Randomness token sampling parameter (default=0.7, only used if ``do_sample=True``)
@@ -137,8 +138,8 @@ class NanoLLM():
                                 will be set in the returned :class:`StreamingResponse` iterator after the request is complete.
 
         Returns:
-          An asynchronous :class:`StreamingResponse` iterator (when ``streaming=True``) that outputs one decoded token string at a time.
-          Otherwise, this function blocks and a string containing the full reply is returned after it's been completed.
+          An asynchronous :class:`StreamingResponse` iterator (when ``streaming=True``) that outputs one decoded token or string at a time.
+          Otherwise, this function blocks and a string (or ``list[int]`` if ``detokenize=False``) containing the full reply is returned after it's been completed.
         """
         raise NotImplementedError("use LLM.from_pretrained() as opposed to instantiating an LLM object directly")
 
@@ -208,13 +209,14 @@ class NanoLLM():
         
         if use_cache:
             result = self.embed_cache.get(text)
-            logging.debug(f'text embedding cache hit `{text}`'.replace('\n', '\\n'))
             
         if result is None:
             tokens = self.tokenize(text, add_special_tokens=add_special_tokens, return_tensors=return_tensors, **kwargs)
             embed = self.embed_tokens(tokens, return_tensors=return_tensors) if self.has_embed else None
             result = (embed, tokens)
-
+        else:
+            logging.debug(f'text embedding cache hit `{text}`'.replace('\n', '\\n'))
+            
         if use_cache:
             self.embed_cache[text] = result
             
@@ -297,7 +299,7 @@ class NanoLLM():
         # load the config file
         if os.path.isfile(self.config_path):
             with open(self.config_path) as config_file:
-                self.config = AttributeDict(filter_keys(json.load(config_file), remove=['norm_stats']))
+                self.config = AttributeDict(json.load(config_file))
         else:
             logging.warning(f"could not find model config file at {self.config_path}")
             self.config = AttributeDict()
@@ -411,8 +413,12 @@ class NanoLLM():
                     
                 rename_weights(self.model_path, llm_path, lambda layer: layer.replace('language_model.', ''))
 
+            if 'norm_stats' in self.config:
+                self.norm_stats = self.config.norm_stats
+                del self.config['norm_stats']
+               
             self.model_path = llm_path
-
+             
         # change model_type back to the base model    
         if self.config.model_type == 'bunny-stablelm':
             self.patch_config(model_type='stablelm_epoch')
@@ -465,6 +471,8 @@ class NanoLLM():
                     act_layer=self.config.timm_override_act_layers[i],
                     hidden_state=-2,
                     num_classes=0,
+                    dtype=torch.float16,
+                    use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
                 )
                 for i, timm_model_id in enumerate(self.config.timm_model_ids)
             ]

@@ -27,11 +27,14 @@ class StreamingResponse():
         #: accumulated output tokens generated so far (for the whole reply)
         self.tokens = []  
         
+        #: detokenize and return text if true, otherwise token ID's
+        self.detokenize = kwargs.get('detokenize', True)
+        
         #: detokenized output text generated so far (for the whole reply)
         self.text = ''    
         
-        #: the new text added since the iterator was last read
-        self.delta = ''
+        #: the new text or tokens added since the iterator was last read
+        self.delta = '' if self.detokenize else []
         
         #: the original input query from the user
         self.input = input
@@ -41,7 +44,7 @@ class StreamingResponse():
         
         #: the :class:`KVCache` used by this request
         self.kv_cache = kwargs.get('kv_cache', None)
-        
+
         #: set if the user requested early termination
         self.stopping = False  
         
@@ -98,22 +101,24 @@ class StreamingResponse():
         """
         if isinstance(tokens, (torch.Tensor, np.ndarray)):
             tokens = tokens.squeeze().tolist()
+        
+        if not isinstance(tokens, list):
+            tokens = [tokens]
             
-        if isinstance(tokens, list):
-            self.tokens.extend(tokens)
-        elif tokens is not None:
-            self.tokens.append(tokens)
-            
+        self.tokens.extend(tokens)    
+
         if not detokenize:
             return
             
-        # detokenize the entire reply on each new output token, because multiple tokens can
-        # combine with each other, changing the previous text (like with long words and unicode)
-        message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False, clean_up_tokenization_spaces=False)
-        
-        self.delta = self.delta + message[len(self.text):]
-        self.text = message
-        
+        if self.detokenize:
+            # detokenize the entire reply on each new output token, because multiple tokens can
+            # combine with each other, changing the previous text (like with long words and unicode)
+            message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+            self.delta = self.delta + message[len(self.text):]
+            self.text = message
+        else:
+            self.delta.extend(tokens)
+            
         if event:
             self.event.set()
 
@@ -124,6 +129,6 @@ class StreamingResponse():
         delta = self.delta
         
         if reset:
-            self.delta = ''
+            self.delta = '' if self.detokenize else []
             
         return delta

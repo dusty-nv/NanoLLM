@@ -14,3 +14,6 @@ decorator-args
 cachetools
 natsort
 pyyaml
+tfds-nightly
+tensorflow
+gsutil

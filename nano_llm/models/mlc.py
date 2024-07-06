@@ -304,7 +304,7 @@ class MLCModel(NanoLLM):
             
         return embedding
         
-    def generate(self, inputs, streaming=True, functions=None, **kwargs):
+    def generate(self, inputs, streaming=True, detokenize=True, **kwargs):
         """
         Generate output from input text, tokens, or an embedding.
         For detailed kwarg descriptions, see `transformers.GenerationConfig <https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.GenerationConfig>`_.
@@ -323,6 +323,7 @@ class MLCModel(NanoLLM):
 
           max_new_tokens (int): The number of tokens to output in addition to the prompt (default: 128)
           min_new_tokens (int): Force the model to generate a set number of output tokens (default: -1)
+          detokenize (bool): If ``True`` (the default), text will be returned (otherwise ``list[int]`` of token ID's)
           do_sample (bool): If ``True``, temperature/top_p will be used.  Otherwise, greedy search (default: ``False``)
           repetition_penalty: The parameter for repetition penalty. 1.0 means no penalty (default: 1.0)
           temperature (float): Randomness token sampling parameter (default=0.7, only used if ``do_sample=True``)
@@ -337,10 +338,6 @@ class MLCModel(NanoLLM):
           An asynchronous :class:`StreamingResponse` iterator (when ``streaming=True``) that outputs one decoded token string at a time.
           Otherwise, this function blocks and a string containing the full reply is returned after it's been completed.
         """
-        if functions is None:
-            functions = []
-        elif not isinstance(functions, list):
-            functions = [functions]
         
         ''' this should not actually be necessary because only plugin(text) is called (i.e. the same for both callable and Plugin)
         for idx, function in enumerate(functions):
@@ -350,7 +347,7 @@ class MLCModel(NanoLLM):
             functions[idx] = Callback(function)
         '''
         
-        stream = StreamingResponse(self, inputs, functions=functions, **kwargs)
+        stream = StreamingResponse(self, inputs, detokenize=detokenize, **kwargs)
         self.queue.put(stream)
         
         if not streaming:
@@ -367,6 +364,11 @@ class MLCModel(NanoLLM):
         """
         functions = stream.kwargs.get('functions', [])
         
+        if functions is None:
+            functions = []
+        elif not isinstance(functions, list):
+            functions = [functions]
+
         max_new_tokens = stream.kwargs.get('max_new_tokens', 128)
         min_new_tokens = stream.kwargs.get('min_new_tokens', -1)
         

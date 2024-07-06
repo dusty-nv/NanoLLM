@@ -46,6 +46,7 @@ model = NanoLLM.from_pretrained(
     api=args.api,
     quantization=args.quantization, 
     max_context_len=args.max_context_len,
+    vision_api=args.vision_api,
     vision_model=args.vision_model,
     vision_scaling=args.vision_scaling, 
 )
