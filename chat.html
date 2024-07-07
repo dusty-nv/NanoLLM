@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Chat &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -38,7 +38,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -66,11 +66,15 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.pop"><code class="docutils literal notranslate"><span class="pre">ChatHistory.pop()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.remove"><code class="docutils literal notranslate"><span class="pre">ChatHistory.remove()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.reset"><code class="docutils literal notranslate"><span class="pre">ChatHistory.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.turn"><code class="docutils literal notranslate"><span class="pre">ChatHistory.turn()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.to_list"><code class="docutils literal notranslate"><span class="pre">ChatHistory.to_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.add_system_prompt"><code class="docutils literal notranslate"><span class="pre">ChatHistory.add_system_prompt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.system_prompt"><code class="docutils literal notranslate"><span class="pre">ChatHistory.system_prompt</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.embed_chat"><code class="docutils literal notranslate"><span class="pre">ChatHistory.embed_chat()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.reindex"><code class="docutils literal notranslate"><span class="pre">ChatHistory.reindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.find_wrap_entry"><code class="docutils literal notranslate"><span class="pre">ChatHistory.find_wrap_entry()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.to_html"><code class="docutils literal notranslate"><span class="pre">ChatHistory.to_html()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.ChatHistory.run_tools"><code class="docutils literal notranslate"><span class="pre">ChatHistory.run_tools()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -105,8 +109,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.len"><code class="docutils literal notranslate"><span class="pre">BotFunctions.len()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.list"><code class="docutils literal notranslate"><span class="pre">BotFunctions.list()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.filter"><code class="docutils literal notranslate"><span class="pre">BotFunctions.filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.find"><code class="docutils literal notranslate"><span class="pre">BotFunctions.find()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.generate_docs"><code class="docutils literal notranslate"><span class="pre">BotFunctions.generate_docs()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.register"><code class="docutils literal notranslate"><span class="pre">BotFunctions.register()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.run"><code class="docutils literal notranslate"><span class="pre">BotFunctions.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.load"><code class="docutils literal notranslate"><span class="pre">BotFunctions.load()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.BotFunctions.test"><code class="docutils literal notranslate"><span class="pre">BotFunctions.test()</span></code></a></li>
 </ul>
@@ -186,7 +192,7 @@
     <span class="n">prompt</span> <span class="o">=</span> <span class="nb">input</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
     <span class="c1"># add user prompt and generate chat tokens/embeddings</span>
-    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">)</span>
     <span class="n">embedding</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()</span>
 
     <span class="c1"># generate bot reply</span>
@@ -203,8 +209,7 @@
         <span class="n">termcolor</span><span class="o">.</span><span class="n">cprint</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="c1"># save the final output</span>
-    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
-    <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">reply</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -311,17 +316,40 @@ If stop is not specified, then only the single entry at the start index will be 
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.reset">
-<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">add_system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reset" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.reset" title="Link to this definition"></a></dt>
 <dd><p>Reset the chat history, and optionally add the system prompt to the new chat.
 If <code class="docutils literal notranslate"><span class="pre">use_cache=True</span></code>, then the system prompt tokens/embedding will be cached.
 If <cite>wrap_tokens</cite> is set, then the most recent N tokens from the chat will be kept.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.turn">
+<span class="sig-name descname"><span class="pre">turn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'user'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.turn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.turn" title="Link to this definition"></a></dt>
+<dd><p>Returns true if it’s the given role’s turn in the chat, otherwise false.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.ChatHistory.to_list">
-<span class="sig-name descname"><span class="pre">to_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.to_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.to_list" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">to_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">html</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.to_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.to_list" title="Link to this definition"></a></dt>
 <dd><p>Serialize the history to a list of dicts, where each dict is a chat entry
 with the non-critical keys removed (suitable for web transport, ect)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.add_system_prompt">
+<span class="sig-name descname"><span class="pre">add_system_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system_prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.add_system_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.add_system_prompt" title="Link to this definition"></a></dt>
+<dd><p>Add the system prompt message to the chat, containing <a class="reference internal" href="#nano_llm.ChatHistory.system_prompt" title="nano_llm.ChatHistory.system_prompt"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ChatHistory.system_prompt</span></code></a>
+appended by the tool function descriptions if tools are enabled.  If the <code class="docutils literal notranslate"><span class="pre">system</span></code> role
+is not defined by the model’s chat template, then this function does nothing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>use_cache</strong> (<em>bool</em>) – If true, then the system prompt tokens/embeddedings will be cached.
+This is the default because the system prompt typically may not change.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The <a class="reference internal" href="#nano_llm.ChatMessage" title="nano_llm.ChatMessage"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChatMessage</span></code></a> that was added to the chat with the <code class="docutils literal notranslate"><span class="pre">system</span></code> role.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py property">
@@ -360,6 +388,18 @@ You wouldn’t typically need to call this yourself.</p>
 <dd><p>Find the oldest entry from which the chat doesn’t exceed the number of wrap_tokens,
 and that the entry should be a user query.  This is used to keep those more recent
 chat entries when the history overflows past the max context window of the model.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.to_html">
+<span class="sig-name descname"><span class="pre">to_html</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.to_html"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.to_html" title="Link to this definition"></a></dt>
+<dd><p>Sanitize message contents to HTML representation, apply code formatting, ect.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.ChatHistory.run_tools">
+<span class="sig-name descname"><span class="pre">run_tools</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tools</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">append</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/history.html#ChatHistory.run_tools"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.ChatHistory.run_tools" title="Link to this definition"></a></dt>
+<dd><p>Invoke any function calls in the output text and return the results.</p>
 </dd></dl>
 
 </dd></dl>
@@ -561,7 +601,7 @@ embed() needs to have been called for this to be valid.</p>
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.bot_function">
-<span class="sig-name descname"><span class="pre">bot_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pydoc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#bot_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.bot_function" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">bot_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#bot_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.bot_function" title="Link to this definition"></a></dt>
 <dd><p>Decorator for exposing a function to be callable by the LLM.
 This will create wrapper functions that do the parsing to
 determine if this function was called in the output text,
@@ -584,11 +624,7 @@ you can then add to the chat history.</p>
 <li><p><strong>func</strong> (<em>Callable</em>) – The function to be called by the model.</p></li>
 <li><p><strong>name</strong> (<em>str</em>) – The function name that the model should refer to.
 By default, it will be the actual Python function name.</p></li>
-<li><p><strong>docs</strong> (<em>str</em>) – Description of the function that is added to the model’s
-system prompt.  By default, the Python docstring is used
-from the function’s code comment block (<cite>‘’’ docs here ‘’’</cite>)</p></li>
-<li><p><strong>code</strong> (<em>str</em>) – Language that the model is expected to write code in.
-By default this is Python, but JSON will be added also.</p></li>
+<li><p><strong>docs</strong> (<em>str</em>) – Description of the function that overrides its pydoc string.</p></li>
 <li><p><strong>enabled</strong> (<em>bool</em>) – Boolean that toggles whether this function is added
 to the system prompt and able to be called or not.</p></li>
 </ul>
@@ -598,7 +634,7 @@ to the system prompt and able to be called or not.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nano_llm.BotFunctions">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BotFunctions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BotFunctions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Manager of functions able to be called by the LLM that have been registered
 with the <a class="reference internal" href="#nano_llm.bot_function" title="nano_llm.bot_function"><code class="xref py py-func docutils literal notranslate"><span class="pre">bot_function()</span></code></a> decorator or <a class="reference internal" href="#nano_llm.BotFunctions.register" title="nano_llm.BotFunctions.register"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.register()</span></code></a>.
@@ -616,7 +652,7 @@ with the generation:</p>
 from their Python docstrings.  You can filter and disable functions with <a class="reference internal" href="#nano_llm.BotFunctions.filter" title="nano_llm.BotFunctions.filter"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BotFunctions.filter()</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.BotFunctions.__new__">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.__new__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.__new__" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.__new__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.__new__" title="Link to this definition"></a></dt>
 <dd><p>Return the list of enabled functions whenever <cite>BotFunctions()</cite> is called,
 making it seem like you are just calling a function that returns a list:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">BotFunctions</span><span class="p">():</span>
@@ -649,15 +685,27 @@ if their names are matched against the filter list.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.find">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.find" title="Link to this definition"></a></dt>
+<dd><p>Find a function by name, or return None if not found</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.BotFunctions.generate_docs">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">generate_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prologue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epilogue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.generate_docs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.generate_docs" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">generate_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prologue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epilogue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.generate_docs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.generate_docs" title="Link to this definition"></a></dt>
 <dd><p>Collate the documentation strings from all the enabled functions</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.BotFunctions.register">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pydoc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'python'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.register"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.register" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.register"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.register" title="Link to this definition"></a></dt>
 <dd><p>See the docs for <a class="reference internal" href="#nano_llm.bot_function" title="nano_llm.bot_function"><code class="xref py py-func docutils literal notranslate"><span class="pre">bot_function()</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.BotFunctions.run">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugins/bot_functions.html#BotFunctions.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.BotFunctions.run" title="Link to this definition"></a></dt>
+<dd><p>Invoke any function calls in the output text and return the results.</p>
 </dd></dl>
 
 <dl class="py method">

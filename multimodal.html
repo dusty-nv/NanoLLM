@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multimodal &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Multimodal &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -38,7 +38,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -141,12 +141,15 @@
 <span class="c1"># For example, `--video-input /dev/video0` will capture from a V4L2 webcam. See here:</span>
 <span class="c1"># https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-streaming.md</span>
 <span class="c1">#</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">termcolor</span>
+
 <span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">NanoLLM</span><span class="p">,</span> <span class="n">ChatHistory</span>
 <span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span><span class="p">,</span> <span class="n">load_prompts</span>
 <span class="kn">from</span> <span class="nn">nano_llm.plugins</span> <span class="kn">import</span> <span class="n">VideoSource</span>
 
-<span class="kn">from</span> <span class="nn">termcolor</span> <span class="kn">import</span> <span class="n">cprint</span>
 <span class="kn">from</span> <span class="nn">jetson_utils</span> <span class="kn">import</span> <span class="n">cudaMemcpy</span><span class="p">,</span> <span class="n">cudaToNumpy</span>
+
 
 <span class="c1"># parse args and set some defaults</span>
 <span class="n">args</span> <span class="o">=</span> <span class="n">ArgParser</span><span class="p">(</span><span class="n">extras</span><span class="o">=</span><span class="n">ArgParser</span><span class="o">.</span><span class="n">Defaults</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;prompt&#39;</span><span class="p">,</span> <span class="s1">&#39;video_input&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
@@ -179,7 +182,7 @@
 <span class="n">chat_history</span> <span class="o">=</span> <span class="n">ChatHistory</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">chat_template</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">)</span>
 
 <span class="c1"># open the video stream</span>
-<span class="n">video_source</span> <span class="o">=</span> <span class="n">VideoSource</span><span class="p">(</span><span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+<span class="n">video_source</span> <span class="o">=</span> <span class="n">VideoSource</span><span class="p">(</span><span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">),</span> <span class="n">cuda_stream</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">return_copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <span class="c1"># apply the prompts to each frame</span>
 <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
@@ -188,10 +191,11 @@
     <span class="k">if</span> <span class="n">img</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">continue</span>
 
-    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="n">img</span><span class="p">)</span>
+    <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="n">img</span><span class="p">)</span>
+    <span class="n">time_begin</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
     
     <span class="k">for</span> <span class="n">prompt</span> <span class="ow">in</span> <span class="n">prompts</span><span class="p">:</span>
-        <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+        <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">embedding</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">chat_history</span><span class="o">.</span><span class="n">embed_chat</span><span class="p">()</span>
         
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&gt;&gt;&#39;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">)</span>
@@ -208,11 +212,13 @@
         <span class="p">)</span>
         
         <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">reply</span><span class="p">:</span>
-            <span class="n">cprint</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">termcolor</span><span class="o">.</span><span class="n">cprint</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">eos</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-        <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
-        <span class="n">chat_history</span><span class="o">.</span><span class="n">kv_cache</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">kv_cache</span>
-        
+        <span class="n">chat_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;bot&#39;</span><span class="p">,</span> <span class="n">reply</span><span class="p">)</span>
+      
+    <span class="n">time_elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_begin</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;time:  </span><span class="si">{</span><span class="n">time_elapsed</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ms  rate:  </span><span class="si">{</span><span class="mf">1.0</span><span class="o">/</span><span class="n">time_elapsed</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> FPS&quot;</span><span class="p">)</span>
+    
     <span class="n">chat_history</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
     
     <span class="k">if</span> <span class="n">video_source</span><span class="o">.</span><span class="n">eos</span><span class="p">:</span>

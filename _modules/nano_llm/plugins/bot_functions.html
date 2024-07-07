@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.plugins.bot_functions &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>nano_llm.plugins.bot_functions &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/documentation_options.js?v=66a9afe1"></script>
         <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -34,6 +34,9 @@
           <a href="../../../index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.7
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -47,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../multimodal.html">Multimodal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
@@ -81,18 +85,20 @@
   <h1>Source code for nano_llm.plugins.bot_functions</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
 <span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
 <span class="kn">from</span> <span class="nn">decorator_args</span> <span class="kn">import</span> <span class="n">decorator_args</span>
+<span class="kn">from</span> <span class="nn">...utils</span> <span class="kn">import</span> <span class="n">inspect_function</span>
 
 
 <div class="viewcode-block" id="bot_function">
 <a class="viewcode-back" href="../../../chat.html#nano_llm.bot_function">[docs]</a>
 <span class="nd">@decorator_args</span><span class="p">(</span><span class="n">optional</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>        
-<span class="k">def</span> <span class="nf">bot_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;pydoc&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">bot_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator for exposing a function to be callable by the LLM.</span>
 <span class="sd">    This will create wrapper functions that do the parsing to</span>
@@ -113,23 +119,14 @@
 <span class="sd">    you can then add to the chat history.</span>
 <span class="sd">            </span>
 <span class="sd">    Args:</span>
-<span class="sd">    </span>
 <span class="sd">      func (Callable):  The function to be called by the model.</span>
-<span class="sd">      </span>
 <span class="sd">      name (str):  The function name that the model should refer to.</span>
 <span class="sd">                   By default, it will be the actual Python function name.</span>
-<span class="sd">                   </span>
-<span class="sd">      docs (str):  Description of the function that is added to the model&#39;s</span>
-<span class="sd">                   system prompt.  By default, the Python docstring is used</span>
-<span class="sd">                   from the function&#39;s code comment block (`&#39;&#39;&#39; docs here &#39;&#39;&#39;`)</span>
-<span class="sd">                   </span>
-<span class="sd">      code (str):  Language that the model is expected to write code in.</span>
-<span class="sd">                   By default this is Python, but JSON will be added also.</span>
-<span class="sd">         </span>
+<span class="sd">      docs (str):  Description of the function that overrides its pydoc string.</span>
 <span class="sd">      enabled (bool):  Boolean that toggles whether this function is added</span>
 <span class="sd">                       to the system prompt and able to be called or not.</span>
 <span class="sd">    &quot;&quot;&quot;</span>                   
-    <span class="k">return</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="n">code</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="n">enabled</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="n">enabled</span><span class="p">)</span></div>
 
 
 
@@ -158,7 +155,7 @@
         
 <div class="viewcode-block" id="BotFunctions.__new__">
 <a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.__new__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">load</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">load</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the list of enabled functions whenever `BotFunctions()` is called,</span>
 <span class="sd">        making it seem like you are just calling a function that returns a list::</span>
@@ -217,33 +214,65 @@
                     <span class="n">function</span><span class="o">.</span><span class="n">enabled</span> <span class="o">==</span> <span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;enable&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">list</span><span class="p">()</span></div>
 
+    
+<div class="viewcode-block" id="BotFunctions.find">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.find">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find a function by name, or return None if not found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">functions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">functions</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">functions</span>
         
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">functions</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">functions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                
+        <span class="k">for</span> <span class="n">function</span> <span class="ow">in</span> <span class="n">functions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">function</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">function</span></div>
+
+    
 <div class="viewcode-block" id="BotFunctions.generate_docs">
 <a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.generate_docs">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">generate_docs</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prologue</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">epilogue</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">generate_docs</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prologue</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">epilogue</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">spec</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Collate the documentation strings from all the enabled functions</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">functions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">functions</span> <span class="o">=</span> <span class="n">BotFunctions</span><span class="p">()</span>
+            
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">prologue</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">prologue</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">prologue</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
                 <span class="n">prologue</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
             <span class="k">elif</span> <span class="n">prologue</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">prologue</span> <span class="o">=</span> <span class="s2">&quot;You are able to call the Python functions defined below, and the returned values will be added to the chat:</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-        
+                <span class="k">if</span> <span class="n">spec</span> <span class="o">==</span> <span class="s1">&#39;python&#39;</span><span class="p">:</span>
+                    <span class="n">prologue</span> <span class="o">=</span> <span class="s2">&quot;You are able to call the Python functions defined below, and the returned values will be added to the chat:</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">prologue</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">epilogue</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">epilogue</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">epilogue</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
                 <span class="n">epilogue</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
             <span class="k">elif</span> <span class="n">epilogue</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">epilogue</span> <span class="o">=</span> <span class="s2">&quot;For example, if the user asks for the temperature, call the WEATHER() function.&quot;</span>
-
-        <span class="n">docs</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;* &#39;</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">docs</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">functions</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">enabled</span><span class="p">])</span>
-        
+                <span class="k">if</span> <span class="n">spec</span> <span class="o">==</span> <span class="s1">&#39;python&#39;</span><span class="p">:</span>
+                    <span class="n">epilogue</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">For example, if the user asks for the temperature, call the WEATHER() function.&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">epilogue</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                    
+        <span class="k">if</span> <span class="n">spec</span> <span class="o">==</span> <span class="s1">&#39;python&#39;</span><span class="p">:</span>          
+            <span class="n">docs</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;* &#39;</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">docs</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">functions</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">enabled</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">spec</span> <span class="o">==</span> <span class="s1">&#39;openai&#39;</span><span class="p">:</span>
+            <span class="n">docs</span> <span class="o">=</span> <span class="nb">str</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">docs</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">functions</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">enabled</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;supported function-calling tool specifications are &#39;openai&#39; and &#39;python&#39; (was spec=</span><span class="si">{</span><span class="n">spec</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                
         <span class="k">if</span> <span class="n">prologue</span><span class="p">:</span>
             <span class="n">docs</span> <span class="o">=</span> <span class="n">prologue</span> <span class="o">+</span> <span class="n">docs</span>
             
         <span class="k">if</span> <span class="n">epilogue</span><span class="p">:</span>
-            <span class="n">docs</span> <span class="o">=</span> <span class="n">docs</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">epilogue</span>
+            <span class="n">docs</span> <span class="o">=</span> <span class="n">docs</span> <span class="o">+</span> <span class="n">epilogue</span>
             
         <span class="k">return</span> <span class="n">docs</span></div>
 
@@ -251,7 +280,7 @@
 <div class="viewcode-block" id="BotFunctions.register">
 <a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.register">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="s1">&#39;pydoc&#39;</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">docs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        See the docs for :func:`bot_function`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -280,35 +309,101 @@
                 <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running generated code `</span><span class="si">{</span><span class="n">code_str</span><span class="si">}</span><span class="s2">`&quot;</span><span class="p">)</span>
                 <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="n">code_str</span><span class="p">,</span> <span class="p">{</span><span class="n">name</span> <span class="p">:</span> <span class="n">func</span><span class="p">})</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception occurred executing generated code </span><span class="si">{</span><span class="n">code_str</span><span class="si">}</span><span class="se">\n\n</span><span class="si">{</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="n">error</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception occurred executing generated code </span><span class="si">{</span><span class="n">code_str</span><span class="si">}</span><span class="se">\n\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="k">return</span> <span class="kc">None</span>
 
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">docs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">wrapper</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">:</span>
+                <span class="n">docs</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">()` - &quot;</span> <span class="o">+</span> <span class="n">wrapper</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">docs</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;() &#39;</span>
+                
         <span class="n">wrapper</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="n">docs</span>
+        <span class="n">wrapper</span><span class="o">.</span><span class="n">spec</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">wrapper</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">enabled</span>
         <span class="n">wrapper</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="n">func</span>
         <span class="n">wrapper</span><span class="o">.</span><span class="n">regex</span> <span class="o">=</span> <span class="n">regex</span>
-        
-        <span class="k">if</span> <span class="n">docs</span> <span class="o">==</span> <span class="s1">&#39;nosig&#39;</span><span class="p">:</span>
-            <span class="n">docs</span> <span class="o">=</span> <span class="s1">&#39;pydoc_nosig&#39;</span>
-            
-        <span class="k">if</span> <span class="n">docs</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;pydoc&#39;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">wrapper</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">docs</span> <span class="o">==</span> <span class="s1">&#39;pydoc&#39;</span><span class="p">:</span>
-                    <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">()` - &quot;</span> <span class="o">+</span> <span class="n">wrapper</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                <span class="k">elif</span> <span class="n">docs</span> <span class="o">==</span> <span class="s1">&#39;pydoc_nosig&#39;</span><span class="p">:</span>
-                    <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="n">wrapper</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;() &#39;</span>
-        <span class="k">elif</span> <span class="n">docs</span><span class="p">:</span>
-            <span class="n">wrapper</span><span class="o">.</span><span class="n">docs</span> <span class="o">=</span> <span class="n">docs</span>
-            
+        <span class="n">wrapper</span><span class="o">.</span><span class="n">openai</span> <span class="o">=</span> <span class="n">inspect_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">return_spec</span><span class="o">=</span><span class="s1">&#39;openai&#39;</span><span class="p">)</span>
+
         <span class="bp">cls</span><span class="o">.</span><span class="n">functions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wrapper</span><span class="p">)</span>
         <span class="n">func</span><span class="o">.</span><span class="n">_bot_function</span> <span class="o">=</span> <span class="n">wrapper</span>
-        
+
         <span class="k">return</span> <span class="n">func</span></div>
 
+    
+<div class="viewcode-block" id="BotFunctions.run">
+<a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.run">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Invoke any function calls in the output text and return the results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+            
+        <span class="k">if</span> <span class="n">functions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">functions</span> <span class="o">=</span> <span class="n">BotFunctions</span><span class="p">()</span>
+            
+        <span class="k">if</span> <span class="n">template</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># inline-style python/JSON</span>
+            <span class="n">function_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">function</span> <span class="ow">in</span> <span class="n">functions</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">output</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">function_text</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">output</span>
+            <span class="k">return</span> <span class="n">function_text</span> <span class="k">if</span> <span class="n">function_text</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">tool_spec</span> <span class="o">!=</span> <span class="s1">&#39;openai&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;to run tools, the chat template needs to have keys for &#39;tool_call&#39; and &#39;tool_response&#39;&quot;</span><span class="p">)</span>
+         
+        <span class="k">if</span> <span class="s1">&#39;tool_regex&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">template</span><span class="p">:</span>
+            <span class="n">template</span><span class="o">.</span><span class="n">tool_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">tool_call</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span> <span class="c1"># allow for newlines in matches</span>
+                  
+        <span class="k">def</span> <span class="nf">parse_tools</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">template</span><span class="o">.</span><span class="n">tool_regex</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="c1"># extract what is inside any prefix/postfix tags</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception occurred trying to parse tool calls from bot reply:</span><span class="se">\n\n</span><span class="s2">```</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">```</span><span class="se">\n\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>             
+
+        <span class="n">call</span> <span class="o">=</span> <span class="n">parse_tools</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
         
+        <span class="k">if</span> <span class="n">call</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+             
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;invoking tool call </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+               
+        <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">tool_spec</span> <span class="o">==</span> <span class="s1">&#39;openai&#39;</span><span class="p">:</span>
+            <span class="n">func_name</span> <span class="o">=</span> <span class="n">call</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+            <span class="n">func_args</span> <span class="o">=</span> <span class="n">call</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;arguments&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Tool calling is only currently supported with openai format&quot;</span><span class="p">)</span>
+         
+        <span class="n">func</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">func_name</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="n">functions</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">func</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">func</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Error: could not find tool named &#39;</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">error</span>
+                
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">function</span><span class="p">(</span><span class="o">**</span><span class="n">func_args</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Exception occurred running tool </span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">func_args</span><span class="si">}</span><span class="s2">) - </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="se">\n\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">error</span>
+        
+        <span class="k">if</span> <span class="n">response</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+                    
+        <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">tool_spec</span> <span class="o">==</span> <span class="s1">&#39;openai&#39;</span><span class="p">:</span>  
+            <span class="n">response</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">func_name</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">response</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+            
 <div class="viewcode-block" id="BotFunctions.load">
 <a class="viewcode-back" href="../../../chat.html#nano_llm.BotFunctions.load">[docs]</a>
     <span class="nd">@classmethod</span>
@@ -320,9 +415,11 @@
             <span class="k">return</span> <span class="kc">True</span>
             
         <span class="c1"># TODO: automate this</span>
+        <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">alert</span>
         <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">clock</span>
         <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">location</span>
-        <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">weather</span>
+        <span class="c1">#from . import weather</span>
+        <span class="c1">#from . import home_assistant</span>
         
         <span class="k">assert</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">functions</span><span class="p">)</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">builtins</span> <span class="o">=</span> <span class="kc">True</span>
@@ -350,7 +447,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  * </span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">() =&gt; &#39;</span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">function</span><span class="p">()</span><span class="si">}</span><span class="s2">&#39;  (</span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">docs</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception occurred testing bot function </span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">()</span><span class="se">\n\n</span><span class="si">{</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="n">error</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception occurred testing bot function </span><span class="si">{</span><span class="n">function</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">()</span><span class="se">\n\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="n">had_error</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">if</span> <span class="n">disable_on_error</span><span class="p">:</span>
                     <span class="n">function</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">False</span>

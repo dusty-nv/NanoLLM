@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.agents.web_chat &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>nano_llm.agents.web_chat &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/documentation_options.js?v=66a9afe1"></script>
         <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -34,6 +34,9 @@
           <a href="../../../index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.7
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -47,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../multimodal.html">Multimodal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
@@ -89,7 +93,7 @@
 
 <span class="kn">from</span> <span class="nn">nano_llm</span> <span class="kn">import</span> <span class="n">StopTokens</span><span class="p">,</span> <span class="n">BotFunctions</span><span class="p">,</span> <span class="n">bot_function</span>
 <span class="kn">from</span> <span class="nn">nano_llm.web</span> <span class="kn">import</span> <span class="n">WebServer</span>
-<span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span><span class="p">,</span> <span class="ne">KeyboardInterrupt</span>
+<span class="kn">from</span> <span class="nn">nano_llm.utils</span> <span class="kn">import</span> <span class="n">ArgParser</span><span class="p">,</span> <span class="ne">KeyboardInterrupt</span><span class="p">,</span> <span class="n">code_tags</span><span class="p">,</span> <span class="n">resample_audio</span>
 <span class="kn">from</span> <span class="nn">nano_llm.plugins</span> <span class="kn">import</span> <span class="n">AutoASR</span>
 
 <span class="kn">from</span> <span class="nn">.voice_chat</span> <span class="kn">import</span> <span class="n">VoiceChat</span>
@@ -180,7 +184,7 @@
                 <span class="k">if</span> <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;client_state&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;connected&#39;</span><span class="p">:</span>
                     <span class="n">client_init_msg</span> <span class="o">=</span> <span class="p">{</span>
                         <span class="s1">&#39;system_prompt&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">,</span>
-                        <span class="s1">&#39;bot_functions&#39;</span><span class="p">:</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">(</span><span class="n">prologue</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                        <span class="s1">&#39;bot_functions&#39;</span><span class="p">:</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">(</span><span class="n">spec</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">tool_spec</span><span class="p">,</span> <span class="n">prologue</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">epilogue</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
                         <span class="s1">&#39;user_profile&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="p">),</span>
                     <span class="p">}</span>
                     
@@ -232,8 +236,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">on_interrupt</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">prompt</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_AUDIO</span><span class="p">:</span>  <span class="c1"># web audio (mic)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">asr</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">asr</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vad</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">vad</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="mi">48000</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_IMAGE</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;recieved </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2"> image message </span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">([</span><span class="s1">&#39;/reset&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">filename</span><span class="p">])</span>
@@ -244,7 +248,7 @@
 
 <div class="viewcode-block" id="WebChat.SAVE">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.SAVE">[docs]</a>
-    <span class="nd">@bot_function</span><span class="p">(</span><span class="n">docs</span><span class="o">=</span><span class="s1">&#39;nosig&#39;</span><span class="p">)</span>
+    <span class="nd">@bot_function</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">SAVE</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        SAVE(&quot;&lt;insert info here&gt;&quot;) - save information about the user, for example SAVE(&quot;Mary likes to garden&quot;)</span>
@@ -295,8 +299,8 @@
             
         <span class="n">system_prompt</span> <span class="o">=</span> <span class="p">[</span><span class="n">instruct</span><span class="p">]</span>
         
-        <span class="k">if</span> <span class="n">enable_autodoc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">functions</span><span class="p">:</span>
-            <span class="n">system_prompt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">BotFunctions</span><span class="o">.</span><span class="n">generate_docs</span><span class="p">())</span>
+        <span class="c1">#if enable_autodoc and self.llm.functions:</span>
+        <span class="c1">#    system_prompt.append(&quot;\n&quot; + BotFunctions.generate_docs())</span>
             
         <span class="k">if</span> <span class="n">enable_profile</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_profile</span><span class="p">:</span>
             <span class="n">system_prompt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
@@ -348,10 +352,15 @@
         
 <div class="viewcode-block" id="WebChat.on_tts_samples">
 <a class="viewcode-back" href="../../../agents.html#nano_llm.agents.web_chat.WebChat.on_tts_samples">[docs]</a>
-    <span class="k">def</span> <span class="nf">on_tts_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_tts_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Send audio samples to the client when they arrive.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">webaudio_rate</span> <span class="o">=</span> <span class="mi">48000</span>
+        
+        <span class="k">if</span> <span class="n">sample_rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">sample_rate</span> <span class="o">!=</span> <span class="n">webaudio_rate</span><span class="p">:</span>
+            <span class="n">audio</span> <span class="o">=</span> <span class="n">resample_audio</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">webaudio_rate</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            
         <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">WebServer</span><span class="o">.</span><span class="n">MESSAGE_AUDIO</span><span class="p">)</span></div>
 
         
@@ -367,17 +376,29 @@
             <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;role&#39;</span><span class="p">:</span> <span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">asr_history</span><span class="p">})</span>
             
         <span class="k">def</span> <span class="nf">web_text</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;br/&gt;&#39;</span><span class="p">)</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;s&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-            
             <span class="k">for</span> <span class="n">stop_token</span> <span class="ow">in</span> <span class="n">StopTokens</span><span class="p">:</span>
                 <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">stop_token</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-                
+               
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+             
+            <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;&lt;tool_call&gt;&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;s&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&amp;&#39;</span><span class="p">,</span> <span class="s1">&#39;&amp;amp;&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&amp;lt;&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&amp;gt;&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;br/&gt;&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\&quot;</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\&#39;</span><span class="s2">&quot;</span><span class="p">)</span>
+            
             <span class="k">for</span> <span class="n">regex</span><span class="p">,</span> <span class="n">replace</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">web_regex</span><span class="p">:</span>
                 <span class="n">text</span> <span class="o">=</span> <span class="n">regex</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">replace</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-                
+
+            <span class="n">text</span> <span class="o">=</span> <span class="n">code_tags</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
             <span class="k">return</span> <span class="n">text</span>
           
         <span class="k">def</span> <span class="nf">web_image</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>

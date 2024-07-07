@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.chat.kv_cache &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>nano_llm.chat.kv_cache &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/documentation_options.js?v=66a9afe1"></script>
         <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -34,6 +34,9 @@
           <a href="../../../index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.7
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -88,11 +91,12 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract interface for storing &amp; manipulating the KV cache,</span>
 <span class="sd">    which encodes all the context and model state in the chat.</span>
-<span class="sd">    These are implemented by different LLM backends that are</span>
-<span class="sd">    backed by CUDA tensors for each layer in the model, which</span>
-<span class="sd">    these functions provide some ability to modify.  It gets</span>
-<span class="sd">    returned in the :class:`StreamingResponse` iterator from</span>
-<span class="sd">    :meth:`NanoLLM.generate()` and as an optional argument it</span>
+<span class="sd">    These are implemented by different LLM backends and are</span>
+<span class="sd">    backed by CUDA memory for each layer in the model, which</span>
+<span class="sd">    these functions provide some modifications.  </span>
+<span class="sd">    </span>
+<span class="sd">    It gets returned in the :class:`StreamingResponse` iterator</span>
+<span class="sd">    from :meth:`NanoLLM.generate()` and as an optional argument</span>
 <span class="sd">    can be re-used during the next generation to grow the cache</span>
 <span class="sd">    instead of having to refill the chat context each request.</span>
 <span class="sd">    </span>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.utils.audio &mdash; NanoLLM 24.4.1 documentation</title>
+  <title>nano_llm.utils.audio &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=b29169ad"></script>
+        <script src="../../../_static/documentation_options.js?v=66a9afe1"></script>
         <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -34,6 +34,9 @@
           <a href="../../../index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.7
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -47,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../chat.html">Chat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../multimodal.html">Multimodal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../plugins.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../agents.html">Agents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../webserver.html">Webserver</a></li>
@@ -80,10 +84,17 @@
              
   <h1>Source code for nano_llm.utils.audio</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
-<span class="kn">from</span> <span class="nn">.tensor</span> <span class="kn">import</span> <span class="n">convert_dtype</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torchaudio</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyaudio</span> <span class="k">as</span> <span class="nn">pa</span>
+
+<span class="kn">from</span> <span class="nn">clip_trt.utils</span> <span class="kn">import</span> <span class="n">convert_dtype</span><span class="p">,</span> <span class="n">convert_tensor</span>
+
 
 <div class="viewcode-block" id="convert_audio">
 <a class="viewcode-back" href="../../../utilities.html#nano_llm.utils.convert_audio">[docs]</a>
@@ -95,50 +106,117 @@
 <span class="sd">    byte buffers will be returned as ndarray, otherwise the same object type as input.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
-        <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
     <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;samples should either be bytes, np.ndarray, or torch.Tensor (was </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
         
     <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">dtype</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">samples</span>
 
-    <span class="c1">#sample_width = np.dtype(str(dtype).split(&#39;.&#39;)[-1]).itemsize</span>
-    <span class="n">sample_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">convert_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">itemsize</span>
-    <span class="n">max_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">sample_width</span> <span class="o">*</span> <span class="mi">8</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 32767 for 16-bit</span>
+    <span class="k">def</span> <span class="nf">is_float</span><span class="p">(</span><span class="n">dtype</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         
+    <span class="k">if</span> <span class="n">is_float</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+        <span class="n">rescale_dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rescale_dtype</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span>
+        
+    <span class="c1">#sample_width = np.dtype(str(dtype).split(&#39;.&#39;)[-1]).itemsize</span>
+    <span class="n">sample_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">convert_dtype</span><span class="p">(</span><span class="n">rescale_dtype</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">itemsize</span>
+    <span class="n">max_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">sample_width</span> <span class="o">*</span> <span class="mi">8</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 32767 for 16-bit</span>
+
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>  <span class="c1"># float-to-int</span>
+        <span class="n">numpy_dtype</span> <span class="o">=</span> <span class="n">convert_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_float</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>  <span class="c1"># float-to-int</span>
             <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span> <span class="o">*</span> <span class="n">max_value</span>
             <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">max_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">)</span>
-            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>  <span class="c1"># int-to-float</span>
-            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy_dtype</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_float</span><span class="p">(</span><span class="n">dtype</span><span class="p">):</span>  <span class="c1"># int-to-float</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy_dtype</span><span class="p">)</span>
             <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span> <span class="o">/</span> <span class="n">max_value</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsupported audio sample dtype=</span><span class="si">{</span><span class="n">samples</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+        <span class="n">torch_dtype</span> <span class="o">=</span> <span class="n">convert_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_float</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
             <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span> <span class="o">*</span> <span class="n">max_value</span>
-            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">max_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
-            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_value</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">max_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">)</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">torch_dtype</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_float</span><span class="p">(</span><span class="n">dtype</span><span class="p">):</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">torch_dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_value</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsupported audio sample dtype=</span><span class="si">{</span><span class="n">samples</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_tensor</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_tensor</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">)</span>
             
     <span class="k">return</span> <span class="n">samples</span></div>
 
 
 
+<span class="n">_resamplers</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">def</span> <span class="nf">resample_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">orig_freq</span><span class="o">=</span><span class="mi">16000</span><span class="p">,</span> <span class="n">new_freq</span><span class="o">=</span><span class="mi">16000</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resample audio to a different sampling rate, while maintaining the pitch.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_resamplers</span>
+    
+    <span class="k">if</span> <span class="n">orig_freq</span> <span class="o">==</span> <span class="n">new_freq</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">samples</span>
+    
+    <span class="n">return_tensors</span> <span class="o">=</span> <span class="s1">&#39;pt&#39;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;np&#39;</span>
+    
+    <span class="c1"># lookup or create the resampler    </span>
+    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">orig_freq</span><span class="p">,</span> <span class="n">new_freq</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_resamplers</span><span class="p">:</span>
+        <span class="n">_resamplers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">torchaudio</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">Resample</span><span class="p">(</span><span class="n">orig_freq</span><span class="p">,</span> <span class="n">new_freq</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_tensor</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span>
+    <span class="n">type_in</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">_resamplers</span><span class="p">[</span><span class="n">key</span><span class="p">](</span><span class="n">samples</span><span class="p">)</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">type_in</span><span class="p">)</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">convert_tensor</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="n">return_tensors</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">warn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">warn</span><span class="p">,</span> <span class="s1">&#39;_resample_warning&#39;</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">warn</span><span class="p">)</span><span class="si">}</span><span class="s2"> is resampling audio from </span><span class="si">{</span><span class="n">orig_freq</span><span class="si">}</span><span class="s2"> Hz to </span><span class="si">{</span><span class="n">new_freq</span><span class="si">}</span><span class="s2"> Hz&quot;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="o">.</span><span class="n">_resample_warning</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="k">return</span> <span class="n">samples</span>
+    
+    
 <div class="viewcode-block" id="audio_rms">
 <a class="viewcode-back" href="../../../utilities.html#nano_llm.utils.audio_rms">[docs]</a>
 <span class="k">def</span> <span class="nf">audio_rms</span><span class="p">(</span><span class="n">samples</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute the average audio RMS (returns a float between 0 and 1)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">convert_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span></div>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">convert_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">convert_audio</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span></div>
 
 
 
+<span class="k">def</span> <span class="nf">audio_db</span><span class="p">(</span><span class="n">samples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute RMS of audio samples in dB.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rms</span> <span class="o">=</span> <span class="n">audio_rms</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">rms</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">rms</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">100.0</span>
+    
+    
 <div class="viewcode-block" id="audio_silent">
 <a class="viewcode-back" href="../../../utilities.html#nano_llm.utils.audio_silent">[docs]</a>
 <span class="k">def</span> <span class="nf">audio_silent</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
@@ -163,6 +241,150 @@
     <span class="k">else</span><span class="p">:</span>       
         <span class="k">return</span> <span class="n">audio_rms</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span></div>
 
+        
+        
+<span class="n">_audio_device_info</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">def</span> <span class="nf">get_audio_devices</span><span class="p">(</span><span class="n">audio_interface</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a list of audio devices (from PyAudio/PortAudio)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_audio_device_info</span>
+    
+    <span class="k">if</span> <span class="n">_audio_device_info</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_audio_device_info</span>
+        
+    <span class="k">if</span> <span class="n">audio_interface</span><span class="p">:</span>
+        <span class="n">interface</span> <span class="o">=</span> <span class="n">audio_interface</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">interface</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">PyAudio</span><span class="p">()</span>
+        
+    <span class="n">info</span> <span class="o">=</span> <span class="n">interface</span><span class="o">.</span><span class="n">get_host_api_info_by_index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">numDevices</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deviceCount&#39;</span><span class="p">)</span>
+    
+    <span class="n">_audio_device_info</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">numDevices</span><span class="p">):</span>
+        <span class="n">_audio_device_info</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface</span><span class="o">.</span><span class="n">get_device_info_by_host_api_device_index</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">audio_interface</span><span class="p">:</span>
+        <span class="n">interface</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+        
+    <span class="k">return</span> <span class="n">_audio_device_info</span>
+    
+    
+<span class="k">def</span> <span class="nf">find_audio_device</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">audio_interface</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find an audio device by it&#39;s name or ID number.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_audio_devices</span><span class="p">(</span><span class="n">audio_interface</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;audio device unspecified, defaulting to id=</span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">devices</span><span class="p">[</span><span class="n">device</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">device_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;expected either a string or an int for &#39;device&#39; parameter&quot;</span><span class="p">)</span>
+            
+        <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">dev</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">dev</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="n">device_id</span> <span class="o">=</span> <span class="nb">id</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+                
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;could not find audio device with name &#39;</span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            
+    <span class="k">if</span> <span class="n">device_id</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">device_id</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;invalid audio device ID (</span><span class="si">{</span><span class="n">device_id</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">devices</span><span class="p">[</span><span class="n">device_id</span><span class="p">]</span>
+    
+    
+<span class="k">def</span> <span class="nf">list_audio_inputs</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print out information about present audio input devices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_audio_devices</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;----------------------------------------------------&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot; Audio Input Devices&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;----------------------------------------------------&#39;</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev_info</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>    
+        <span class="k">if</span> <span class="p">(</span><span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;maxInputChannels&#39;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Input Device ID </span><span class="si">{:d}</span><span class="s2"> - &#39;</span><span class="si">{:s}</span><span class="s2">&#39; (inputs=</span><span class="si">{:.0f}</span><span class="s2">) (sample_rate=</span><span class="si">{:.0f}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span>
+                  <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">),</span> <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;maxInputChannels&#39;</span><span class="p">),</span> <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;defaultSampleRate&#39;</span><span class="p">)))</span>
+                 
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    
+<span class="k">def</span> <span class="nf">list_audio_outputs</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print out information about present audio output devices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_audio_devices</span><span class="p">()</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;----------------------------------------------------&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot; Audio Output Devices&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;----------------------------------------------------&#39;</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dev_info</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>  
+        <span class="k">if</span> <span class="p">(</span><span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;maxOutputChannels&#39;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Output Device ID </span><span class="si">{:d}</span><span class="s2"> - &#39;</span><span class="si">{:s}</span><span class="s2">&#39; (outputs=</span><span class="si">{:.0f}</span><span class="s2">) (sample_rate=</span><span class="si">{:.0f}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span>
+                  <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">),</span> <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;maxOutputChannels&#39;</span><span class="p">),</span> <span class="n">dev_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;defaultSampleRate&#39;</span><span class="p">)))</span>
+                  
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    
+<span class="k">def</span> <span class="nf">list_audio_devices</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print out information about present audio input and output devices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">list_audio_inputs</span><span class="p">()</span>
+    <span class="n">list_audio_outputs</span><span class="p">()</span>
+    
+    
+<span class="k">def</span> <span class="nf">pyaudio_dtype</span><span class="p">(</span><span class="nb">format</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="s1">&#39;np&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert the PyAudio formats to &#39;np&#39; (numpy) or &#39;pt&#39; (torch) datatypes</span>
+<span class="sd">    https://github.com/jleb/pyaudio/blob/0109cc46cac6a3c404050f4ba11752e51aeb1fda/src/pyaudio.py#L128</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">to_numpy</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paFloat32</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt32</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt16</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt8</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paUInt8</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+    <span class="p">}</span>
+    
+    <span class="n">to_torch</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paFloat32</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt32</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt16</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paInt8</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">int8</span><span class="p">,</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">paUInt8</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+    <span class="p">}</span>
+    
+    <span class="k">if</span> <span class="n">to</span> <span class="o">==</span> <span class="s1">&#39;np&#39;</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">to</span> <span class="o">==</span> <span class="s1">&#39;pt&#39;</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">to_torch</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the &#39;to&#39; argument should either be &#39;np&#39; or &#39;pt&#39; (was &#39;</span><span class="si">{</span><span class="n">to</span><span class="si">}</span><span class="s2">&#39;)&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsupported PyAudio data format: </span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">dtype</span>
+        
 </pre></div>
 
            </div>

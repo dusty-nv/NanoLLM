@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Models &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Models &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -38,7 +38,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -63,13 +63,13 @@
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_text"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_text()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_tokens()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.embed_image"><code class="docutils literal notranslate"><span class="pre">NanoLLM.embed_image()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.tokenizer"><code class="docutils literal notranslate"><span class="pre">NanoLLM.tokenizer</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.config_path"><code class="docutils literal notranslate"><span class="pre">NanoLLM.config_path</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.model_path"><code class="docutils literal notranslate"><span class="pre">NanoLLM.model_path</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.config"><code class="docutils literal notranslate"><span class="pre">NanoLLM.config</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.stats"><code class="docutils literal notranslate"><span class="pre">NanoLLM.stats</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.has_vision"><code class="docutils literal notranslate"><span class="pre">NanoLLM.has_vision</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.has_embed"><code class="docutils literal notranslate"><span class="pre">NanoLLM.has_embed</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.NanoLLM.tokenizer"><code class="docutils literal notranslate"><span class="pre">NanoLLM.tokenizer</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -220,9 +220,18 @@
 <dt class="sig sig-object py" id="nano_llm.NanoLLM">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">NanoLLM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>LLM interface that model APIs implement, including:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="#nano_llm.NanoLLM.generate" title="nano_llm.NanoLLM.generate"><code class="xref py py-func docutils literal notranslate"><span class="pre">generate()</span></code></a> for token generation</p></li>
+<li><p><a class="reference internal" href="#nano_llm.NanoLLM.tokenize" title="nano_llm.NanoLLM.tokenize"><code class="xref py py-func docutils literal notranslate"><span class="pre">tokenize()</span></code></a> and <a class="reference internal" href="#nano_llm.NanoLLM.detokenize" title="nano_llm.NanoLLM.detokenize"><code class="xref py py-func docutils literal notranslate"><span class="pre">detokenize()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#nano_llm.NanoLLM.embed_text" title="nano_llm.NanoLLM.embed_text"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_text()</span></code></a>, <a class="reference internal" href="#nano_llm.NanoLLM.embed_tokens" title="nano_llm.NanoLLM.embed_tokens"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_tokens()</span></code></a>, and <a class="reference internal" href="#nano_llm.NanoLLM.embed_image" title="nano_llm.NanoLLM.embed_image"><code class="xref py py-func docutils literal notranslate"><span class="pre">embed_image()</span></code></a></p></li>
+</ul>
+</div></blockquote>
+<p>The static method <a class="reference internal" href="#nano_llm.NanoLLM.from_pretrained" title="nano_llm.NanoLLM.from_pretrained"><code class="xref py py-func docutils literal notranslate"><span class="pre">from_pretrained()</span></code></a> will load the model using the specified API.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.NanoLLM.from_pretrained">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_pretrained</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.from_pretrained"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.from_pretrained" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_pretrained</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/nano_llm.html#NanoLLM.from_pretrained"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.NanoLLM.from_pretrained" title="Link to this definition"></a></dt>
 <dd><p>Load a model from the given path or download it from HuggingFace Hub.
 Various inference and quantization APIs are supported, such as MLC and AWQ.
 If the API isn’t explicitly specified, it will be inferred from the type of model.</p>
@@ -392,12 +401,6 @@ if <code class="docutils literal notranslate"><span class="pre">return_dict=True
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="nano_llm.NanoLLM.tokenizer">
-<span class="sig-name descname"><span class="pre">tokenizer</span></span><a class="headerlink" href="#nano_llm.NanoLLM.tokenizer" title="Link to this definition"></a></dt>
-<dd><p>HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a> instance used for tokenization/detokenization.</p>
-</dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="nano_llm.NanoLLM.config_path">
 <span class="sig-name descname"><span class="pre">config_path</span></span><a class="headerlink" href="#nano_llm.NanoLLM.config_path" title="Link to this definition"></a></dt>
 <dd><p>The local path to the model config file (<code class="docutils literal notranslate"><span class="pre">config.json</span></code>)</p>
@@ -431,6 +434,12 @@ if <code class="docutils literal notranslate"><span class="pre">return_dict=True
 <dt class="sig sig-object py" id="nano_llm.NanoLLM.has_embed">
 <span class="sig-name descname"><span class="pre">has_embed</span></span><a class="headerlink" href="#nano_llm.NanoLLM.has_embed" title="Link to this definition"></a></dt>
 <dd><p>True if this model has a separate text embedding layer for embed_text()</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.NanoLLM.tokenizer">
+<span class="sig-name descname"><span class="pre">tokenizer</span></span><a class="headerlink" href="#nano_llm.NanoLLM.tokenizer" title="Link to this definition"></a></dt>
+<dd><p>HuggingFace <a class="reference external" href="https://huggingface.co/docs/transformers/main/en/model_doc/auto#transformers.AutoTokenizer">transformers.AutoTokenizer</a> instance used for tokenization/detokenization.</p>
 </dd></dl>
 
 </dd></dl>
@@ -521,7 +530,7 @@ which will signal the model to stop from generating additional output tokens.</p
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.StreamingResponse.add_tokens">
-<span class="sig-name descname"><span class="pre">add_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detokenize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.add_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.add_tokens" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">add_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detokenize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/chat/stream.html#StreamingResponse.add_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.StreamingResponse.add_tokens" title="Link to this definition"></a></dt>
 <dd><p>Add an output token, detokenize the reply, and accumulate the delta message.
 This function is only used by the model APIs when they generate a new token.</p>
 </dd></dl>

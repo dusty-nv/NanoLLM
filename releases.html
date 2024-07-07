@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Release Notes &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Release Notes &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +37,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -58,10 +58,12 @@
 <li class="toctree-l1"><a class="reference internal" href="webserver.html">Webserver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#id1">24.5.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id2">24.5</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id3">24.4.1</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id4">24.4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">24.7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">24.6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">24.5.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">24.5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">24.4.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">24.4</a></li>
 </ul>
 </li>
 </ul>
@@ -98,22 +100,36 @@
 <p>The latest builds following the main branch are <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r35.4.1</span></code> for JetPack 5 and <code class="docutils literal notranslate"><span class="pre">dustynv/nano_llm:r36.2.0</span></code> for JetPack 6.  Check the tags on <a class="reference external" href="https://hub.docker.com/r/dustynv/nano_llm/tags">DockerHub</a> for the versions below.</p>
 </div>
 <section id="id1">
-<h2>24.5.1<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<h2>24.7<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Initial release of <a class="reference external" href="https://www.jetson-ai-lab.com/agent_studio.html">Agent Studio</a></p></li>
+</ul>
+</section>
+<section id="id2">
+<h2>24.6<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Added LLM backends for AWQ (<code class="docutils literal notranslate"><span class="pre">--api=awq</span></code>) and HuggingFace Transformers (<code class="docutils literal notranslate"><span class="pre">--api=hf</span></code>)</p></li>
+<li><p>Support for OpenAI-style tool calling and <code class="docutils literal notranslate"><span class="pre">NousResearch/Hermes-2-Pro-Llama-3-8B</span></code></p></li>
+<li><p>Plugin for <a class="reference external" href="https://github.com/NVIDIA-AI-IOT/whisper_trt"><code class="docutils literal notranslate"><span class="pre">whisper_trt</span></code></a> and VAD</p></li>
+</ul>
+</section>
+<section id="id3">
+<h2>24.5.1<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Added <a class="reference internal" href="multimodal.html#video-sequences"><span class="std std-ref">Video VILA</span></a> on image sequences</p></li>
 <li><p>Added <a class="reference internal" href="models.html#kv-cache"><span class="std std-ref"><code class="docutils literal notranslate"><span class="pre">KVCache</span></code></span></a> interface for KV cache manipulation</p></li>
 <li><p>Updated <a class="reference internal" href="chat.html#chat-history"><span class="std std-ref"><code class="docutils literal notranslate"><span class="pre">ChatHistory</span></code></span></a> and <a class="reference internal" href="chat.html#chat-history"><span class="std std-ref"><code class="docutils literal notranslate"><span class="pre">ChatMessage</span></code></span></a> with deletion/removal operators</p></li>
 </ul>
 </section>
-<section id="id2">
-<h2>24.5<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<section id="id4">
+<h2>24.5<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Added <a class="reference internal" href="chat.html#function-calling"><span class="std std-ref">function calling</span></a> with Llama 3</p></li>
 <li><p>Added <a class="reference external" href="https://developer.nvidia.com/blog/visual-language-intelligence-and-edge-ai-2-0/">VILA-1.5</a> with TensorRT for CLIP/SigLIP</p></li>
 </ul>
 </section>
-<section id="id3">
-<h2>24.4.1<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<section id="id5">
+<h2>24.4.1<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Added chat templates for Llama 3</p></li>
 <li><p>Added <a class="reference external" href="https://www.jetson-ai-lab.com/tutorial_nano-llm.html">NanoLLM page</a> to Jetson AI Lab</p></li>
@@ -121,8 +137,8 @@
 <li><p>Changed over some lingering references from <code class="docutils literal notranslate"><span class="pre">local_llm</span></code></p></li>
 </ul>
 </section>
-<section id="id4">
-<h2>24.4<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<section id="id6">
+<h2>24.4<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Migration from <code class="docutils literal notranslate"><span class="pre">local_llm</span></code> in jetson-containers</p></li>
 <li><p>Generated docs site (<a class="reference external" href="https://dusty-nv.github.io/NanoLLM">dusty-nv.github.io/NanoLLM</a>)</p></li>

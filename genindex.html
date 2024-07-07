@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Index &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -35,7 +35,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -154,16 +154,28 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="plugins.html#nano_llm.Plugin.add">add() (Plugin method)</a>
 </li>
-      <li><a href="webserver.html#nano_llm.web.WebServer.add_message_handler">add_message_handler() (WebServer method)</a>
+      <li><a href="webserver.html#nano_llm.web.WebServer.add_listener">add_listener() (WebServer class method)</a>
+</li>
+      <li><a href="webserver.html#nano_llm.web.WebServer.add_message_handler">add_message_handler() (WebServer class method)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.add_parameter">add_parameter() (Plugin method)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.add_parameters">add_parameters() (Plugin method)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatHistory.add_system_prompt">add_system_prompt() (ChatHistory method)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.add_tokens">add_tokens() (StreamingResponse method)</a>
 </li>
-      <li><a href="chat.html#nano_llm.ChatHistory.append">append() (ChatHistory method)</a>
-</li>
-      <li><a href="utilities.html#nano_llm.utils.ArgParser">ArgParser (class in nano_llm.utils)</a>
+      <li><a href="plugins.html#nano_llm.Plugin.add_tool">add_tool() (Plugin method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="chat.html#nano_llm.ChatHistory.append">append() (ChatHistory method)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.apply_substitutions">apply_substitutions() (Plugin method)</a>
+</li>
+      <li><a href="utilities.html#nano_llm.utils.ArgParser">ArgParser (class in nano_llm.utils)</a>
+</li>
       <li><a href="agents.html#nano_llm.agents.voice_chat.VoiceChat.asr_final">asr_final() (VoiceChat method)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.voice_chat.VoiceChat.asr_partial">asr_partial() (VoiceChat method)</a>
@@ -206,9 +218,13 @@
 </li>
       <li><a href="models.html#nano_llm.NanoLLM.config">config (NanoLLM attribute)</a>
 </li>
+      <li><a href="models.html#nano_llm.NanoLLM.config_path">config_path (NanoLLM attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#nano_llm.NanoLLM.config_path">config_path (NanoLLM attribute)</a>
+      <li><a href="plugins.html#nano_llm.Plugin.connect">connect() (Plugin method)</a>
+</li>
+      <li><a href="webserver.html#nano_llm.web.WebServer.connected">connected (WebServer property)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatMessage.content">content (ChatMessage attribute)</a>
 </li>
@@ -232,9 +248,11 @@
 </li>
       <li><a href="utilities.html#nano_llm.utils.ArgParser.Defaults">Defaults (ArgParser attribute)</a>
 </li>
+      <li><a href="models.html#nano_llm.StreamingResponse.delta">delta (StreamingResponse attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#nano_llm.StreamingResponse.delta">delta (StreamingResponse attribute)</a>
+      <li><a href="plugins.html#nano_llm.Plugin.destroy">destroy() (Plugin method)</a>
 </li>
       <li><a href="models.html#nano_llm.NanoLLM.detokenize">detokenize() (NanoLLM method)</a>
 </li>
@@ -272,8 +290,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.BotFunctions.filter">filter() (BotFunctions class method)</a>
 </li>
-      <li><a href="plugins.html#nano_llm.Plugin.find">find() (Plugin method)</a>
+      <li><a href="chat.html#nano_llm.BotFunctions.find">find() (BotFunctions class method)</a>
+
+      <ul>
+        <li><a href="plugins.html#nano_llm.Plugin.find">(Plugin method)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.ChatHistory.find_wrap_entry">find_wrap_entry() (ChatHistory method)</a>
@@ -320,9 +342,13 @@
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.input">input (StreamingResponse attribute)</a>
 </li>
+      <li><a href="plugins.html#nano_llm.Plugin.input">input() (Plugin method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="plugins.html#nano_llm.Plugin.input">input() (Plugin method)</a>
+      <li><a href="webserver.html#nano_llm.web.WebServer.Instance">Instance (WebServer attribute)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.Instances">Instances (Plugin attribute)</a>
 </li>
       <li><a href="plugins.html#nano_llm.Plugin.interrupt">interrupt() (Plugin method)</a>
 </li>
@@ -378,11 +404,13 @@
 </li>
       <li><a href="webserver.html#nano_llm.web.WebServer.MESSAGE_IMAGE">MESSAGE_IMAGE (WebServer attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="webserver.html#nano_llm.web.WebServer.MESSAGE_JSON">MESSAGE_JSON (WebServer attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="webserver.html#nano_llm.web.WebServer.MESSAGE_TEXT">MESSAGE_TEXT (WebServer attribute)</a>
+</li>
+      <li><a href="webserver.html#nano_llm.web.WebServer.MessageHandlers">MessageHandlers (WebServer attribute)</a>
 </li>
       <li><a href="agents.html#nano_llm.agents.chat.ChatAgent.model">model (ChatAgent attribute)</a>
 
@@ -402,10 +430,12 @@
 </li>
       <li><a href="chat.html#nano_llm.ChatMessage.next">next (ChatMessage attribute)</a>
 </li>
-      <li><a href="plugins.html#nano_llm.Plugin.num_outputs">num_outputs (Plugin property)</a>
+      <li><a href="webserver.html#nano_llm.web.WebServer.num_clients">num_clients (WebServer property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="plugins.html#nano_llm.Plugin.num_outputs">num_outputs (Plugin property)</a>
+</li>
       <li><a href="chat.html#nano_llm.ChatHistory.num_tokens">num_tokens (ChatHistory property)</a>
 
       <ul>
@@ -498,6 +528,8 @@
         <li><a href="models.html#nano_llm.KVCache.remove">(KVCache method)</a>
 </li>
       </ul></li>
+      <li><a href="plugins.html#nano_llm.Plugin.reorder_parameters">reorder_parameters() (Plugin method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.ChatHistory.reset">reset() (ChatHistory method)</a>
@@ -506,7 +538,13 @@
 </li>
       <li><a href="chat.html#nano_llm.ChatMessage.role">role (ChatMessage attribute)</a>
 </li>
-      <li><a href="plugins.html#nano_llm.Plugin.run">run() (Plugin method)</a>
+      <li><a href="chat.html#nano_llm.BotFunctions.run">run() (BotFunctions class method)</a>
+
+      <ul>
+        <li><a href="plugins.html#nano_llm.Plugin.run">(Plugin method)</a>
+</li>
+      </ul></li>
+      <li><a href="chat.html#nano_llm.ChatHistory.run_tools">run_tools() (ChatHistory method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -516,11 +554,21 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.SAVE">SAVE() (WebChat method)</a>
 </li>
+      <li><a href="plugins.html#nano_llm.Plugin.send_alert">send_alert() (Plugin method)</a>
+</li>
       <li><a href="agents.html#nano_llm.agents.web_chat.WebChat.send_chat_history">send_chat_history() (WebChat method)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.send_client_output">send_client_output() (Plugin method)</a>
 </li>
       <li><a href="webserver.html#nano_llm.web.WebServer.send_message">send_message() (WebServer method)</a>
 </li>
+      <li><a href="plugins.html#nano_llm.Plugin.send_state">send_state() (Plugin method)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.send_stats">send_stats() (Plugin method)</a>
+</li>
       <li><a href="agents.html#nano_llm.agents.video_query.VideoQuery.server">server (VideoQuery attribute)</a>
+</li>
+      <li><a href="plugins.html#nano_llm.Plugin.set_parameters">set_parameters() (Plugin method)</a>
 </li>
       <li><a href="plugins.html#nano_llm.Plugin.start">start() (Plugin method)</a>
 
@@ -536,10 +584,16 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="chat.html#nano_llm.ChatMessage.start_token">start_token (ChatMessage property)</a>
 </li>
+      <li><a href="plugins.html#nano_llm.Plugin.state_dict">state_dict() (Plugin method)</a>
+</li>
       <li><a href="models.html#nano_llm.NanoLLM.stats">stats (NanoLLM attribute)</a>
 </li>
-      <li><a href="models.html#nano_llm.StreamingResponse.stop">stop() (StreamingResponse method)</a>
+      <li><a href="plugins.html#nano_llm.Plugin.stop">stop() (Plugin method)</a>
+
+      <ul>
+        <li><a href="models.html#nano_llm.StreamingResponse.stop">(StreamingResponse method)</a>
 </li>
+      </ul></li>
       <li><a href="models.html#nano_llm.StreamingResponse.stopped">stopped (StreamingResponse attribute)</a>
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.stopping">stopping (StreamingResponse attribute)</a>
@@ -564,6 +618,8 @@
 </li>
       <li><a href="models.html#nano_llm.StreamingResponse.text">text (StreamingResponse attribute)</a>
 </li>
+      <li><a href="chat.html#nano_llm.ChatHistory.to_html">to_html() (ChatHistory method)</a>
+</li>
       <li><a href="chat.html#nano_llm.ChatHistory.to_list">to_list() (ChatHistory method)</a>
 </li>
       <li><a href="models.html#nano_llm.NanoLLM.tokenize">tokenize() (NanoLLM method)</a>
@@ -579,6 +635,8 @@
 </li>
       </ul></li>
       <li><a href="utilities.html#nano_llm.utils.torch_image">torch_image() (in module nano_llm.utils)</a>
+</li>
+      <li><a href="chat.html#nano_llm.ChatHistory.turn">turn() (ChatHistory method)</a>
 </li>
       <li><a href="chat.html#nano_llm.ChatMessage.type">type (ChatMessage attribute)</a>
 </li>

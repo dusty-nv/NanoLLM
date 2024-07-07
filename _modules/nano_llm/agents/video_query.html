@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>nano_llm.agents.video_query &mdash; NanoLLM 24.4.2 documentation</title>
+  <title>nano_llm.agents.video_query &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=b097aa5a" />
@@ -15,7 +15,7 @@
   
         <script src="../../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../../_static/documentation_options.js?v=8569e3c7"></script>
+        <script src="../../../_static/documentation_options.js?v=66a9afe1"></script>
         <script src="../../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -34,6 +34,9 @@
           <a href="../../../index.html" class="icon icon-home">
             NanoLLM
           </a>
+              <div class="version">
+                24.7
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -127,23 +130,16 @@
             <span class="n">vision_scaling</span> <span class="o">=</span> <span class="s1">&#39;resize&#39;</span>
             
         <span class="c1">#: The model plugin (ChatQuery)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">ProcessProxy</span><span class="p">(</span><span class="s1">&#39;ChatQuery&#39;</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">drop_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vision_scaling</span><span class="o">=</span><span class="n">vision_scaling</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1">#ProcessProxy((lambda **kwargs: ChatQuery(model, drop_inputs=True, **kwargs)), **kwargs)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">ChatQuery</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">drop_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vision_scaling</span><span class="o">=</span><span class="n">vision_scaling</span><span class="p">,</span> <span class="n">warmup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1">#ProcessProxy(&#39;ChatQuery&#39;, model=model, drop_inputs=True, vision_scaling=vision_scaling, warmup=True, **kwargs)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">PrintStream</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="n">relay</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_text</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
-        <span class="c1"># test / warm-up query</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">warmup</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eos</span> <span class="o">=</span> <span class="kc">False</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="p">(</span><span class="s2">&quot;What is 2+2?&quot;</span><span class="p">)</span>
-        
-        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup</span><span class="p">:</span>
-            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
-            
+
         <span class="c1"># create video streams    </span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">video_source</span> <span class="o">=</span> <span class="n">VideoSource</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1">#: The video source plugin</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">video_output</span> <span class="o">=</span> <span class="n">VideoOutput</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1">#: The video output plugin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">video_source</span> <span class="o">=</span> <span class="n">VideoSource</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">cuda_stream</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#: The video source plugin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">video_output</span> <span class="o">=</span> <span class="n">VideoOutput</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">cuda_stream</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#: The video output plugin</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">video_source</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_video</span><span class="p">,</span> <span class="n">threaded</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">video_output</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
@@ -183,15 +179,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">keyboard_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">poll_keyboard</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">keyboard_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
-        <span class="c1">#: The `NanoDB &lt;https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb&gt;`_ vector database </span>
+        <span class="c1"># load vector database</span>
         <span class="k">if</span> <span class="n">nanodb</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_share_embed</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mm_vision_tower</span> <span class="o">==</span> <span class="s1">&#39;openai/clip-vit-large-patch14-336&#39;</span><span class="p">)</span>
+            
+            <span class="c1">#: The `NanoDB &lt;https://github.com/dusty-nv/jetson-containers/tree/master/packages/vectordb/nanodb&gt;`_ vector database </span>
             <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">NanoDB</span><span class="p">(</span>
                 <span class="n">path</span><span class="o">=</span><span class="n">nanodb</span><span class="p">,</span> 
-                <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># disable DB&#39;s model because VLM&#39;s CLIP is used </span>
+                <span class="n">model</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_share_embed</span> <span class="k">else</span> <span class="s1">&#39;ViT-L/14@336px&#39;</span><span class="p">,</span>
                 <span class="n">reserve</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nanodb_reserve&#39;</span><span class="p">),</span> 
-                <span class="n">k</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">drop_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">top_k</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">drop_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_search</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_image_embedding</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">ChatQuery</span><span class="o">.</span><span class="n">OutputImageEmbedding</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_share_embed</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_image_embedding</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">ChatQuery</span><span class="o">.</span><span class="n">OutputImageEmbedding</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="kc">None</span>
             
@@ -296,18 +297,19 @@
 <span class="sd">        and check if it satisfied any of the event filters when the output is complete.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span>  <span class="c1"># new query response</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eos</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup</span><span class="p">:</span>  <span class="c1"># don&#39;t view warmup response</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span>  <span class="c1"># reset rolling text</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eos</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># new query response</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">+</span> <span class="n">text</span>
 
         <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">StopTokens</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;###&#39;</span><span class="p">])):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">print_stats</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prompt</span><span class="p">)</span>
             
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">prompt</span><span class="p">)</span>
-                
-            <span class="bp">self</span><span class="o">.</span><span class="n">warmup</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_share_embed</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">on_image_embedding</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># use self.last_image instead of embeddings</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">eos</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 
@@ -328,13 +330,13 @@
             
             <span class="k">def</span> <span class="nf">save_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">embedding</span><span class="p">,</span> <span class="n">metadata</span><span class="p">):</span>
                 <span class="n">saveImage</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">add</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">(</span><span class="n">embedding</span> <span class="k">if</span> <span class="n">embedding</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">image</span><span class="p">,</span> <span class="n">add</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
                 <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;added incoming image to database with tags &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tag_image</span><span class="si">}</span><span class="s2">&#39; (</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
         
             <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">save_image</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_image</span><span class="p">,</span> <span class="n">embedding</span><span class="p">,</span> <span class="n">metadata</span><span class="p">))</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
             
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_refresh_db</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">(</span><span class="n">embedding</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">(</span><span class="n">embedding</span> <span class="k">if</span> <span class="n">embedding</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_image</span><span class="p">)</span></div>
 
         
 <div class="viewcode-block" id="VideoQuery.on_search">

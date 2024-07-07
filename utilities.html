@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Utilities &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Utilities &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -38,7 +38,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -127,13 +127,13 @@
 <h2>Tensor Conversion<a class="headerlink" href="#tensor-conversion" title="Link to this heading"></a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.convert_dtype">
-<span class="sig-name descname"><span class="pre">convert_dtype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/tensor.html#convert_dtype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_dtype" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">convert_dtype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'np'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/tensor.html#convert_dtype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_dtype" title="Link to this definition"></a></dt>
 <dd><p>Convert a string, numpy type, or torch.dtype to either numpy or PyTorch</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.convert_tensor">
-<span class="sig-name descname"><span class="pre">convert_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/tensor.html#convert_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_tensor" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">convert_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pt'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/tensor.html#convert_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.convert_tensor" title="Link to this definition"></a></dt>
 <dd><p>Convert tensors between numpy/torch/ect</p>
 </dd></dl>
 
@@ -170,7 +170,7 @@ If threshold = 0, it will check for any non-zero samples (faster than RMS)</p>
 <h2>Images<a class="headerlink" href="#images" title="Link to this heading"></a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.load_image">
-<span class="sig-name descname"><span class="pre">load_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#load_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.load_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">load_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/image.html#load_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.load_image" title="Link to this definition"></a></dt>
 <dd><p>Load an image from a local path or URL that will be downloaded.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -184,26 +184,26 @@ If threshold = 0, it will check for any non-zero samples (faster than RMS)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.is_image">
-<span class="sig-name descname"><span class="pre">is_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#is_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.is_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">is_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/image.html#is_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.is_image" title="Link to this definition"></a></dt>
 <dd><p>Returns true if the object is a PIL.Image, np.ndarray, torch.Tensor, or jetson_utils.cudaImage</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.cuda_image">
-<span class="sig-name descname"><span class="pre">cuda_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#cuda_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.cuda_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">cuda_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/image.html#cuda_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.cuda_image" title="Link to this definition"></a></dt>
 <dd><p>Convert an image from <cite>PIL.Image</cite>, <cite>np.ndarray</cite>, <cite>torch.Tensor</cite>, or <cite>__gpu_array_interface__</cite>
 to a jetson_utils.cudaImage on the GPU (without using memory copies when possible)</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.torch_image">
-<span class="sig-name descname"><span class="pre">torch_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#torch_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.torch_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">torch_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/image.html#torch_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.torch_image" title="Link to this definition"></a></dt>
 <dd><p>Convert the image to a type that is compatible with PyTorch <code class="docutils literal notranslate"><span class="pre">(torch.Tensor,</span> <span class="pre">ndarray,</span> <span class="pre">PIL.Image)</span></code></p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nano_llm.utils.image_size">
-<span class="sig-name descname"><span class="pre">image_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/utils/image.html#image_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.image_size" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">image_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/clip_trt/utils/image.html#image_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.utils.image_size" title="Link to this definition"></a></dt>
 <dd><p>Returns the dimensions of the image as a <code class="docutils literal notranslate"><span class="pre">(height,</span> <span class="pre">width,</span> <span class="pre">channels)</span></code> tuple.</p>
 </dd></dl>
 

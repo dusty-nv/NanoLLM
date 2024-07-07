@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Plugins &mdash; NanoLLM 24.5.1 documentation</title>
+  <title>Plugins &mdash; NanoLLM 24.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=b097aa5a" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=c34423f4"></script>
+        <script src="_static/documentation_options.js?v=66a9afe1"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -38,7 +38,7 @@
             NanoLLM
           </a>
               <div class="version">
-                24.5.1
+                24.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -57,18 +57,33 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Plugins</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#plugin-api">Plugin API</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#nano_llm.Plugin"><code class="docutils literal notranslate"><span class="pre">Plugin</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.Instances"><code class="docutils literal notranslate"><span class="pre">Plugin.Instances</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.process"><code class="docutils literal notranslate"><span class="pre">Plugin.process()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.connect"><code class="docutils literal notranslate"><span class="pre">Plugin.connect()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.add"><code class="docutils literal notranslate"><span class="pre">Plugin.add()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.__call__"><code class="docutils literal notranslate"><span class="pre">Plugin.__call__()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.input"><code class="docutils literal notranslate"><span class="pre">Plugin.input()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.output"><code class="docutils literal notranslate"><span class="pre">Plugin.output()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.num_outputs"><code class="docutils literal notranslate"><span class="pre">Plugin.num_outputs</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.start"><code class="docutils literal notranslate"><span class="pre">Plugin.start()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.stop"><code class="docutils literal notranslate"><span class="pre">Plugin.stop()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.destroy"><code class="docutils literal notranslate"><span class="pre">Plugin.destroy()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.run"><code class="docutils literal notranslate"><span class="pre">Plugin.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.dispatch"><code class="docutils literal notranslate"><span class="pre">Plugin.dispatch()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.interrupt"><code class="docutils literal notranslate"><span class="pre">Plugin.interrupt()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.clear_inputs"><code class="docutils literal notranslate"><span class="pre">Plugin.clear_inputs()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.find"><code class="docutils literal notranslate"><span class="pre">Plugin.find()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.add_tool"><code class="docutils literal notranslate"><span class="pre">Plugin.add_tool()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.add_parameter"><code class="docutils literal notranslate"><span class="pre">Plugin.add_parameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.add_parameters"><code class="docutils literal notranslate"><span class="pre">Plugin.add_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.set_parameters"><code class="docutils literal notranslate"><span class="pre">Plugin.set_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.reorder_parameters"><code class="docutils literal notranslate"><span class="pre">Plugin.reorder_parameters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.state_dict"><code class="docutils literal notranslate"><span class="pre">Plugin.state_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.send_state"><code class="docutils literal notranslate"><span class="pre">Plugin.send_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.send_stats"><code class="docutils literal notranslate"><span class="pre">Plugin.send_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.send_alert"><code class="docutils literal notranslate"><span class="pre">Plugin.send_alert()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.send_client_output"><code class="docutils literal notranslate"><span class="pre">Plugin.send_client_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nano_llm.Plugin.apply_substitutions"><code class="docutils literal notranslate"><span class="pre">Plugin.apply_substitutions()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -116,7 +131,7 @@
 <p>All plugins derive from the shared <code class="docutils literal notranslate"><span class="pre">Plugin</span></code> interface:</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="nano_llm.Plugin">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threaded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin" title="Link to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Plugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threaded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Thread</span></code></p>
 <p>Base class for plugins that process incoming/outgoing data from connections
 with other plugins, forming a pipeline or graph.  Plugins can run either
@@ -130,16 +145,12 @@ single-threaded or in an independent thread that processes data out of a queue.<
 </ul>
 </div></blockquote>
 <p>Inherited plugins should implement the <a class="reference internal" href="#nano_llm.Plugin.process" title="nano_llm.Plugin.process"><code class="xref py py-func docutils literal notranslate"><span class="pre">process()</span></code></a> function to handle incoming data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>output_channels</strong> (<em>int</em>) – the number of sets of output connections the plugin has</p></li>
-<li><p><strong>relay</strong> (<em>bool</em>) – if true, will relay any inputs as outputs after processing</p></li>
-<li><p><strong>drop_inputs</strong> (<em>bool</em>) – if true, only the most recent input in the queue will be used</p></li>
-<li><p><strong>threaded</strong> (<em>bool</em>) – if true, will spawn independent thread for processing the queue.</p></li>
-</ul>
-</dd>
-</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nano_llm.Plugin.Instances">
+<span class="sig-name descname"><span class="pre">Instances</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></em><a class="headerlink" href="#nano_llm.Plugin.Instances" title="Link to this definition"></a></dt>
+<dd><p>Global list of plugin instances</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.process">
 <span class="sig-name descname"><span class="pre">process</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.process"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.process" title="Link to this definition"></a></dt>
@@ -161,8 +172,8 @@ You can also call <a class="reference internal" href="#nano_llm.Plugin.output" t
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="nano_llm.Plugin.add">
-<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="nano_llm.Plugin.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.connect" title="Link to this definition"></a></dt>
 <dd><p>Connect the output queue from this plugin with the input queue of another plugin,
 so that this plugin sends its output data to the other one.</p>
 <dl class="field-list simple">
@@ -176,6 +187,12 @@ so that this plugin sends its output data to the other one.</p>
 <dd class="field-even"><p>A reference to this plugin instance (self)</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add" title="Link to this definition"></a></dt>
+<dd><p>&#64;deprecated Please use :func:<code class="docutils literal notranslate"><span class="pre">Plugin.connect</span></code></p>
 </dd></dl>
 
 <dl class="py method">
@@ -234,6 +251,18 @@ or process it now and return the results if <code class="docutils literal notran
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.stop" title="Link to this definition"></a></dt>
+<dd><p>Flag the plugin to stop processing and exit the run() thread.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.destroy">
+<span class="sig-name descname"><span class="pre">destroy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.destroy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.destroy" title="Link to this definition"></a></dt>
+<dd><p>Stop a plugin thread’s running, and unregister it from the global instances.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="nano_llm.Plugin.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.run" title="Link to this definition"></a></dt>
 <dd><p>Processes the queue forever and automatically run when created with <code class="docutils literal notranslate"><span class="pre">threaded=True</span></code></p>
@@ -275,6 +304,89 @@ If block is None, it will automatically be set to true if this plugin has output
 <span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.find" title="Link to this definition"></a></dt>
 <dd><p>Return the plugin with the specified type by searching for it among
 the pipeline graph of inputs and output connections to other plugins.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.add_tool">
+<span class="sig-name descname"><span class="pre">add_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add_tool" title="Link to this definition"></a></dt>
+<dd><p>Register a function that is able to be called by function-calling models.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>callable</em><em>|</em><em>str</em>) – The function or name of the function.</p></li>
+<li><p><strong>doc_templates</strong> (<em>dict</em>) – Substitute the keys with their values in the help docs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.add_parameter">
+<span class="sig-name descname"><span class="pre">add_parameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attribute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwarg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add_parameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add_parameter" title="Link to this definition"></a></dt>
+<dd><p>Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
+These will automatically show up in the studio web UI and can be sync’d over websockets.
+If there is an __init__ parameter by the same name, its help docs will be taken from that.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.add_parameters">
+<span class="sig-name descname"><span class="pre">add_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.add_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.add_parameters" title="Link to this definition"></a></dt>
+<dd><p>Add parameters from kwargs of the form <code class="docutils literal notranslate"><span class="pre">Plugin.add_parameters(x=x,</span> <span class="pre">y=y)</span></code>
+where the keys are the attribute names and the values are the default values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.set_parameters">
+<span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.set_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.set_parameters" title="Link to this definition"></a></dt>
+<dd><p>Set a state dict of parameters. Only entries in the dict matching a parameter will be set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.reorder_parameters">
+<span class="sig-name descname"><span class="pre">reorder_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.reorder_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.reorder_parameters" title="Link to this definition"></a></dt>
+<dd><p>Move some parameters to the end for display purposes (if end=True)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.state_dict">
+<span class="sig-name descname"><span class="pre">state_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connections</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.state_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.state_dict" title="Link to this definition"></a></dt>
+<dd><p>Return a configuration dict with plugin state that gets shared with clients.
+Subclasses can reimplement this to add custom state for each type of plugin.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.send_state">
+<span class="sig-name descname"><span class="pre">send_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.send_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.send_state" title="Link to this definition"></a></dt>
+<dd><p>Send the state dict message over the websocket.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.send_stats">
+<span class="sig-name descname"><span class="pre">send_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.send_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.send_stats" title="Link to this definition"></a></dt>
+<dd><p>Send performance stats over the websocket.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.send_alert">
+<span class="sig-name descname"><span class="pre">send_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.send_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.send_alert" title="Link to this definition"></a></dt>
+<dd><p>Send an alert message to the webserver (see WebServer.send_alert() for kwargs)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.send_client_output">
+<span class="sig-name descname"><span class="pre">send_client_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.send_client_output"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.send_client_output" title="Link to this definition"></a></dt>
+<dd><p>Subscribe clients to recieving plugin output over websockets.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nano_llm.Plugin.apply_substitutions">
+<span class="sig-name descname"><span class="pre">apply_substitutions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nano_llm/plugin.html#Plugin.apply_substitutions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nano_llm.Plugin.apply_substitutions" title="Link to this definition"></a></dt>
+<dd><p>Perform variable substitution on a string of text by looking up values from other plugins.</p>
+<p>References can be scoped to a plugin’s name:  “The date is ${Clock.date}”
+Or if left unscoped, find the first plugin with it:  “The date is ${date}”
+Both plugins and attributes are case-insensitive:  “The date is ${DATE}”</p>
+<p>These can also refer to getter functions or properties that require no positional arguments,
+and if found the associate function will be called and its return value substituted instead.</p>
 </dd></dl>
 
 </dd></dl>
