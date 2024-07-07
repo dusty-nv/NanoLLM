@@ -22,22 +22,138 @@
 import os
 import sys
 import time
+import pprint
 import logging
 import subprocess
 import transformers
 
-import tensorflow as tf
-import tensorflow_datasets as tdfs
+import numpy as np
 
 from nano_llm import NanoLLM, ChatHistory, remove_special_tokens
+from nano_llm.utils import AttributeDict, convert_tensor
 
 
+
+class VLAModel:
+    def __init__(self, model="openvla/openvla-7b", actions={}, max_images=1, **kwargs):
+        if isinstance(model, str):
+            self.model = NanoLLM.from_pretrained(model, **kwargs)
+        elif isinstance(model, NanoLLM):
+            self.model = model
+        else:
+            raise TypeError(f"expected model as str or NanoLLM (was {type(model)})")
+            
+        self.chat = ChatHistory(model, **kwargs)
+        self.prompt = "What action should the robot take to ${INSTRUCTION}?"  
+        self.instruction = kwargs.get('instruction', 'stop')
+        
+        self.num_images = 0
+        self.max_images = max_images
+
+        assert(model.has_vision)
+        
+        # setup action configs
+        actions['unnormalized'] = dict(normalized=False)
+        
+        for key, scene in actions.items():
+            scene['name'] = key
+            action = scene['action']
+            for stat_key, stat in action.items():
+                if isinstance(stat, list):
+                    action[stat_key] = np.array(stat)
+
+        self.action_configs = actions
+        self.actions = 'unnormalized'
+        
+        # map the tokenizer vocab range to discrete action bins
+        self.bins = np.linspace(-1, 1, self.model.config.n_action_bins)
+        self.bin_centers = (self.bins[:-1] + self.bins[1:]) / 2.0
+        self.vocab_size = self.config.vocab_size - self.config.pad_to_multiple_of
+        
+        # LLM warmup
+        self.chat.append(role='user', text='What is 2+2?')
+        logging.info(f"Warmup response:  '{self.model.generate(self.chat.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
+        self.chat.reset()
+
+    @property
+    def actions(self):
+        return self._actions
+        
+    @actions.setter
+    def actions(self, key):
+        if isinstance(key, str):
+            self._actions = self.action_configs[key]
+        elif isinstance(key, dict):
+            self._actions = key
+        else:
+            raise TypeError(f"actions can be set to str or dict (was {type(key)})")
+            
+    def embed(self, image, instruction='', prompt=None, **kwargs):
+        if not instruction:
+            instruction = self.instruction
+         
+        if not prompt:
+            prompt = self.prompt
+        
+        prompt = prompt.replace('${INSTRUCTION}', instruction)
+        
+        logging.debug(f"{self.model.config.name} prompt:  `{prompt}`")
+
+        self.chat.reset()
+        
+        self.chat.append('user', image=image)
+        self.chat.append('user', text=prompt)
+        
+        return self.chat.embed_chat()[0]
+        
+    def predict_actions(self, image, actions={}, **kwargs):
+        if not actions:
+            actions = self.actions
+
+        num_actions = len(actions['q01'])
+
+        reply = model.generate(
+            self.embed(image, **kwargs),
+            kv_cache=self.chat.kv_cache,
+            detokenize=False,
+            min_new_tokens=num_actions,
+            max_new_tokens=num_actions+1,
+            **kwargs,
+        ).wait()
+        
+        return decode_actions(reply.tokens[:num_actions], actions, **kwargs)
+        
+    def decode_actions(self, tokens, actions={}, return_tensors='np', **kwargs):
+        if not actions:
+            actions = self.actions
+   
+        # map from vocab bins back into action space (-1,1)
+        pred_actions = self.vocab_size - convert_tensor(tokens, return_tensors='np')
+        pred_actions = np.clip(pred_actions - 1, a_min=0, a_max=self.bin_centers.shape[0] - 1)
+        pred_actions = self.bin_centers[pred_actions]
+        
+        # denormalize the actions using robot coefficients
+        if not actions.get('normalized', True):
+            action_high, action_low = actions['q99'], actions['q01']
+            pred_actions = np.where(
+                actions['mask'],
+                0.5 * (pred_actions + 1) * (action_high - action_low) + action_low,
+                pred_actions,
+            )
+        
+        return convert_tensors(pred_actions, return_tensors=return_tensors, **kwargs)
+     
+    def __call__(self, image, **kwargs):
+        return self.predict_actions(image, **kwargs)
+           
 
 class OpenXDataset:
     Names = ['fractal20220817_data', 'kuka', 'bridge', 'taco_play', 'jaco_play', 'berkeley_cable_routing', 'roboturk', 'nyu_door_opening_surprising_effectiveness', 'viola', 'berkeley_autolab_ur5', 'toto', 'language_table', 'columbia_cairlab_pusht_real', 'stanford_kuka_multimodal_dataset_converted_externally_to_rlds', 'nyu_rot_dataset_converted_externally_to_rlds', 'stanford_hydra_dataset_converted_externally_to_rlds', 'austin_buds_dataset_converted_externally_to_rlds', 'nyu_franka_play_dataset_converted_externally_to_rlds', 'maniskill_dataset_converted_externally_to_rlds', 'furniture_bench_dataset_converted_externally_to_rlds', 'cmu_franka_exploration_dataset_converted_externally_to_rlds', 'ucsd_kitchen_dataset_converted_externally_to_rlds', 'ucsd_pick_and_place_dataset_converted_externally_to_rlds', 'austin_sailor_dataset_converted_externally_to_rlds', 'austin_sirius_dataset_converted_externally_to_rlds', 'bc_z', 'usc_cloth_sim_converted_externally_to_rlds', 'utokyo_pr2_opening_fridge_converted_externally_to_rlds', 'utokyo_pr2_tabletop_manipulation_converted_externally_to_rlds', 'utokyo_saytap_converted_externally_to_rlds', 'utokyo_xarm_pick_and_place_converted_externally_to_rlds', 'utokyo_xarm_bimanual_converted_externally_to_rlds', 'robo_net', 'berkeley_mvp_converted_externally_to_rlds', 'berkeley_rpt_converted_externally_to_rlds', 'kaist_nonprehensile_converted_externally_to_rlds', 'stanford_mask_vit_converted_externally_to_rlds', 'tokyo_u_lsmo_converted_externally_to_rlds', 'dlr_sara_pour_converted_externally_to_rlds', 'dlr_sara_grid_clamp_converted_externally_to_rlds', 'dlr_edan_shared_control_converted_externally_to_rlds', 'asu_table_top_converted_externally_to_rlds', 'stanford_robocook_converted_externally_to_rlds', 'eth_agent_affordances', 'imperialcollege_sawyer_wrist_cam', 'iamlab_cmu_pickup_insert_converted_externally_to_rlds', 'uiuc_d3field', 'utaustin_mutex', 'berkeley_fanuc_manipulation', 'cmu_food_manipulation', 'cmu_play_fusion', 'cmu_stretch', 'berkeley_gnm_recon', 'berkeley_gnm_cory_hall', 'berkeley_gnm_sac_son']
     Cache = "/data/datasets/open_x_embodiment"
     
-    def __init__(self, name, cache_dir=Cache):
+    def __init__(self, name, split='train', cache_dir=Cache):
+        import tensorflow_datasets as tdfs
+
         if not name:
             raise ValueError(f"select the dataset name with one of these values: {OpenXDataset.Names}")
         
@@ -45,14 +161,14 @@ class OpenXDataset:
         
         # tensorflow gets used for loading tfrecords/tensors, but we don't want it hogging all the GPU memory,
         # which it preallocates by default - so just disable it from using GPUs since it's not needed anyways.
-        tensorflow_disable_gpu()
+        self.disable_tf_device('GPU')
 
         # https://github.com/google-deepmind/open_x_embodiment?tab=readme-ov-file#dataset-not-found
         download_cmd = f"gsutil -m cp -r -n gs://gresearch/robotics/{name} {cache_dir}"
         logging.info(f"running command to download OpenXEmbodiment dataset '{name}' to {cache_dir}\n{download_cmd}")
         subprocess.run(download_cmd, executable='/bin/bash', shell=True, check=True)
         
-        self.dataset = tdfs.load(name, data_dir=cache_dir)
+        self.dataset = tdfs.load(name, split=split, data_dir=cache_dir)
         '''
         self.dataset = tdfs.load(
             name, 
@@ -61,14 +177,30 @@ class OpenXDataset:
             download_and_prepare_kwargs=dict(download_dir=cache_dir)
         )
         '''
-        
-    def dump(self, path):
-        print('DUMP', path)
+     
+    def __iter__(self):
+        for episode in iter(self.dataset):
+            for step in episode['steps']:
+                obs = step['observation']
+                
+                data = AttributeDict(
+                    instruction = obs['natural_language_instruction'].numpy().decode('UTF-8'),
+                    image = obs['image'].numpy()
+                )
+                
+                if 'image_wrist' in obs:
+                    data['image_wrist'] = obs['image_wrist'].numpy()
+                
+                yield(data)
 
+    def dump(self, path):
         episode = next(iter(self.dataset))
-        print(episode)
-        print('DONE DUMP')
-    
+        step = next(iter(episode['steps']))
+        pprint.pprint(step, indent=2)
+        for step in self:
+            pprint.pprint(step, indent=2)
+            break
+            
     @staticmethod
     def gcs_path(dataset_name):
         # https://colab.research.google.com/github/google-deepmind/open_x_embodiment/blob/main/colabs/Open_X_Embodiment_Datasets.ipynb
@@ -79,56 +211,21 @@ class OpenXDataset:
         else:
             version = '0.1.0'
         return f'gs://gresearch/robotics/{dataset_name}/{version}'      
+     
+    @staticmethod
+    def disable_tf_device(device):
+        # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
+        import tensorflow as tf
         
-class VLAModel:
-    def __init__(self, model="openvla/openvla-7b", eval_model=None, max_images=1, **kwargs):
-        self.model = NanoLLM.from_pretrained(model, **kwargs)
-        self.chat = ChatHistory(model, **kwargs)
-        self.command = 'stop'
+        devices = tf.config.list_physical_devices(device)
         
-        self.num_images = 0
-        self.max_images = max_images
+        if not devices:
+            return
 
-        assert(model.has_vision)
-        
-        self.chat.append(role='user', text='What is 2+2?')
-        logging.info(f"Warmup response:  '{self.model.generate(self.chat.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
-        self.chat.reset()
-
-    def process(self, image, **kwargs):
-        self.chat.append('user', image=image)
-        self.chat.append('user', text=f"What action should the user take to {self.command}")
-        
-        self.num_images += 1
-        
-        embedding, _ = chat_history.embed_chat()
-            
-        print('>>', prompt)
-        
-        reply = model.generate(
-            embedding,
-            kv_cache=chat_history.kv_cache,
-            max_new_tokens=args.max_new_tokens,
-            min_new_tokens=args.min_new_tokens,
-            do_sample=args.do_sample,
-            repetition_penalty=args.repetition_penalty,
-            temperature=args.temperature,
-            top_p=args.top_p,
-        )
-
-
-
-def tensorflow_disable_gpu():
-    # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
-    gpus = tf.config.list_physical_devices('GPU')
-    
-    if not gpus:
-        return
-
-    logging.warning(f"disabling tensorflow GPUs ({len(gpus)})")
-    tf.config.set_visible_devices([], 'GPU')
-    logical_gpus = tf.config.list_logical_devices('GPU')
-    logging.info(f"tensorflow  Physical GPUs: {len(gpus)}  Logical GPUs: {len(logical_gpus)}")
+        logging.warning(f"disabling tensorflow device {device} ({len(devices)})")
+        tf.config.set_visible_devices([], device)
+        logical_devices = tf.config.list_logical_devices(device)
+        logging.info(f"tensorflow  Physical {device}: {len(devices)}  Logical {device}: {len(logical_devices)}")
 
     
                 
@@ -165,13 +262,13 @@ if __name__ == "__main__":
     if args.dump:
         dataset = OpenXDataset(args.dataset)
         dataset.dump(args.dump)
-        print('EXITING')
         sys.exit(0)
         
     # load vision/language model
-    model = VLAModel(args.model, **vars(args))
+    model = NanoLLM.from_pretrained(args.model, **vars(args))
 
-
+    assert(model.vla)
+    
     # open the video stream
     num_images = 0
     last_image = None

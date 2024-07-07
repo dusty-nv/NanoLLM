@@ -310,6 +310,12 @@ class NanoLLM():
         #: Dict containing the latest generation performance statistics.
         self.stats = AttributeDict()
         
+        #: :class:`VLAModel` for vision/language action models.
+        self.vla = None
+        
+        #: List of vision encoders for vision/language models.
+        self.vision = []  
+        
         #: True if this is a multimodal vision/language model.
         self.has_vision = self.config_vision()
         
@@ -394,6 +400,8 @@ class NanoLLM():
          
         # OpenVLA needs its LLM layer names renamed   
         if arch == 'openvla':
+            from nano_llm.vision.vla import VLAModel
+            
             llm_path = os.path.join(self.model_path, 'llm')
             llm_config = os.path.join(llm_path, 'config.json')
             
@@ -413,10 +421,7 @@ class NanoLLM():
                     
                 rename_weights(self.model_path, llm_path, lambda layer: layer.replace('language_model.', ''))
 
-            if 'norm_stats' in self.config:
-                self.norm_stats = self.config.norm_stats
-                del self.config['norm_stats']
-               
+            self.vla = VLAModel(self, actions=self.config.pop('norm_stats', {}))
             self.model_path = llm_path
              
         # change model_type back to the base model    
@@ -458,8 +463,6 @@ class NanoLLM():
         if not self.has_vision:
             return
 
-        self.vision = []  #: list of vision encoders
-        
         if self.is_type('openvla'):
             weights_key = ['vision_backbone.featurizer.', 'vision_backbone.fused_featurizer.']
             self.vision = [

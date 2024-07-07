@@ -346,16 +346,18 @@ class MLCModel(NanoLLM):
                     raise TypeError(f"functions passed to NanoLLM.generate() should be either a callable function, or a Plugin instance (was {type(function)})")
             functions[idx] = Callback(function)
         '''
-        
+
         stream = StreamingResponse(self, inputs, detokenize=detokenize, **kwargs)
+        
         self.queue.put(stream)
         
         if not streaming:
-            text = ''
-            for token in stream:
-                text += token
-            return stream.text  # return the fully-detokenized copy
-        
+            stream.wait()
+            if detokenize:
+                return stream.text
+            else:
+                return stream.tokens
+
         return stream
 
     def _generate(self, stream):

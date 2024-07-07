@@ -94,6 +94,16 @@ class StreamingResponse():
         """
         self.stopping = True
 
+    def wait(self):
+        """
+        Wait for the generation to be over and the full response complete.
+        """
+        while True:
+            if self.stopped:
+                return self
+            self.event.wait()
+            self.event.clear()
+            
     def add_tokens(self, tokens, detokenize=True, event=False):
         """
         Add an output token, detokenize the reply, and accumulate the delta message.
