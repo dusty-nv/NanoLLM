@@ -8,6 +8,16 @@ Each release has a corresponding branch in the NanoLLM [GitHub repository](https
    The latest builds following the main branch are ``dustynv/nano_llm:r35.4.1`` for JetPack 5 and ``dustynv/nano_llm:r36.2.0`` for JetPack 6.  Check the tags on `DockerHub <https://hub.docker.com/r/dustynv/nano_llm/tags>`_ for the versions below.
 ```
   
+## 24.7
+
+* Initial release of [Agent Studio](https://www.jetson-ai-lab.com/agent_studio.html)
+
+## 24.6
+
+* Added LLM backends for AWQ (`--api=awq`) and HuggingFace Transformers (`--api=hf`)
+* Support for OpenAI-style tool calling and `NousResearch/Hermes-2-Pro-Llama-3-8B`
+* Plugin for [`whisper_trt`](https://github.com/NVIDIA-AI-IOT/whisper_trt) and VAD
+
 ## 24.5.1
 
 * Added [Video VILA](multimodal.md#video-sequences) on image sequences
