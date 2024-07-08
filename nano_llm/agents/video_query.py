@@ -9,6 +9,7 @@ import threading
 
 from datetime import datetime
 from termcolor import cprint
+from flask import Flask, request, jsonify
 
 from nano_llm import Agent, StopTokens
 
@@ -18,6 +19,7 @@ from nano_llm.utils import ArgParser, print_table, wrap_text
 
 from jetson_utils import cudaFont, cudaMemcpy, cudaToNumpy, cudaDeviceSynchronize, saveImage
 
+app = Flask(__name__)
 
 class VideoQuery(Agent):
     """
@@ -153,6 +155,7 @@ class VideoQuery(Agent):
         
         #: event filters for parsing bot output and triggering actions when conditions are met.
         self.events = EventFilter(server=self.server)
+        self.setup_rest_api()
    
     def on_video(self, image):
         """
@@ -343,12 +346,24 @@ class VideoQuery(Agent):
             self.server.send_message({'refresh_rate': refresh_str})
             logging.info(f"refresh rate:  {refresh_str}")
 
+    def setup_rest_api(self):
+        app.add_url_rule('/api/prompt', 'set_prompt', self.set_prompt, methods=['POST'])
+
+    def set_prompt(self):
+        data = request.json
+        self.prompt = data.get('prompt')
+        if self.prompt not in self.prompt_history:
+            self.prompt_history.append(self.prompt)
+        response = self.llm.query_sync(self.prompt)  # 使用同步方法获取结果
+        return jsonify({'status': 'success', 'prompt': self.prompt, 'response': response})
+
     def start(self):
         """
         Start the webserver & websocket listening in other threads.
         """
         super().start()
         self.server.start()
+        app.run(host='0.0.0.0', port=5000)
         return self
         
 if __name__ == "__main__":

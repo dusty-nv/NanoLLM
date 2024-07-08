@@ -272,5 +272,44 @@ class ChatQuery(Plugin):
                 chat_history.append('tool_response', tool_response)
             else:
                 return
-                
-            
+
+    def query_sync(self, input):
+        """
+        同步方法生成回复，用于直接获取生成结果。
+
+        参数:
+          input (str): 用户输入的提示
+
+        返回:
+          str: 生成的回复文本
+        """
+        self.apply_config()
+        self.history.append(role='user', msg=input)
+        chat_history = self.history
+
+        # 获取最新的聊天嵌入
+        embedding, position = chat_history.embed_chat(
+            max_tokens=self.model.config.max_length - self.max_new_tokens,
+            wrap_tokens=self.wrap_tokens,
+            use_cache=self.model.has_embed and chat_history.kv_cache,
+        )
+
+        # 同步生成回复
+        response = self.model.generate(
+            embedding,
+            streaming=False,
+            functions=self.functions,
+            kv_cache=chat_history.kv_cache,
+            cache_position=position,
+            stop_tokens=chat_history.template.stop,
+            max_new_tokens=self.max_new_tokens,
+            min_new_tokens=self.min_new_tokens,
+            do_sample=self.do_sample,
+            repetition_penalty=self.repetition_penalty,
+            temperature=self.temperature,
+            top_p=self.top_p
+        )
+
+        # 将回复添加到聊天历史记录中
+        chat_history.append(role='bot', text=response, cached=True)
+        return response
