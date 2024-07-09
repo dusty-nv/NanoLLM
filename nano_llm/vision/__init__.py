@@ -2,3 +2,5 @@
 
 from .clip import CLIPVisionModel, TIMMVisionModel
 from .mm_projector import MMProjector
+
+from .datasets import *

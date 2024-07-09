@@ -258,7 +258,8 @@ class ChatMessage():
         embeddings.append(image_embeds)
         
         # add the template trailer
-        template[1] = '\n' + template[1]
+        if not model.vla:
+            template[1] = '\n' + template[1]
         
         if template[1]:
             embeddings.append(model.embed_text(template[1], use_cache=True, return_tensors=return_tensors))

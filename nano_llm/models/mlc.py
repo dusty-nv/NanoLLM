@@ -443,13 +443,14 @@ class MLCModel(NanoLLM):
         output = prefill(input, stream.kv_cache)
 
         # decode until EOS or max_new_tokens
-        time_begin_decode = time.perf_counter()
-
-        self.stats.prefill_time = time_begin_decode - time_begin_prefill
-        self.stats.prefill_rate = self.stats.input_tokens / self.stats.prefill_time
-        
         while True:
             tokens = [self._sample(output[0], do_sample, temperature, top_p, repetition_penalty)]
+            
+            if len(stream.tokens) == 0:
+                time_begin_decode = time.perf_counter()
+                self.stats.prefill_time = time_begin_decode - time_begin_prefill
+                self.stats.prefill_rate = self.stats.input_tokens / self.stats.prefill_time
+                
             stream.add_tokens(tokens)
             
             # TODO change `token` above to a list and then add any tokens made by functions to it
@@ -504,7 +505,10 @@ class MLCModel(NanoLLM):
                 break
 
             # add EOS token on early stop
-            if len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
+            if min_new_tokens == max_new_tokens:
+                if len(stream.tokens) == min_new_tokens:
+                    break
+            elif len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
                 stream.add_tokens(self.tokenizer.eos_token_id)
                 stream.kv_cache.num_tokens += 1
                 self.stats.output_tokens += 1

@@ -368,8 +368,8 @@ class ChatHistory():
             else:
                 embeddings.append(msg.embed())
               
-            #if not use_cache and logging.getLogger().isEnabledFor(logging.DEBUG):
-            #    logging.debug(f"chat msg {n}  role={msg.role}  type={msg.type}  tokens={msg.num_tokens}  `{msg.template if msg.template else msg.content if isinstance(msg.content, str) else ''}`".replace('\n', '\\n'))
+            if not use_cache and logging.getLogger().isEnabledFor(logging.DEBUG) and (len(self.messages) - n < 5):
+                logging.debug(f"chat msg {n}  role={msg.role}  type={msg.type}  tokens={msg.num_tokens}  `{msg.template if msg.template else msg.content if isinstance(msg.content, str) else ''}`".replace('\n', '\\n'))
 
         entries = len(embeddings)
         embeddings = np.concatenate(embeddings, axis=1) #, position

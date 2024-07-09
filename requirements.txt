@@ -25,5 +25,6 @@ getch
 # tensorflow_datasets (don't need tensorflow-gpu)
 tfds-nightly
 gsutil
+gdown
 --index-url https://pypi.org/simple
 tensorflow

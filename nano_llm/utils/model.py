@@ -129,7 +129,7 @@ def rename_weights(model_path: str, save_path: str=None, key: callable=None):
                     del weight_index_updated['weight_map'][layer]
                 
         logging.info(f"saving {weight_save}")
-        safetensors.torch.save_file(updated_weights, weight_save)
+        safetensors.torch.save_file(updated_weights, weight_save, metadata={'format':'pt'})
         del updated_weights   
 
     with open(os.path.join(save_path, weight_index_file), 'w') as file:

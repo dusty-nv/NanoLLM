@@ -206,7 +206,7 @@ class NanoLLM():
           tuple will be returned instead of only the embeddings. If ``model.has_embed=False`, then the embedding will be None.
         """
         result = None
-        
+
         if use_cache:
             result = self.embed_cache.get(text)
             
@@ -214,12 +214,15 @@ class NanoLLM():
             tokens = self.tokenize(text, add_special_tokens=add_special_tokens, return_tensors=return_tensors, **kwargs)
             embed = self.embed_tokens(tokens, return_tensors=return_tensors) if self.has_embed else None
             result = (embed, tokens)
+            
+            if use_cache:
+                self.embed_cache[text] = result
+                
+            #print(f'NanoLLM text:   `{text}`'.replace('\n', '\\n'))
+            #print(f'NanoLLM tokens: {convert_tensor(tokens, return_tensors=list)}'.replace('\n', '\\n'))
         else:
             logging.debug(f'text embedding cache hit `{text}`'.replace('\n', '\\n'))
-            
-        if use_cache:
-            self.embed_cache[text] = result
-            
+
         if return_tokens:
             return result
         else:
@@ -307,10 +310,13 @@ class NanoLLM():
         self.config.name = kwargs.get('name')
         self.config.api = kwargs.get('api')
         
+        if 'max_position_embeddings' not in self.config:
+            self.config.max_position_embeddings = self.config.get('llm_max_length', 4096)
+            
         #: Dict containing the latest generation performance statistics.
         self.stats = AttributeDict()
         
-        #: :class:`VLAModel` for vision/language action models.
+        #: :class:`VLAModel` for vision-language-action models.
         self.vla = None
         
         #: List of vision encoders for vision/language models.
@@ -400,8 +406,6 @@ class NanoLLM():
          
         # OpenVLA needs its LLM layer names renamed   
         if arch == 'openvla':
-            from nano_llm.vision.vla import VLAModel
-            
             llm_path = os.path.join(self.model_path, 'llm')
             llm_config = os.path.join(llm_path, 'config.json')
             
@@ -421,7 +425,6 @@ class NanoLLM():
                     
                 rename_weights(self.model_path, llm_path, lambda layer: layer.replace('language_model.', ''))
 
-            self.vla = VLAModel(self, actions=self.config.pop('norm_stats', {}))
             self.model_path = llm_path
              
         # change model_type back to the base model    
@@ -464,6 +467,8 @@ class NanoLLM():
             return
 
         if self.is_type('openvla'):
+            from nano_llm.vision.vla import VLAModel
+            
             weights_key = ['vision_backbone.featurizer.', 'vision_backbone.fused_featurizer.']
             self.vision = [
                 TIMMVisionModel(
@@ -493,6 +498,8 @@ class NanoLLM():
                 input_dim=vision_hidden_size, 
                 output_dim=llm_hidden_size
             )
+            
+            self.vla = VLAModel(self, actions=self.config.pop('norm_stats', {}))
         else:
             # load the image embedding model
             self.vision = [

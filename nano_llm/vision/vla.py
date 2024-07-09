@@ -10,28 +10,27 @@
 #    python3 -m nano_llm.vision.vla \
 #      --model openvla/openvla-7b \
 #      --eval-model /data/models/openvla-7b \
-#      --dataset /data/o
-#      --max-images 8 \
-#      --max-new-tokens 48 \
-#      --video-input /data/my_video.mp4 \
-#      --video-output /data/my_output.mp4 \
-#      --prompt 'What changes occurred in the video?'
-#
-# The model should have been trained to understand video sequences (like VILA-1.5)
+#      --dataset jaco_play \
+#      --max-episodes 1 \
+#      --max-steps 100
 #
 import os
 import sys
 import time
+import json
 import pprint
 import logging
 import subprocess
-import transformers
 
+import PIL
+import torch
 import numpy as np
 
-from nano_llm import NanoLLM, ChatHistory, remove_special_tokens
-from nano_llm.utils import AttributeDict, convert_tensor
+from transformers import AutoModelForVision2Seq, AutoProcessor
 
+from nano_llm import NanoLLM, ChatHistory, remove_special_tokens
+from nano_llm.utils import AttributeDict, convert_tensor, print_table
+from nano_llm.vision import DatasetTypes, load_dataset
 
 
 class VLAModel:
@@ -44,7 +43,7 @@ class VLAModel:
             raise TypeError(f"expected model as str or NanoLLM (was {type(model)})")
             
         self.chat = ChatHistory(model, **kwargs)
-        self.prompt = "What action should the robot take to ${INSTRUCTION}?"  
+        self.prompt = "In: What action should the robot take to ${INSTRUCTION}?\nOut:▁" 
         self.instruction = kwargs.get('instruction', 'stop')
         
         self.num_images = 0
@@ -53,17 +52,22 @@ class VLAModel:
         assert(model.has_vision)
         
         # setup action configs
-        actions['unnormalized'] = dict(normalized=False)
+        actions['normalized'] = dict(action=dict(
+            normalized=True,
+            q01=[-1.0] * 7,
+            q99=[1.0] * 7,
+        ))
         
         for key, scene in actions.items():
-            scene['name'] = key
             action = scene['action']
+            action['name'] = key
+            actions[key] = action
             for stat_key, stat in action.items():
                 if isinstance(stat, list):
                     action[stat_key] = np.array(stat)
 
         self.action_configs = actions
-        self.actions = 'unnormalized'
+        self.actions = 'normalized'
         
         # map the tokenizer vocab range to discrete action bins
         self.bins = np.linspace(-1, 1, self.model.config.n_action_bins)
@@ -75,6 +79,10 @@ class VLAModel:
         logging.info(f"Warmup response:  '{self.model.generate(self.chat.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
         self.chat.reset()
 
+    @property
+    def config(self):
+        return self.model.config
+        
     @property
     def actions(self):
         return self._actions
@@ -97,7 +105,7 @@ class VLAModel:
         
         prompt = prompt.replace('${INSTRUCTION}', instruction)
         
-        logging.debug(f"{self.model.config.name} prompt:  `{prompt}`")
+        logging.debug(f"{self.model.config.name} prompt:  `{prompt}`".replace('\n', '\\n'))
 
         self.chat.reset()
         
@@ -109,125 +117,52 @@ class VLAModel:
     def predict_actions(self, image, actions={}, **kwargs):
         if not actions:
             actions = self.actions
-
+        elif isinstance(actions, str):
+            actions = self.action_configs[actions]
+            
         num_actions = len(actions['q01'])
 
-        reply = model.generate(
+        reply = self.model.generate(
             self.embed(image, **kwargs),
             kv_cache=self.chat.kv_cache,
             detokenize=False,
             min_new_tokens=num_actions,
-            max_new_tokens=num_actions+1,
+            max_new_tokens=num_actions,
             **kwargs,
         ).wait()
         
-        return decode_actions(reply.tokens[:num_actions], actions, **kwargs)
+        return self.decode_actions(reply.tokens[:num_actions], actions, **kwargs)
         
     def decode_actions(self, tokens, actions={}, return_tensors='np', **kwargs):
         if not actions:
             actions = self.actions
-   
+        elif isinstance(actions, str):
+            actions = self.action_configs[actions]
+            
+        #print(f'NanoLLM tokens ({len(tokens)}) ', tokens)
+        
         # map from vocab bins back into action space (-1,1)
         pred_actions = self.vocab_size - convert_tensor(tokens, return_tensors='np')
         pred_actions = np.clip(pred_actions - 1, a_min=0, a_max=self.bin_centers.shape[0] - 1)
         pred_actions = self.bin_centers[pred_actions]
         
         # denormalize the actions using robot coefficients
-        if not actions.get('normalized', True):
+        if not actions.get('normalized', False):
             action_high, action_low = actions['q99'], actions['q01']
             pred_actions = np.where(
                 actions['mask'],
                 0.5 * (pred_actions + 1) * (action_high - action_low) + action_low,
                 pred_actions,
             )
-        
-        return convert_tensors(pred_actions, return_tensors=return_tensors, **kwargs)
+        #else:
+        #    logging.warning('NanoLLM skipping denormalization')
+            
+        return convert_tensor(pred_actions, return_tensors=return_tensors, **kwargs)
      
     def __call__(self, image, **kwargs):
         return self.predict_actions(image, **kwargs)
            
 
-class OpenXDataset:
-    Names = ['fractal20220817_data', 'kuka', 'bridge', 'taco_play', 'jaco_play', 'berkeley_cable_routing', 'roboturk', 'nyu_door_opening_surprising_effectiveness', 'viola', 'berkeley_autolab_ur5', 'toto', 'language_table', 'columbia_cairlab_pusht_real', 'stanford_kuka_multimodal_dataset_converted_externally_to_rlds', 'nyu_rot_dataset_converted_externally_to_rlds', 'stanford_hydra_dataset_converted_externally_to_rlds', 'austin_buds_dataset_converted_externally_to_rlds', 'nyu_franka_play_dataset_converted_externally_to_rlds', 'maniskill_dataset_converted_externally_to_rlds', 'furniture_bench_dataset_converted_externally_to_rlds', 'cmu_franka_exploration_dataset_converted_externally_to_rlds', 'ucsd_kitchen_dataset_converted_externally_to_rlds', 'ucsd_pick_and_place_dataset_converted_externally_to_rlds', 'austin_sailor_dataset_converted_externally_to_rlds', 'austin_sirius_dataset_converted_externally_to_rlds', 'bc_z', 'usc_cloth_sim_converted_externally_to_rlds', 'utokyo_pr2_opening_fridge_converted_externally_to_rlds', 'utokyo_pr2_tabletop_manipulation_converted_externally_to_rlds', 'utokyo_saytap_converted_externally_to_rlds', 'utokyo_xarm_pick_and_place_converted_externally_to_rlds', 'utokyo_xarm_bimanual_converted_externally_to_rlds', 'robo_net', 'berkeley_mvp_converted_externally_to_rlds', 'berkeley_rpt_converted_externally_to_rlds', 'kaist_nonprehensile_converted_externally_to_rlds', 'stanford_mask_vit_converted_externally_to_rlds', 'tokyo_u_lsmo_converted_externally_to_rlds', 'dlr_sara_pour_converted_externally_to_rlds', 'dlr_sara_grid_clamp_converted_externally_to_rlds', 'dlr_edan_shared_control_converted_externally_to_rlds', 'asu_table_top_converted_externally_to_rlds', 'stanford_robocook_converted_externally_to_rlds', 'eth_agent_affordances', 'imperialcollege_sawyer_wrist_cam', 'iamlab_cmu_pickup_insert_converted_externally_to_rlds', 'uiuc_d3field', 'utaustin_mutex', 'berkeley_fanuc_manipulation', 'cmu_food_manipulation', 'cmu_play_fusion', 'cmu_stretch', 'berkeley_gnm_recon', 'berkeley_gnm_cory_hall', 'berkeley_gnm_sac_son']
-    Cache = "/data/datasets/open_x_embodiment"
-    
-    def __init__(self, name, split='train', cache_dir=Cache):
-        import tensorflow_datasets as tdfs
-
-        if not name:
-            raise ValueError(f"select the dataset name with one of these values: {OpenXDataset.Names}")
-        
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # tensorflow gets used for loading tfrecords/tensors, but we don't want it hogging all the GPU memory,
-        # which it preallocates by default - so just disable it from using GPUs since it's not needed anyways.
-        self.disable_tf_device('GPU')
-
-        # https://github.com/google-deepmind/open_x_embodiment?tab=readme-ov-file#dataset-not-found
-        download_cmd = f"gsutil -m cp -r -n gs://gresearch/robotics/{name} {cache_dir}"
-        logging.info(f"running command to download OpenXEmbodiment dataset '{name}' to {cache_dir}\n{download_cmd}")
-        subprocess.run(download_cmd, executable='/bin/bash', shell=True, check=True)
-        
-        self.dataset = tdfs.load(name, split=split, data_dir=cache_dir)
-        '''
-        self.dataset = tdfs.load(
-            name, 
-            split='train',
-            data_dir="gs://gresearch/robotics",
-            download_and_prepare_kwargs=dict(download_dir=cache_dir)
-        )
-        '''
-     
-    def __iter__(self):
-        for episode in iter(self.dataset):
-            for step in episode['steps']:
-                obs = step['observation']
-                
-                data = AttributeDict(
-                    instruction = obs['natural_language_instruction'].numpy().decode('UTF-8'),
-                    image = obs['image'].numpy()
-                )
-                
-                if 'image_wrist' in obs:
-                    data['image_wrist'] = obs['image_wrist'].numpy()
-                
-                yield(data)
-
-    def dump(self, path):
-        episode = next(iter(self.dataset))
-        step = next(iter(episode['steps']))
-        pprint.pprint(step, indent=2)
-        for step in self:
-            pprint.pprint(step, indent=2)
-            break
-            
-    @staticmethod
-    def gcs_path(dataset_name):
-        # https://colab.research.google.com/github/google-deepmind/open_x_embodiment/blob/main/colabs/Open_X_Embodiment_Datasets.ipynb
-        if dataset_name == 'robo_net':
-            version = '1.0.0'
-        elif dataset_name == 'language_table':
-            version = '0.0.1'
-        else:
-            version = '0.1.0'
-        return f'gs://gresearch/robotics/{dataset_name}/{version}'      
-     
-    @staticmethod
-    def disable_tf_device(device):
-        # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
-        import tensorflow as tf
-        
-        devices = tf.config.list_physical_devices(device)
-        
-        if not devices:
-            return
-
-        logging.warning(f"disabling tensorflow device {device} ({len(devices)})")
-        tf.config.set_visible_devices([], device)
-        logical_devices = tf.config.list_logical_devices(device)
-        logging.info(f"tensorflow  Physical {device}: {len(devices)}  Logical {device}: {len(logical_devices)}")
-
-    
                 
 if __name__ == "__main__":
 
@@ -241,98 +176,115 @@ if __name__ == "__main__":
     parser = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input', 'video_output'])
     
     parser.add_argument("--eval-model", type=str, default=None, help="path to the original HuggingFace model to enable error comparison")
-    parser.add_argument("--dataset", type=str, default=None, choices=OpenXDataset.Names, help="the OpenX dataset to run inference evaluation on")
+    parser.add_argument("--dataset", type=str, default=None, required=True, help=f"path or name of the dataset to load")
+    parser.add_argument("--dataset-type", type=str, default=None, choices=list(DatasetTypes.keys()), help=f"type of the dataset to load")
     parser.add_argument("--dump", type=str, default=None, help="dump the OpenX dataset to a directory of individual image files")
     parser.add_argument("--max-images", type=int, default=1, help="the number of video frames to keep in the history")
+    parser.add_argument("--max-episodes", type=int, default=None, help="the maximum number of episodes from the dataset to process")
+    parser.add_argument("--max-steps", type=int, default=None, help="the maximum number of frames to process across all episodes")
+    parser.add_argument("--normalized", action='store_true', help="disable denormalization of the output actions (will output [-1,1])")
+    parser.add_argument("--save-stats", type=str, default=None, help="path to json file for saving performance and accuracy measurements")
     
     args = parser.parse_args()
 
     if not args.model:
         args.model = "openvla/openvla-7b"
-        
-    '''
-    prompts = load_prompts(args.prompt)
 
-    if not prompts:
-        prompts = ["pick up the block"]
-    '''   
-    
     print(args)
 
+    if args.dataset:
+        dataset = load_dataset(args.dataset, **vars(args))
+        
     if args.dump:
-        dataset = OpenXDataset(args.dataset)
         dataset.dump(args.dump)
         sys.exit(0)
+      
+    if args.normalized:
+        actions_key = 'normalized'
+    else:
+        actions_key = dataset.name
         
-    # load vision/language model
-    model = NanoLLM.from_pretrained(args.model, **vars(args))
+    np.set_printoptions(precision=4, linewidth=1000, edgeitems=30) 
+      
+    # load vision-language-action model
+    model = NanoLLM.from_pretrained(**vars(args))
 
     assert(model.vla)
+    assert(args.dataset)
+
+    # gather performance and accuracy measurements
+    stats = AttributeDict(
+        latency = [],
+        eval_latency = [],
+        error = [],
+    )
+       
+    def rmspe(y_true, y_pred):
+        # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
+        return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))
     
-    # open the video stream
-    num_images = 0
-    last_image = None
-    last_text = ''
-
-    def on_video(image):
-        global last_image
-        last_image = cudaMemcpy(image)
-        if last_text:
-            font_text = remove_special_tokens(last_text)
-            wrap_text(font, image, text=font_text, x=5, y=5, color=(120,215,21), background=font.Gray50)
-        video_output(image)
+    def nrmse(y_true, y_pred):
+        # https://en.wikipedia.org/wiki/Root_mean_square_deviation#Normalization
+        if args.normalized:
+            y_range = 2.0
+        else:
+            y_range = np.max(y_true) - np.min(y_true)
         
-    video_source = VideoSource(**vars(args), cuda_stream=0)
-    video_source.add(on_video, threaded=False)
-    video_source.start()
-
-    video_output = VideoOutput(**vars(args))
-    video_output.start()
-
-    font = cudaFont()
-
-    # apply the prompts to each frame
-    while True:
-        if last_image is None:
-            continue
-
-        chat_history.append('user', text=f'Image {num_images + 1}:')
-        chat_history.append('user', image=last_image)
+        return np.sqrt(np.mean(np.square(y_true - y_pred))) / y_range
+    
+    def mean_stats(stats):
+        mean = AttributeDict(timesteps=len(stats.latency))
+        for key, samples in stats.items():
+            if not samples or not isinstance(samples, list):
+                continue
+            mean[key] = np.mean(samples)
+            if 'latency' in key:
+                mean[key.replace('latency', 'fps')] = 1 / mean[key]
+        return mean
         
-        last_image = None
-        num_images += 1
-
-        for prompt in prompts:
-            chat_history.append('user', prompt)
-            embedding, _ = chat_history.embed_chat()
-            
-            print('>>', prompt)
-            
-            reply = model.generate(
-                embedding,
-                kv_cache=chat_history.kv_cache,
-                max_new_tokens=args.max_new_tokens,
-                min_new_tokens=args.min_new_tokens,
-                do_sample=args.do_sample,
-                repetition_penalty=args.repetition_penalty,
-                temperature=args.temperature,
-                top_p=args.top_p,
-            )
-            
-            for token in reply:
-                cprint(token, 'blue', end='\n\n' if reply.eos else '', flush=True)
-                if len(reply.tokens) == 1:
-                    last_text = token
-                else:
-                    last_text = last_text + token
-
-            chat_history.append('bot', reply)
-            chat_history.pop(2)
-            
-        if num_images >= args.max_images:
-            chat_history.reset()
-            num_images = 0
-            
-        if video_source.eos:
-            video_output.stream.Close()
-            break
+    # load original unquantized model for eval
+    if args.eval_model:
+        eval_dtype = torch.float16 #torch.bfloat16
+        logging.info(f"loading eval model with HF Transformers from {args.eval_model}  ({eval_dtype})")
+        eval_processor = AutoProcessor.from_pretrained(args.eval_model, trust_remote_code=True) 
+        eval_model = AutoModelForVision2Seq.from_pretrained(
+            args.eval_model,
+            #attn_implementation="flash_attention_2",  # [Optional] Requires `flash_attn`
+            torch_dtype=eval_dtype, 
+            low_cpu_mem_usage=True, 
+            trust_remote_code=True
+        ).to("cuda:0")
+        logging.success(f"loaded eval model {eval_model.__class__.__name__} from {args.eval_model}  ({eval_dtype})")
+        logging.debug(f"action bins difference:  {np.sum(np.abs(model.vla.bins - eval_model.bins))}")
+        logging.debug(f"action bin centers diff: {np.sum(np.abs(model.vla.bin_centers - eval_model.bin_centers))}")
+        assert(model.vla.vocab_size == eval_model.vocab_size)
+        
+    def eval(step, i, actions):
+        if not args.eval_model:
+            return
+        prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
+        time_begin = time.perf_counter()
+        inputs = eval_processor(prompt, PIL.Image.fromarray(step.image)).to("cuda:0", dtype=eval_dtype)
+        eval_actions = eval_model.predict_action(**inputs, unnorm_key=actions_key, do_sample=False)
+        time_elapsed = time.perf_counter() - time_begin
+        stats.error.append(nrmse(eval_actions, actions))
+        stats.eval_latency.append(time_elapsed)
+        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.error[-1]:.4f} ~error={np.mean(stats.error):.4f}")
+        
+    # process the dataset
+    for i, step in enumerate(dataset):
+        time_begin = time.perf_counter()
+        actions = model.vla.predict_actions(step.image, actions=actions_key, instruction=step.instruction)
+        time_elapsed = time.perf_counter() - time_begin
+        print_table(model.stats)
+        stats.latency.append(time_elapsed)
+        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}")
+        eval(step, i, actions)
+        stats.mean = mean_stats(stats)
+        if args.save_stats:
+            with open(args.save_stats, 'w') as file:
+                json.dump(stats, file, indent=2)
+                
+    logging.success(f"Done processing {dataset.name} with {model.config.name}\n")
+    print_table(stats.mean)
+     

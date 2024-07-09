@@ -122,7 +122,7 @@ ChatTemplates = {
     
     # https://huggingface.co/openvla/openvla-7b
     'open-vla': {
-        'user': "In: ${MESSAGE}\nOut:▁",
+        'user': "<s>${MESSAGE}",
         'bot': "${MESSAGE}",
     },
 }
