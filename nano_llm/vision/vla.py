@@ -30,7 +30,7 @@ from transformers import AutoModelForVision2Seq, AutoProcessor
 
 from nano_llm import NanoLLM, ChatHistory, remove_special_tokens
 from nano_llm.utils import AttributeDict, convert_tensor, print_table
-from nano_llm.vision import DatasetTypes, load_dataset
+from nano_llm.vision.datasets import DatasetTypes, load_dataset
 
 
 class VLAModel:
@@ -54,13 +54,14 @@ class VLAModel:
         # setup action configs
         actions['normalized'] = dict(action=dict(
             normalized=True,
+            mask=[False] * 7,
             q01=[-1.0] * 7,
             q99=[1.0] * 7,
         ))
         
         for key, scene in actions.items():
-            action = scene['action']
-            action['name'] = key
+            action = AttributeDict(scene['action'])
+            action.name = key
             actions[key] = action
             for stat_key, stat in action.items():
                 if isinstance(stat, list):
@@ -120,8 +121,16 @@ class VLAModel:
         elif isinstance(actions, str):
             actions = self.action_configs[actions]
             
-        num_actions = len(actions['q01'])
-
+        num_actions = len(actions.mask)
+        
+        '''
+        for i in range(num_actions-1, 0, -1):
+            if actions.mask[i]:
+                break
+            else:
+                num_actions -= 1
+        '''
+        
         reply = self.model.generate(
             self.embed(image, **kwargs),
             kv_cache=self.chat.kv_cache,
@@ -150,7 +159,7 @@ class VLAModel:
         if not actions.get('normalized', False):
             action_high, action_low = actions['q99'], actions['q01']
             pred_actions = np.where(
-                actions['mask'],
+                actions.mask,
                 0.5 * (pred_actions + 1) * (action_high - action_low) + action_low,
                 pred_actions,
             )
@@ -193,7 +202,7 @@ if __name__ == "__main__":
     print(args)
 
     if args.dataset:
-        dataset = load_dataset(args.dataset, **vars(args))
+        dataset = load_dataset(**vars(args))
         
     if args.dump:
         dataset.dump(args.dump)
@@ -202,7 +211,7 @@ if __name__ == "__main__":
     if args.normalized:
         actions_key = 'normalized'
     else:
-        actions_key = dataset.name
+        actions_key = 'bridge_orig' if 'bridge' in dataset.name else dataset.name
         
     np.set_printoptions(precision=4, linewidth=1000, edgeitems=30) 
       
@@ -223,14 +232,18 @@ if __name__ == "__main__":
         # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
         return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))
     
-    def nrmse(y_true, y_pred):
+    def nrmse(y_true, y_pred, y_range=None):
         # https://en.wikipedia.org/wiki/Root_mean_square_deviation#Normalization
-        if args.normalized:
-            y_range = 2.0
-        else:
-            y_range = np.max(y_true) - np.min(y_true)
+        if y_range is None:
+            if args.normalized:
+                y_range = 2.0
+            else:
+                y_range = np.max(y_true) - np.min(y_true)
         
-        return np.sqrt(np.mean(np.square(y_true - y_pred))) / y_range
+        if isinstance(y_range, (list, np.ndarray)):
+            return np.sqrt(np.nanmean(np.square((y_true - y_pred) / y_range)))  # y_range[y_range == 0.0] = 1.0
+        else:    
+            return np.sqrt(np.nanmean(np.square(y_true - y_pred))) / y_range
     
     def mean_stats(stats):
         mean = AttributeDict(timesteps=len(stats.latency))
@@ -264,22 +277,24 @@ if __name__ == "__main__":
             return
         prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
         time_begin = time.perf_counter()
-        inputs = eval_processor(prompt, PIL.Image.fromarray(step.image)).to("cuda:0", dtype=eval_dtype)
+        inputs = eval_processor(prompt, PIL.Image.fromarray(step.images[0])).to("cuda:0", dtype=eval_dtype)
         eval_actions = eval_model.predict_action(**inputs, unnorm_key=actions_key, do_sample=False)
         time_elapsed = time.perf_counter() - time_begin
-        stats.error.append(nrmse(eval_actions, actions))
+        action_config = model.vla.action_configs[actions_key]
+        stats.error.append(nrmse(eval_actions[:len(actions)], actions, y_range=2.0 if args.normalized else (action_config.q99 - action_config.q01)))
         stats.eval_latency.append(time_elapsed)
         print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.error[-1]:.4f} ~error={np.mean(stats.error):.4f}")
         
     # process the dataset
     for i, step in enumerate(dataset):
         time_begin = time.perf_counter()
-        actions = model.vla.predict_actions(step.image, actions=actions_key, instruction=step.instruction)
+        actions = model.vla.predict_actions(step.images[0], actions=actions_key, instruction=step.instruction)
         time_elapsed = time.perf_counter() - time_begin
         print_table(model.stats)
         stats.latency.append(time_elapsed)
         print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}")
         eval(step, i, actions)
+        print(f"gt   {i}/{len(dataset)}                               {step.action}")  
         stats.mean = mean_stats(stats)
         if args.save_stats:
             with open(args.save_stats, 'w') as file:
