@@ -3,13 +3,18 @@ import os
 import json
 import time
 import glob
+import array
 import pickle
 import pprint
+import urllib
 import logging
 import subprocess
 
 import torch
 import numpy as np
+
+import tensorflow as tf
+import tensorflow_datasets as tdfs
 
 from nano_llm.utils import AttributeDict
 
@@ -17,7 +22,104 @@ from nano_llm.utils import AttributeDict
 __all__ = ['load_dataset', 'DatasetTypes', 'RLDSDataset', 'OpenXDataset', 'BridgeDataset', 'BridgeDatasetRaw']
 
 
-class RLDSDataset:
+class TFDSDataset:
+    """
+    Load a TFDS dataset with support for downloading from HTTP/HTTPS or Google Cloud Storage, 
+    and streaming from local cache on disk.  This is inherited by `RLDSDataset` and others to
+    implement specific dataset formats and structures with added filtering & pre-processing.
+    
+      https://github.com/tensorflow/datasets
+      https://www.tensorflow.org/datasets/api_docs/python/tfds
+      
+    TFDS datasets can get quite large (several hundred GB), so check your free disk space first.
+    """
+    def __init__(self, path, split='train', cache_dir='/data/datasets', **kwargs):
+        """
+        If path is a URL to an http/https server or Google Cloud Storage Bucket (gs://)
+        then the TDFS dataset will first be downloaded and saved to cache_dir.
+        """
+        tensorflow_disable_device('GPU') # disable GPU memory pool
+        
+        # make sure the cache dir exists
+        if cache_dir:
+            os.makedirs(cache_dir, exist_ok=True)
+        
+        # either check local dir from the dataset, or download it
+        if os.path.isdir(path):
+            self.path = self.find_dataset(path)
+        else:
+            self.path = self.download(path, cache_dir=cache_dir, **kwargs)
+
+        # load the config
+        config_path = os.path.join(self.path, 'dataset_info.json')
+        
+        if not os.path.isfile(config_path):
+            raise IOError(f"TFDSDataset | could not find {config_path}")
+         
+        with open(config_path) as file:
+            self.config = AttributeDict({
+                **json.load(file), 
+                **dict(name=os.path.basename(path.strip('/')), split=split),
+                **kwargs
+            })
+
+        # open the dataset (it gets loaded iteratively) 
+        self.dataset = tdfs.builder_from_directory(self.path).as_dataset(split=split) #tdfs.load(dataset_name, split=split, data_dir=cache_dir)
+        logging.success(f"TFDSDataset | loaded {self.config.name} from {path} (records={len(self.dataset)})")
+
+    @staticmethod
+    def download(url, resync=False, redownload=False, cache_dir='/data/datasets', **kwargs):
+        """
+        Recursively mirror the remote directory over HTTP/HTTPS or GCS (gs://)
+        to the local cache and return the direct path in which the TFDS resides.
+        """
+        if redownload:
+            resync = True
+            
+        if not url.endswith('/'):
+            url = url + '/'
+                
+        url_path = urllib.parse.urlparse(url).path
+        data_dir = os.path.join(cache_dir, os.path.basename(url_path.strip('/')))
+        
+        if os.path.isdir(data_dir) and not resync:
+            logging.debug(f"TFDSDataset | cached dataset from {url} already found downloaded under {data_dir}  (resync={resync}, redownload={redownload})")
+            return TFDSDataset.find_dataset(data_dir)
+            
+        if url.startswith('gs'):
+            download_cmd = f"gsutil -m cp -r {'' if redownload else '-n'} {url} {cache_dir}"
+        elif url.startswith('http'):
+            cut_dirs = len(url_path.split('/')) - 3  # https://www.baeldung.com/linux/wget-mirroring
+            download_cmd = f"wget -r --no-parent --no-host-directories --cut-dirs={cut_dirs} --reject='index.html*' --directory-prefix={cache_dir} {'' if redownload else '--no-clobber'} {kwargs.get('wget_flags', '')} {url}"
+        else:
+            raise ValueError(f'invalid path or URL:  {url}')
+            
+        logging.info(f"TFDSDataset | downloading from {url} into {cache_dir}\n{download_cmd}")
+        subprocess.run(download_cmd, executable='/bin/bash', shell=True, check=True)
+
+        return TFDSDataset.find_dataset(data_dir)
+
+    @staticmethod
+    def find_config(path, config='dataset_info.json'):
+        """
+        Find the local path containing the TFDS dataset config.
+        """
+        config_files = glob.glob(path.rstrip('/') + f'/**/{config}', recursive=True)
+        
+        if not config_files:
+             raise IOError(f"TFDSDataset | could not find {config} under {path}") 
+          
+        return config_files[0]
+        
+    @staticmethod
+    def find_dataset(path):
+        """
+        Find the local path under which the TFDS records reside.
+        """
+        return os.path.dirname(TFDSDataset.find_config(path))
+
+          
+class RLDSDataset(TFDSDataset):
     """
     Load a TDFS dataset in RLDS format - https://github.com/google-research/rlds
     """
@@ -26,121 +128,159 @@ class RLDSDataset:
         If path is a URL to an http/https server or Google Cloud Storage Bucket (gs://)
         then the TDFS dataset will first be downloaded and saved to cache_dir.
         """
-        import tensorflow_datasets as tdfs
-
-        # tensorflow gets used for loading tfrecords/tensors, but we don't want it hogging all the GPU memory,
-        # which it preallocates by default - so just disable it from using GPUs since it's not needed anyways.
-        tensorflow_disable_device('GPU')
-        
-        # make sure the cache dir exists
-        if cache_dir:
-            os.makedirs(cache_dir, exist_ok=True)
-        
-        # download the dataset from GCS or HTTP/HTTPS
-        if not os.path.isdir(path):
-            self.download(path, cache_dir=cache_dir, **kwargs)
-
         if max_episodes:
             split = f"{split}[:{max_episodes}]"
-         
-        # open the dataset (it gets loaded iteratively) 
-        self.name = kwargs.get(name, os.path.basename(url))
-        self.dataset = tdfs.load(name, split=split, data_dir=cache_dir)
+        
+        super().__init__(path, split=split, cache_dir=cache_dir, **kwargs)
 
-        self.num_episodes = 0
-        self.num_steps = 0
+        step_raw = next(iter(next(iter(self.dataset))['steps']))
+        step_img = next(iter(self))
+
+        layout = AttributeDict(
+            cameras = len(step_img.images),
+            image_size = step_img.images[0].shape,
+            step = list(step_raw.keys()),
+            action = step_raw['action'],
+            observation = AttributeDict()
+        )
+        
+        if isinstance(layout.action, tf.Tensor):
+            layout.action = tf.shape(layout.action).numpy().tolist()
+         
+        for key, value in step_raw['observation'].items():
+            if isinstance(value, tf.Tensor):
+                if value.dtype == tf.string:
+                    value = str
+                else:
+                    value = value.numpy()
+                    value = (value.shape, value.dtype)
+            elif hasattr(value, '__len__'):
+                value = (type(value), len(value))
+            else:
+                value = type(value)
+                
+            layout.observation[key] = value
+            
+        self.config.update(layout)
         self.max_steps = max_steps
         
-        for episode in iter(self.dataset):
-            self.num_steps += len(episode['steps'])
-            self.num_episodes += 1
-
-        if self.max_steps:
-            self.num_steps = min(self.num_steps, self.max_steps)
-
-        self.image_dim = next(iter(self)).images[0].shape
-
-        logging.success(f"RLDSDataset | loaded {self.name} from {path}  (episodes={self.num_episodes}, steps={self.num_steps}, image={self.image_dim})")
-
-    def __len__(self):
-        return self.num_steps
-          
+        logging.success(f"RLDSDataset | loaded {self.config.name} - episode format:\n{pprint.pformat(layout, indent=2)}")
+               
     def __iter__(self):
+        """
+        Returns an iterator over all steps (or up to max_steps if it was set) with the episodes running back-to-back.  
+        `step.is_first` will be set on new episodes, and `set.is_last` will be set at the end of an episode.
+        """
         steps = 0
         for episode in iter(self.dataset):
+            episode = self.filter_episode(episode)
+            if not episode:
+                continue
             for step in episode['steps']:
-                step_dict = self.to_dict(step)
-                if not step_dict:
+                step = self.filter_step(step)
+                if not step:
                     continue
-                yield(step_dict)
+                yield(step)
                 steps += 1
                 if self.max_steps and steps >= self.max_steps:
                     return
                 
     @property
     def episodes(self):
-        # returns generator over episodes
+        """
+        Returns an iterator over all the episodes, nested over the steps in each episode::
+        
+            for episode in dataset.episodes():
+                for step in episode:
+                    ...
+        """
         def generator(episode):
             for step in episode['steps']:
-                step_dict = self.to_dict(step)
-                if step_dict:
-                    yield(step_dict)
+                step = self.filter_step(step)
+                if step:
+                    yield(step)
                 
         for episode in iter(self.dataset):
-            yield(generator(episode))
-            
-    @staticmethod
-    def download(url, cache_dir='/data/datasets', **kwargs):
-        if url.startswith('gs'):
-            download_cmd = f'gsutil -m cp -r -n {url} {cache_dir}'
-        elif url.startswith('http'):
-            download_cmd = f'wget -r --no-clobber --no-host-directories --reject="index.html*" --directory-prefix={cache_dir} {kwargs.get("wget_flags", "")} {url}'
-        else:
-            raise ValueError(f'invalid path or URL:  {url}')
-            
-        logging.info(f'RLDSDataset | running command to download TFDS dataset from {url} to {cache_dir}\n{download_cmd}')
-        subprocess.run(download_cmd, executable='/bin/bash', shell=True, check=True)
-                              
+            episode = self.filter_episode(episode)
+            if episode:
+                yield(generator(episode))
+          
     def dump(self, max_steps=1):
+        """
+        Print out the specified number of steps for inspecting the dataset format.
+        """
         for i, step in enumerate(self):
             pprint.pprint(step, indent=2)
             if max_steps and i > max_steps:
                 break
 
-    def to_dict(self, step, strict=True):
+    def filter_episode(self, episode):
+        """
+        Override this function to implement custom filtering or transformations on each episode.
+        """
+        return episode
+        
+    def filter_step(self, step):
+        """
+        Apply filtering and data transformations to each step (override this for custom processing)
+        """
         data = AttributeDict(
             action=step.get('action'),
             images=[],
             instruction=None,
-            is_first=step.get('is_first'),
-            is_last=step.get('is_last'),
+            is_first=bool(step.get('is_first')),
+            is_last=bool(step.get('is_last')),
         )
         
         observation = step['observation']
-        image_keys = ['image', 'agentview_rgb', 'image_wrist']
-        
+        image_keys = ['image', 'agentview_rgb']
+
         for image_key in image_keys:
-            if image_key in observation:
-                data.images.append(observation[image_key].numpy())
+            for observation_key in observation:
+                if image_key in observation_key:
+                    data.images.append(observation[observation_key].numpy())
 
         instruction = observation.get('natural_language_instruction', step.get('language_instruction'))
         
         if instruction is not None:
             data.instruction = instruction.numpy().decode('UTF-8')
          
-        if strict:
-            for key, value in data.items():
-                if value is None or (not key.startswith('is') and not value):
-                    logging.warning(f"RLDSDataset | episode step has missing or empty key: {key}  (skipping)")           
-                    return None
-                    
+        for key, value in data.items():
+            value = self.filter_key(key, value)
+            
+            if value is None:
+                logging.warning(f"RLDSDataset | episode step has missing or empty key: {key}  (skipping)")           
+                return None
+            else:
+                data[key] = value
+                        
         return data
 
+    def filter_key(self, key, value):
+        """
+        Apply filtering to each data entry in the step dict (return None to exclude)
+        """
+        if value is None:
+            return None
+        elif isinstance(value, (array.array, np.ndarray)):
+            if len(value) == 0:
+                return None
+        elif isinstance(value, tf.Tensor):
+            if len(value) == 0:
+                return None
+            return value.numpy()
+        elif not key.startswith('is_') and not value:
+            return None
+            
+        return value   
      
 def tensorflow_disable_device(device):
-    # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
-    import tensorflow as tf
+    """
+    TensorFlow gets used for loading TFDS records/tensors, but we don't want it hogging all the GPU memory,
+    which it preallocates by default - so just disable it from using GPUs since it's not needed anyways.
     
+        https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
+    """
     devices = tf.config.list_physical_devices(device)
     
     if not devices:
@@ -159,10 +299,7 @@ class OpenXDataset(RLDSDataset):
     Names = ['fractal20220817_data', 'kuka', 'bridge', 'taco_play', 'jaco_play', 'berkeley_cable_routing', 'roboturk', 'nyu_door_opening_surprising_effectiveness', 'viola', 'berkeley_autolab_ur5', 'toto', 'language_table', 'columbia_cairlab_pusht_real', 'stanford_kuka_multimodal_dataset_converted_externally_to_rlds', 'nyu_rot_dataset_converted_externally_to_rlds', 'stanford_hydra_dataset_converted_externally_to_rlds', 'austin_buds_dataset_converted_externally_to_rlds', 'nyu_franka_play_dataset_converted_externally_to_rlds', 'maniskill_dataset_converted_externally_to_rlds', 'furniture_bench_dataset_converted_externally_to_rlds', 'cmu_franka_exploration_dataset_converted_externally_to_rlds', 'ucsd_kitchen_dataset_converted_externally_to_rlds', 'ucsd_pick_and_place_dataset_converted_externally_to_rlds', 'austin_sailor_dataset_converted_externally_to_rlds', 'austin_sirius_dataset_converted_externally_to_rlds', 'bc_z', 'usc_cloth_sim_converted_externally_to_rlds', 'utokyo_pr2_opening_fridge_converted_externally_to_rlds', 'utokyo_pr2_tabletop_manipulation_converted_externally_to_rlds', 'utokyo_saytap_converted_externally_to_rlds', 'utokyo_xarm_pick_and_place_converted_externally_to_rlds', 'utokyo_xarm_bimanual_converted_externally_to_rlds', 'robo_net', 'berkeley_mvp_converted_externally_to_rlds', 'berkeley_rpt_converted_externally_to_rlds', 'kaist_nonprehensile_converted_externally_to_rlds', 'stanford_mask_vit_converted_externally_to_rlds', 'tokyo_u_lsmo_converted_externally_to_rlds', 'dlr_sara_pour_converted_externally_to_rlds', 'dlr_sara_grid_clamp_converted_externally_to_rlds', 'dlr_edan_shared_control_converted_externally_to_rlds', 'asu_table_top_converted_externally_to_rlds', 'stanford_robocook_converted_externally_to_rlds', 'eth_agent_affordances', 'imperialcollege_sawyer_wrist_cam', 'iamlab_cmu_pickup_insert_converted_externally_to_rlds', 'uiuc_d3field', 'utaustin_mutex', 'berkeley_fanuc_manipulation', 'cmu_food_manipulation', 'cmu_play_fusion', 'cmu_stretch', 'berkeley_gnm_recon', 'berkeley_gnm_cory_hall', 'berkeley_gnm_sac_son']
 
     def __init__(self, name, cache_dir="/data/datasets/open_x_embodiment", **kwargs):
-        super().__init__(
-            f"gs://gresearch/robotics/{name}", name=name, 
-            cache_dir=cache_dir, **kwargs
-        )
+        super().__init__(f"gs://gresearch/robotics/{name}", name=name, cache_dir=cache_dir, **kwargs)
 
     @staticmethod
     def gcs_path(dataset_name):
@@ -185,13 +322,31 @@ class BridgeDataset(RLDSDataset):
       
     Although Bridge is included in OXE, models such as OpenVLA and Octo use this original.
     """
-    def __init__(self, cache_dir="/data/datasets/bridge/tfds", **kwargs):
+    def __init__(self, cache_dir="/data/datasets/bridge", **kwargs):
         super().__init__(
-            "https://rail.eecs.berkeley.edu/datasets/bridge_release/data/tfds/bridge_dataset", 
-            wget_flags="--cut-dirs=4", cache_dir=cache_dir, **kwargs
+            "https://rail.eecs.berkeley.edu/datasets/bridge_release/data/tfds", 
+            name='bridge_orig', cache_dir=cache_dir, **kwargs
         )
-        self.name = 'bridge_orig'
+    
+    '''    
+    def relabel_bridge_actions(traj: Dict[str, Any]) -> Dict[str, Any]:
+        """Relabels actions to use reached proprioceptive state; discards last timestep (no-action)."""
+        movement_actions = traj["observation"]["state"][1:, :6] - traj["observation"]["state"][:-1, :6]
+        traj_truncated = tf.nest.map_structure(lambda x: x[:-1], traj)
+        traj_truncated["action"] = tf.concat([movement_actions, traj["action"][:-1, -1:]], axis=1)
+    '''    
+    
+    def filter_step(self, step):
+        """
+        Relabels actions to use reached proprioceptive state; discards last timestep (no-action)
+        """
+        print(list(step['observation'].keys()))
+        step = super().filter_step(step)
         
+        if not step:
+            return
+          
+        return step  
         
 class BridgeDatasetRaw:
     """
