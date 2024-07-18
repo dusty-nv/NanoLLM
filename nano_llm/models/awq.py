@@ -272,7 +272,10 @@ class AWQModel(NanoLLM):
                     break
                     
                 # add EOS token on early stop
-                if len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
+                if min_new_tokens == max_new_tokens:
+                    if len(stream.tokens) == min_new_tokens:
+                        break
+                elif len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
                     stream.add_tokens(self.tokenizer.eos_token_id)
                     self.stats.output_tokens += 1
                     break
