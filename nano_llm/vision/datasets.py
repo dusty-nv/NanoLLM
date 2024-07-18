@@ -5,8 +5,6 @@ import time
 import glob
 import array
 import pickle
-import pprint
-import urllib
 import logging
 import subprocess
 
@@ -16,6 +14,11 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tdfs
 
+from glob import glob
+from pprint import pprint, pformat
+from pathlib import Path
+from datetime import datetime
+from urllib.parse import urlparse
 from nano_llm.utils import AttributeDict
 
 
@@ -68,22 +71,22 @@ class TFDSDataset:
         logging.success(f"TFDSDataset | loaded {self.config.name} from {path} (records={len(self.dataset)})")
 
     @staticmethod
-    def download(url, resync=False, redownload=False, cache_dir='/data/datasets', **kwargs):
+    def download(url, rescan=False, redownload=False, cache_dir='/data/datasets', **kwargs):
         """
         Recursively mirror the remote directory over HTTP/HTTPS or GCS (gs://)
         to the local cache and return the direct path in which the TFDS resides.
         """
         if redownload:
-            resync = True
+            rescan = True
             
         if not url.endswith('/'):
             url = url + '/'
                 
-        url_path = urllib.parse.urlparse(url).path
+        url_path = urlparse(url).path
         data_dir = os.path.join(cache_dir, os.path.basename(url_path.strip('/')))
         
-        if os.path.isdir(data_dir) and not resync:
-            logging.debug(f"TFDSDataset | cached dataset from {url} already found downloaded under {data_dir}  (resync={resync}, redownload={redownload})")
+        if os.path.isdir(data_dir) and not rescan:
+            logging.debug(f"TFDSDataset | cached dataset from {url} already found downloaded under {data_dir}  (rescan={rescan}, redownload={redownload})")
             return TFDSDataset.find_dataset(data_dir)
             
         if url.startswith('gs'):
@@ -104,7 +107,7 @@ class TFDSDataset:
         """
         Find the local path containing the TFDS dataset config.
         """
-        config_files = glob.glob(path.rstrip('/') + f'/**/{config}', recursive=True)
+        config_files = glob(path.rstrip('/') + f'/**/{config}', recursive=True)
         
         if not config_files:
              raise IOError(f"TFDSDataset | could not find {config} under {path}") 
@@ -162,10 +165,24 @@ class RLDSDataset(TFDSDataset):
             layout.observation[key] = value
             
         self.config.update(layout)
-        self.max_steps = max_steps
         
-        logging.success(f"RLDSDataset | loaded {self.config.name} - episode format:\n{pprint.pformat(layout, indent=2)}")
-               
+        self.max_steps = max_steps
+        self.num_steps = 0
+
+        for episode in iter(self.dataset):
+            self.num_steps += len(episode['steps'])
+            
+        if self.max_steps:
+            self.num_steps = min(self.num_steps, self.max_steps)
+        
+        logging.success(f"RLDSDataset | loaded {self.config.name} - episode format:\n{pformat(layout, indent=2)}")
+    
+    def __len__(self):
+        """
+        Returns the number of timesteps or frames in the dataset, taken over all episodes.
+        """
+        return self.num_steps
+                   
     def __iter__(self):
         """
         Returns an iterator over all steps (or up to max_steps if it was set) with the episodes running back-to-back.  
@@ -210,7 +227,7 @@ class RLDSDataset(TFDSDataset):
         Print out the specified number of steps for inspecting the dataset format.
         """
         for i, step in enumerate(self):
-            pprint.pprint(step, indent=2)
+            pprint(step, indent=2)
             if max_steps and i > max_steps:
                 break
 
@@ -245,6 +262,9 @@ class RLDSDataset(TFDSDataset):
         if instruction is not None:
             data.instruction = instruction.numpy().decode('UTF-8')
          
+        if 'state' in observation:
+            data.state = observation['state'].numpy()
+            
         for key, value in data.items():
             value = self.filter_key(key, value)
             
@@ -291,7 +311,31 @@ def tensorflow_disable_device(device):
     logical_devices = tf.config.list_logical_devices(device)
     logging.info(f"tensorflow  Physical {device}: {len(devices)}  Logical {device}: {len(logical_devices)}")
 
-                  
+
+def binarize_gripper_actions(actions):
+    """
+    For the gripper, near 0.0 is closed and 1.0 open. Convert intermediate values based on the state reached.
+    This uses a numpy array of all the gripper action states in the episode, and returns the binary version.
+    
+    https://github.com/octo-models/octo/blob/5eaa5c6960398925ae6f52ed072d843d2f3ecb0b/octo/data/utils/data_utils.py#L296
+    """
+    open_mask = actions > 0.95
+    closed_mask = actions < 0.05
+    in_between_mask = np.logical_not(np.logical_or(open_mask, closed_mask))
+
+    new_actions = np.empty_like(actions)
+    carry = actions[-1]
+    
+    for i in reversed(range(actions.shape[0])):
+        if in_between_mask[i]:
+            carry = carry
+        else:
+            carry = float(open_mask[i])
+        new_actions[i] = carry
+     
+    return new_actions
+    
+                         
 class OpenXDataset(RLDSDataset):
     """
     Open X-Embodiment (OXE) dataset collection (https://github.com/google-deepmind/open_x_embodiment)
@@ -328,25 +372,37 @@ class BridgeDataset(RLDSDataset):
             name='bridge_orig', cache_dir=cache_dir, **kwargs
         )
     
-    '''    
-    def relabel_bridge_actions(traj: Dict[str, Any]) -> Dict[str, Any]:
-        """Relabels actions to use reached proprioceptive state; discards last timestep (no-action)."""
-        movement_actions = traj["observation"]["state"][1:, :6] - traj["observation"]["state"][:-1, :6]
-        traj_truncated = tf.nest.map_structure(lambda x: x[:-1], traj)
-        traj_truncated["action"] = tf.concat([movement_actions, traj["action"][:-1, -1:]], axis=1)
-    '''    
-    
+    def filter_episode(self, data):
+        """
+        Relabels actions to use reached proprioceptive state; discards first & last timestep
+        https://github.com/openvla/openvla/blob/317dbd9e41edaa83ddf2b33f5412b5e7ddadcd4e/prismatic/vla/datasets/rlds/utils/data_utils.py#L166
+        """
+        episode = AttributeDict(steps=[])
+        
+        for step in data['steps']:
+            step = super().filter_step(step)
+            
+            if not step:
+                logging.warning(f"RLDSDataset | {self.config.name} had missing step data (skipping episode)")
+                return
+                
+            episode.steps.append(step)
+        
+        for i, step in enumerate(episode.steps):
+            if i >= len(episode.steps) - 1:
+                break
+            step.action[:6] = episode.steps[i+1].state[:6] - step.state[:6]
+            
+        episode.steps = episode.steps[1:-1]
+        
+        return episode
+            
     def filter_step(self, step):
         """
-        Relabels actions to use reached proprioceptive state; discards last timestep (no-action)
+        The steps were already converted from TFDS format above, so just return them.
         """
-        print(list(step['observation'].keys()))
-        step = super().filter_step(step)
-        
-        if not step:
-            return
-          
-        return step  
+        return step
+       
         
 class BridgeDatasetRaw:
     """
@@ -358,51 +414,64 @@ class BridgeDatasetRaw:
       
     https://github.com/kvablack/dlimp/blob/main/rlds_converters/bridge_dataset/bridge_dataset_dataset_builder.py
     """
-    def __init__(self, path, max_episodes=None, max_steps=None, **kwargs):
+    def __init__(self, path, max_episodes=None, max_steps=None, rescan=False, **kwargs):
         """
         Scan the path for directories containing episodes of images, trajectories, and action data.
         """
         self.root = path
-        self.name = 'bridge_raw'
+        self.config = AttributeDict(name='bridge_raw')
         
-        self.num_images = 0
+        self.num_steps = 0
         self.max_steps = max_steps
         
-        metadata_path = os.path.join(path, 'metadata.pkl')
-        self.metadata = self.load_metadata(metadata_path)
+        index_path = os.path.join(path, 'index.pkl')
+        
+        if not rescan:
+            self.episodes, self.stats = self.load_index(index_path)
 
-        if not self.metadata:
-            self.metadata = self.scan(path, max_episodes=max_episodes)
-            logging.info(f"BridgeDataset | saving {metadata_path}")
-            with open(metadata_path, 'wb') as file:
-                pickle.dump(self.metadata, file, protocol=pickle.HIGHEST_PROTOCOL)
+        if rescan or not self.episodes:
+            self.episodes = self.scan(path, max_episodes=max_episodes, **kwargs)
+            self.stats = self.compute_stats(self.episodes)
+            logging.info(f"BridgeDataset | saving {index_path}")
+            with open(index_path, 'wb') as file:
+                pickle.dump((self.episodes, self.stats), file, protocol=pickle.HIGHEST_PROTOCOL)
 
-        if max_episodes and len(self.metadata) > max_episodes:
-            self.metadata = self.metadata[:max_episodes]
+        if max_episodes and len(self.episodes) > max_episodes:
+            self.episodes = self.episodes[:max_episodes]
             
-        for episode in self.metadata:
-            self.num_images += len(episode.steps)
+        for episode in self.episodes:
+            self.num_steps += len(episode.steps)
 
-        logging.success(f"BridgeDataset | loaded index of {len(self.metadata)} episodes, {self.num_images} images from {self.root}")       
+        if self.max_steps:
+            self.num_steps = min(self.num_steps, self.max_steps)
+        
+        logging.success(f"BridgeDataset | loaded index of {len(self.episodes)} episodes, {self.num_steps} images from {self.root}")       
 
+    def __len__(self):
+        """
+        Returns the number of timesteps or frames in the dataset, over all the episodes.
+        """
+        return self.num_steps
+        
     def __iter__(self):
         """
         Returns an iterator over all steps (or up to max_steps if it was set) with the episodes running back-to-back.  
         `step.is_first` will be set on new episodes, and `set.is_last` will be set at the end of an episode.
         """
         steps = 0
-        for episode in self.metadata:
+        for episode in self.episodes:
             for step in episode.steps:
+                #step.metadata = episode.metadata
                 yield(step)
                 steps += 1
                 if self.max_steps and steps >= self.max_steps:
                     return
 
-    def scan(self, path, max_episodes=None):
+    def scan(self, path, max_episodes=None, **kwargs):
         """
         Search for episodes and build the metadata index.
         """
-        paths = glob.glob(os.path.join(self.root, *("*" * 4)))
+        paths = sorted(glob(os.path.join(self.root, *("*" * 4))))
         episodes = []
         num_images = 0
         
@@ -419,10 +488,10 @@ class BridgeDatasetRaw:
                     path, dated_folder, "raw", "traj_group*", "traj*"
                 )
                 
-                all_traj = glob.glob(search_path)
+                all_traj = glob(search_path)
                 
                 if not all_traj:
-                    logging.warning(f"BridgeDataset | no trajectories found in {search_path}  (skipping)")
+                    logging.debug(f"BridgeDataset | no trajectories found in {search_path}  (skipping)")
                     continue
 
                 '''
@@ -434,78 +503,124 @@ class BridgeDatasetRaw:
                         config = json.load(f)
                 '''
                 
-                for ep_path in all_traj:
-                    image_dirs = glob.glob(os.path.join(ep_path, 'images*'))
-                    images = []
+                for traj_path in all_traj:
+                    episode = self.load_episode(traj_path)
                     
-                    for image_dir in image_dirs:
-                        image_files = sorted(
-                            glob.glob(os.path.join(image_dir, 'im_*.jpg')),
-                            key=lambda x: int(x.split("_")[-1].split(".")[0]),
-                        )
- 
-                        if image_files:   
-                            images.append(image_files)
-
-                    if not images:
-                        logging.warning(f"BridgeDataset | episode {ep_path} did not contain any images (skipping)")
-                        continue
-                     
-                    if not all(len(images[i]) == len(images[0]) for i in range(len(images))):
-                        logging.warning(f"BridgeDataset | episode {ep_path} had {len(images)} sets of images with different number of frames {[len(x) for x in images]}")
-                        continue
-                                             
-                    state = self.load_state(ep_path)
-                    actions = self.load_actions(ep_path)
-                    instruction = self.load_lang(ep_path)
-
-                    if not instruction:
-                        logging.warning(f"BridgeDataset | episode {ep_path} was missing 'instruction' annotation (skipping)")
-                        continue
-                    
-                    steps = len(images[0])
-                    lengths = dict(images=steps, state=len(state), action=len(actions)+1)
-
-                    if not all(x == steps for x in lengths.values()):
-                        logging.warning(f"BridgeDataset | episode {ep_path} did not have matching number of observations {lengths}")
+                    if not episode:
                         continue
 
-                    episode = AttributeDict(path=ep_path, steps=[])
-                    
-                    for i in range(steps):
-                        episode.steps.append(AttributeDict(                   
-                            state = state[i],
-                            action = actions[i] if i < len(actions) else None,
-                            images = [x[i] for x in images],
-                            instruction = instruction,
-                            is_first = bool(i == 0),
-                            is_last = bool(i == (steps-1))
-                        ))
-                    
                     episodes += [episode]
-                    num_images += steps
+                    num_images += len(episode.steps)
 
                     if len(episodes) % 250 == 0:
-                        logging.debug(f"BridgeDataset | scanned {len(episodes)} episodes, {num_images} images from {self.root}")
+                        logging.info(f"BridgeDataset | scanned {len(episodes)} episodes, {num_images} images from {self.root}")
                         
                     if max_episodes and len(episodes) >= max_episodes:
-                        return episodes    
+                        return episodes 
             
         if not episodes:
             raise RuntimeError(f"BridgeDataset | did not find any episodes under {self.root}")
 
         return episodes
-     
-    def dump(self, max_steps=1):
-        for i, step in enumerate(self):
-            if max_steps and i >= max_steps:
-                break
-            pprint.pprint(step, indent=2)
+
+    def compute_stats(self, episodes):
+        logging.debug(f"BridgeDataset | gathering dataset for stats computation ({len(self.episodes)} episodes)")
         
-    def load_metadata(self, path):
+        actions = []
+        
+        for episode in episodes:
+            for step in episode.steps:
+                actions.append(step.action)
+
+        actions = np.asarray(actions)
+        
+        logging.debug(f"BridgeDataset | computing dataset statistics ({len(self.episodes)} episodes, {len(actions)} steps)")
+
+        return AttributeDict(
+            action = AttributeDict(
+                mean = actions.mean(0).tolist(),
+                std = actions.std(0).tolist(),
+                max = actions.max(0).tolist(),
+                min = actions.min(0).tolist(),
+                q01 = np.quantile(actions, 0.01, axis=0).tolist(),
+                q99 = np.quantile(actions, 0.99, axis=0).tolist()
+            )
+        )
+        
+    def load_episode(self, path):
+        date_time = datetime.strptime(path.split("/")[-4], "%Y-%m-%d_%H-%M-%S")
+
+        if date_time < datetime(2021, 7, 23): # episodes before then needed latency corrections
+            logging.debug(f"BridgeDataset | skipping episode from {date_time}  {path}")
+            return
+            
+        image_dirs = sorted(glob(os.path.join(path, 'images*')))
+        images = []
+        
+        for image_dir in image_dirs:
+            image_files = sorted(
+                glob(os.path.join(image_dir, 'im_*.jpg')),
+                key=lambda x: int(x.split("_")[-1].split(".")[0]),
+            )
+
+            if image_files:   
+                images.append(image_files)
+
+        if not images:
+            logging.debug(f"BridgeDataset | episode {path} did not contain any images (skipping)")
+            return
+         
+        if not all(len(images[i]) == len(images[0]) for i in range(len(images))):
+            logging.debug(f"BridgeDataset | episode {path} had {len(images)} sets of images with different number of frames {[len(x) for x in images]}")
+            return
+                                 
+        state = self.load_state(path)
+        actions = self.load_actions(path)
+        metadata = self.load_metadata(path)
+        instruction = self.load_lang(path)
+
+        if not instruction:
+            logging.debug(f"BridgeDataset | episode {path} was missing 'instruction' annotation (skipping)")
+            return
+        
+        if not metadata:
+            logging.debug(f"BridgeDataset | episode {path} was missing metadata (skipping)")
+            return
+            
+        steps = len(images[0])
+        lengths = dict(images=steps, state=len(state), action=len(actions)+1)
+
+        if not all(x == steps for x in lengths.values()):
+            logging.debug(f"BridgeDataset | episode {path} did not have matching number of observations {lengths}")
+            return
+
+        # https://github.com/openvla/openvla/blob/317dbd9e41edaa83ddf2b33f5412b5e7ddadcd4e/prismatic/vla/datasets/rlds/utils/data_utils.py#L166
+        arm_actions = state[1:, :6] - state[:-1, :6]
+        gripper_actions = binarize_gripper_actions(actions[:, -1:])
+        actions = np.concatenate((arm_actions, gripper_actions), axis=1)
+        
+        # drop the first and last frames from the episode
+        episode = AttributeDict(path=path, metadata=metadata, steps=[])
+            
+        for i in range(1, steps-1):
+            episode.steps.append(AttributeDict(                   
+                state = state[i],
+                action = actions[i] if i < len(actions) else None,
+                images = [x[i] for x in images],
+                instruction = instruction,
+                is_first = False,
+                is_last = False,
+            ))
+        
+        episode.steps[0].is_first = True
+        episode.steps[-1].is_last = True
+        
+        return episode
+                        
+    def load_index(self, path):
         if not os.path.isfile(path):
-            logging.warning(f"BridgeDataset | missing {path} - scanning metadata")
-            return []
+            logging.debug(f"BridgeDataset | missing {path} - scanning index")
+            return [], {}
         try:
             with open(path, "rb") as f:
                 return pickle.load(f)
@@ -515,34 +630,55 @@ class BridgeDatasetRaw:
     def load_state(self, path):
         fp = os.path.join(path, "obs_dict.pkl")
         if not os.path.isfile(fp):
-            logging.warning(f"BridgeDataset | missing {fp}")
+            logging.debug(f"BridgeDataset | missing {fp}")
             return []
         with open(fp, "rb") as f:
             x = pickle.load(f)
-        #print('loading state', fp, list(x.keys()))
-        return x["full_state"]
+        #pprint(x, indent=2)
+        #print('loaded state', fp, list(x.keys()))
+        return np.asarray(x["full_state"])
 
     def load_actions(self, path):
         fp = os.path.join(path, "policy_out.pkl")
         if not os.path.isfile(fp):
-            logging.warning(f"BridgeDataset | missing {fp}")
+            logging.debug(f"BridgeDataset | missing {fp}")
             return []
         with open(fp, "rb") as f:
             act_list = pickle.load(f)
-        pprint.pprint(act_list, indent=2)
+        #pprint(act_list, indent=2)
         if isinstance(act_list[0], dict):
             act_list = [x["actions"] for x in act_list]
-        return act_list
+        return np.asarray(act_list)
 
     def load_lang(self, path):
         fp = os.path.join(path, "lang.txt")
         if not os.path.isfile(fp):
-            logging.warning(f"BridgeDataset | missing {fp}")
+            #logging.debug(f"BridgeDataset | missing {fp}")
             return []
         with open(fp, "r") as f:
             text = f.readline().strip()
         return text
 
+    def load_metadata(self, path):
+        fp = os.path.join(Path(path).parents[2], "collection_metadata.json")
+        if not os.path.isfile(fp):
+            logging.debug(f"BridgeDataset | missing {fp}")
+            return {}
+        with open(fp, "r") as f:
+            return json.load(f)
+ 
+    def dump(self, max_steps=1):
+        print(f"{self.config.name} dataset stats:\n\n{pformat(self.stats, indent=2)}\n")
+        steps = 0
+        
+        for e, episode in enumerate(self.episodes):
+            print(f"Episode {e} of {len(self.episodes)}  {episode.path}\n\n{pformat(episode.metadata, indent=2)}\n")
+            for s, step in enumerate(episode.steps):
+                print(f"Step {s} of {len(episode.steps)}  (episode {e} of {len(self.episodes)})\n\n{pformat(step, indent=2)}\n")
+                steps += 1
+                if max_steps and steps >= max_steps:
+                    return
+            
 
 class DroidDataset:
     """
@@ -694,10 +830,13 @@ if __name__ == "__main__":
     parser.add_argument("--dataset-type", type=str, default=None, choices=list(DatasetTypes.keys()), help=f"type of the dataset to load")
     parser.add_argument("--max-episodes", type=int, default=None, help="the maximum number of episodes from the dataset to process")
     parser.add_argument("--max-steps", type=int, default=None, help="the maximum number of frames to process across all episodes")
-
+    parser.add_argument("--rescan", action='store_true', help="rescan the dataset files for changes or rebuild the index")
+    
     args = parser.parse_args()
 
     dataset = load_dataset(**vars(args))
     
-    dataset.dump()
+    dataset.dump(max_steps=args.max_steps)
      
+    logging.debug(f"{dataset.__class__.__name__} | done inspecting {dataset.config.name}")
+    

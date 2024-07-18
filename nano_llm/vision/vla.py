@@ -207,13 +207,8 @@ if __name__ == "__main__":
     if args.dump:
         dataset.dump(args.dump)
         sys.exit(0)
-      
-    if args.normalized:
-        actions_key = 'normalized'
-    else:
-        actions_key = 'bridge_orig' if 'bridge' in dataset.name else dataset.name
-        
-    np.set_printoptions(precision=4, linewidth=1000, edgeitems=30) 
+   
+    np.set_printoptions(floatmode='fixed', precision=5, linewidth=1000, edgeitems=30) 
       
     # load vision-language-action model
     model = NanoLLM.from_pretrained(**vars(args))
@@ -225,9 +220,18 @@ if __name__ == "__main__":
     stats = AttributeDict(
         latency = [],
         eval_latency = [],
+        eval_error = [],
+        quant_error = [],
         error = [],
     )
        
+    if args.normalized:
+        action_key = 'normalized'
+        action_range = 2.0 
+    else:
+        action_key = 'bridge_orig' if 'bridge' in dataset.config.name else dataset.config.name
+        action_range = model.vla.action_configs[action_key].q99 - model.vla.action_configs[action_key].q01
+
     def rmspe(y_true, y_pred):
         # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
         return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))
@@ -272,34 +276,35 @@ if __name__ == "__main__":
         logging.debug(f"action bin centers diff: {np.sum(np.abs(model.vla.bin_centers - eval_model.bin_centers))}")
         assert(model.vla.vocab_size == eval_model.vocab_size)
         
-    def eval(step, i, actions):
+    def eval(step, i, actions, gt):
         if not args.eval_model:
             return
         prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
         time_begin = time.perf_counter()
         inputs = eval_processor(prompt, PIL.Image.fromarray(step.images[0])).to("cuda:0", dtype=eval_dtype)
-        eval_actions = eval_model.predict_action(**inputs, unnorm_key=actions_key, do_sample=False)
+        eval_actions = eval_model.predict_action(**inputs, unnorm_key=action_key, do_sample=False)
         time_elapsed = time.perf_counter() - time_begin
-        action_config = model.vla.action_configs[actions_key]
-        stats.error.append(nrmse(eval_actions[:len(actions)], actions, y_range=2.0 if args.normalized else (action_config.q99 - action_config.q01)))
+        stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
+        stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
         stats.eval_latency.append(time_elapsed)
-        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.error[-1]:.4f} ~error={np.mean(stats.error):.4f}")
+        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~error={np.mean(stats.eval_error):.4f}")  # q_err={stats.quant_error[-1]:.4f} ~q_err={np.mean(stats.quant_error):.4f}
         
     # process the dataset
     for i, step in enumerate(dataset):
         time_begin = time.perf_counter()
-        actions = model.vla.predict_actions(step.images[0], actions=actions_key, instruction=step.instruction)
+        actions = model.vla.predict_actions(step.images[0], actions=action_key, instruction=step.instruction)
         time_elapsed = time.perf_counter() - time_begin
         print_table(model.stats)
         stats.latency.append(time_elapsed)
-        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}")
-        eval(step, i, actions)
-        print(f"gt   {i}/{len(dataset)}                               {step.action}")  
+        stats.error.append(nrmse(step.action, actions, y_range=action_range))
+        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~error={np.mean(stats.error):.4f}")
+        eval(step, i, actions, step.action)
+        print(f"gt   {i}/{len(dataset)}                                 {step.action}")  
         stats.mean = mean_stats(stats)
         if args.save_stats:
             with open(args.save_stats, 'w') as file:
                 json.dump(stats, file, indent=2)
                 
-    logging.success(f"Done processing {dataset.name} with {model.config.name}\n")
+    logging.success(f"Done processing {dataset.config.name} with {model.config.name}\n")
     print_table(stats.mean)
      
