@@ -32,9 +32,9 @@ class StreamingResponse():
         
         #: detokenized output text generated so far (for the whole reply)
         self.text = ''    
-        
-        #: the new text or tokens added since the iterator was last read
-        self.delta = '' if self.detokenize else []
+
+        #: how many tokens or characters have been read by the iterator so far
+        self.read = 0
         
         #: the original input query from the user
         self.input = input
@@ -50,8 +50,11 @@ class StreamingResponse():
         
         #: set when generation has actually stopped
         self.stopped = False   
-        
+
+        #: event that triggers when new tokens are added
         self.event = threading.Event()
+        
+        #: the original arguments the generation request was created with
         self.kwargs = kwargs
         
     def __iter__(self):
@@ -59,27 +62,24 @@ class StreamingResponse():
 
     def __next__(self):
         """
-        Wait until the model generates more output, and return the new text (only the delta)
+        Wait until the model generates more output, and return the new text (only the delta message)
+        If :attr:``StreamingResponse.detokenize`` is False, then the list of tokens is returned.
         """
-        if self.stopped:
-            '''
-            # early-stop EOS token is now added inside LLM APIs
-            stop_tokens = self.kwargs.get('stop_tokens', [self.model.tokenizer.eos_token_id])
-            if not ends_with_token(self.tokens, stop_tokens, self.model.tokenizer):
-                self.add_tokens(self.model.tokenizer.eos_token_id) # add EOS if necessary
-                return self._pop_delta()
-            '''
-            delta = self._pop_delta()
+        def decode():
+            delta = self.decode()
             
-            if delta:
+            if delta is not None:
                 return delta
             else:
                 raise StopIteration
+                
+        if self.stopped:
+            return decode()
             
         self.event.wait()
         self.event.clear()
 
-        return self._pop_delta()
+        return decode()
      
     @property
     def eos(self):
@@ -100,11 +100,11 @@ class StreamingResponse():
         """
         while True:
             if self.stopped:
-                return self
+                return self.decode()
             self.event.wait()
             self.event.clear()
             
-    def add_tokens(self, tokens, detokenize=True, event=False):
+    def add_tokens(self, tokens, event=False):
         """
         Add an output token, detokenize the reply, and accumulate the delta message.
         This function is only used by the model APIs when they generate a new token.
@@ -117,28 +117,35 @@ class StreamingResponse():
             
         self.tokens.extend(tokens)    
 
-        if not detokenize:
-            return
-            
-        if self.detokenize:
-            # detokenize the entire reply on each new output token, because multiple tokens can
-            # combine with each other, changing the previous text (like with long words and unicode)
-            message = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False, clean_up_tokenization_spaces=False)
-            self.delta = self.delta + message[len(self.text):]
-            self.text = message
-        else:
-            self.delta.extend(tokens)
-            
         if event:
             self.event.set()
 
-    def _pop_delta(self, reset=True):
+    def decode(self):
         """
-        Get the tokens that have accumulated since the iterator was last read, and reset it.
-        """
-        delta = self.delta
+        Retrieve the message text or tokens that have accumulated since the iterator was last read, 
+        and detokenize them. The entire reply is detokenized on each new output token, because 
+        multiple tokens can combine, changing the previous text (like with long words and unicode)
+        If :attr:``StreamingResponse.detokenize`` is False, then that's skipped and tokens are returned.
+        If this stream originates from a :class:`VLAModel`, then the actions are decoded and returned.
+        """  
+        read = self.read
+        self.read = len(self.tokens)
         
-        if reset:
-            self.delta = '' if self.detokenize else []
-            
-        return delta
+        if self.read == read:
+            return None
+
+        action_space = self.kwargs.get('action_space')
+        
+        if self.model.vla and action_space:
+            delta = self.actions = self.model.vla.decode_action(self.tokens, action_space=action_space)
+        elif self.detokenize:
+            read = len(self.text)
+            delta = self.text = self.model.tokenizer.decode(self.tokens, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+        else:
+            delta = self.tokens
+        
+        if len(delta) == 0 or read == 0:
+            return delta
+
+        return delta[read:]
+        

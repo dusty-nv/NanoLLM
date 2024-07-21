@@ -10,9 +10,8 @@
 #    python3 -m nano_llm.vision.vla \
 #      --model openvla/openvla-7b \
 #      --eval-model /data/models/openvla-7b \
-#      --dataset jaco_play \
-#      --max-episodes 1 \
-#      --max-steps 100
+#      --dataset bridge_orig \
+#      --max-episodes 1
 #
 import os
 import sys
@@ -34,7 +33,17 @@ from nano_llm.vision.datasets import DatasetTypes, load_dataset
 
 
 class VLAModel:
-    def __init__(self, model="openvla/openvla-7b", actions={}, max_images=1, **kwargs):
+    """
+    Extension to NanoLLM for Vision/Language Action models.
+    
+    To get the :class:`NanoLLM`, use the ``vla.model`` property.
+    To get the :class:`VLAModel`, use the ``model.vla`` property.
+    """
+    def __init__(self, model="openvla/openvla-7b", action_space={}, max_images=1, **kwargs):
+        """
+        VLAModel can either be instantiated directly, or through :func:`NanoLLM.from_pretrained()` -
+        in which case it can be accessed through the returned ``model.vla`` property.
+        """  
         if isinstance(model, str):
             self.model = NanoLLM.from_pretrained(model, **kwargs)
         elif isinstance(model, NanoLLM):
@@ -43,8 +52,8 @@ class VLAModel:
             raise TypeError(f"expected model as str or NanoLLM (was {type(model)})")
             
         self.chat = ChatHistory(model, **kwargs)
-        self.prompt = "In: What action should the robot take to ${INSTRUCTION}?\nOut:▁" 
         self.instruction = kwargs.get('instruction', 'stop')
+        self.prompt_template = "In: What action should the robot take to ${INSTRUCTION}?\nOut:▁" 
         
         self.num_images = 0
         self.max_images = max_images
@@ -52,23 +61,37 @@ class VLAModel:
         assert(model.has_vision)
         
         # setup action configs
-        actions['normalized'] = dict(action=dict(
+        if action_space is None:
+            action_space = {}
+            
+        if not isinstance(action_space, dict):
+            raise TypeError(f"expected action_space to be dict (was {type(action_space)})")
+          
+        action_spaces = {}
+        
+        if len(action_space) > 0:
+            action = action_space[list(action_space.keys())[0]]
+            if isinstance(action, dict) and 'action' in action:
+                action_spaces = action_space
+                action_space = 'normalized'
+             
+        action_spaces['normalized'] = dict(action=dict(
             normalized=True,
             mask=[False] * 7,
             q01=[-1.0] * 7,
             q99=[1.0] * 7,
         ))
         
-        for key, scene in actions.items():
-            action = AttributeDict(scene['action'])
+        for key, space in action_spaces.items():
+            action = AttributeDict(space['action'])
             action.name = key
-            actions[key] = action
+            action_spaces[key] = action
             for stat_key, stat in action.items():
                 if isinstance(stat, list):
                     action[stat_key] = np.array(stat)
 
-        self.action_configs = actions
-        self.actions = 'normalized'
+        self.action_spaces = action_spaces
+        self.action_space = action_space
         
         # map the tokenizer vocab range to discrete action bins
         self.bins = np.linspace(-1, 1, self.model.config.n_action_bins)
@@ -77,34 +100,132 @@ class VLAModel:
         
         # LLM warmup
         self.chat.append(role='user', text='What is 2+2?')
-        logging.info(f"Warmup response:  '{self.model.generate(self.chat.embed_chat()[0], streaming=False)}'".replace('\n','\\n'))
+        logging.info(f"Warmup response:  '{self.model.generate(self.chat.embed_chat()[0], streaming=False, max_new_tokens=8)}'".replace('\n','\\n'))
         self.chat.reset()
 
     @property
     def config(self):
+        """
+        Return the base model's config dict from :attr:`NanoLLM.config`
+        """
         return self.model.config
         
     @property
-    def actions(self):
-        return self._actions
+    def action_space(self):
+        """
+        Returns a dict defining the action space and normalization coefficients.
+        """
+        return self._action_space
         
-    @actions.setter
-    def actions(self, key):
+    @action_space.setter
+    def action_space(self, key):
+        """
+        Set the default action space to a dict or name defined by the model.
+        """
         if isinstance(key, str):
-            self._actions = self.action_configs[key]
+            self._action_space = self.action_spaces[key]
         elif isinstance(key, dict):
-            self._actions = key
+            self._actions_space = key
         else:
             raise TypeError(f"actions can be set to str or dict (was {type(key)})")
+     
+    @property
+    def dof(self):
+        """
+        Degrees of freedom, or the number of action dimensions.
+        """
+        return len(self.action_space['q01'])
+      
+    def __call__(self, image, **kwargs):
+        """
+        Function-calling overload for predict_action()
+        """
+        return self.predict_action(image, **kwargs)
             
-    def embed(self, image, instruction='', prompt=None, **kwargs):
+    def predict_action(self, image, instruction='', action_space={}, streaming=False, **kwargs):
+        """
+        Predict the actions for a given image using the latest prompt.
+        
+        If streaming=True, then a :class:`StreamingResponse` iterator
+        will be returned, and the tokens need decoded into actions::
+        
+            stream = vla.predict_action(image, instruction)
+            
+            for token in stream:
+                actions = vla.decode_actions(stream.tokens, action_space)
+        """
+        if not action_space:
+            action_space = self.action_space
+        elif isinstance(action_space, str):
+            action_space = self.action_spaces[action_space]
+
+        '''
+        for i in range(self.dof-1, 0, -1):
+            if actions.mask[i]:
+                break
+            else:
+                num_actions -= 1
+        '''
+        
+        stream = self.model.generate(
+            self.embed(image, instruction=instruction, **kwargs),
+            kv_cache=self.chat.kv_cache,
+            detokenize=False,
+            min_new_tokens=self.dof,
+            max_new_tokens=self.dof,
+            action_space=action_space,
+            **kwargs,
+        )
+
+        if streaming:
+            return stream
+        else:
+            return stream.wait()    
+
+    def decode_action(self, tokens, action_space={}, return_tensors='np', **kwargs):
+        """
+        Map tokens into action space, denormalizing them if needed.
+        """
+        if not action_space:
+            action_space = self.action_space
+        elif isinstance(action_space, str):
+            action_space = self.action_spaces[actions]
+          
+        if not tokens:
+            return None
+        
+        num_tokens = min(len(tokens), self.dof) 
+        tokens = tokens[:num_tokens]
+ 
+        # map from vocab bins back into action space (-1,1)
+        pred_actions = self.vocab_size - convert_tensor(tokens, return_tensors='np')
+        pred_actions = np.clip(pred_actions - 1, a_min=0, a_max=self.bin_centers.shape[0] - 1)
+        pred_actions = self.bin_centers[pred_actions]
+        
+        # denormalize the actions using robot coefficients
+        if not action_space.get('normalized', False):
+            action_high, action_low = action_space['q99'][:num_tokens], action_space['q01'][:num_tokens]
+            pred_actions = np.where(
+                action_space['mask'][:num_tokens],
+                0.5 * (pred_actions + 1) * (action_high - action_low) + action_low,
+                pred_actions,
+            )
+        #else:
+        #    logging.warning('NanoLLM skipping denormalization')
+            
+        return convert_tensor(pred_actions, return_tensors=return_tensors, **kwargs)
+           
+    def embed(self, image, instruction='', prompt_template=None, **kwargs):
+        """
+        Embed the image and instruction into a chat generation using the prompt template.
+        """
         if not instruction:
             instruction = self.instruction
          
-        if not prompt:
-            prompt = self.prompt
+        if not prompt_template:
+            prompt_template = self.prompt_template
         
-        prompt = prompt.replace('${INSTRUCTION}', instruction)
+        prompt = prompt_template.replace('${INSTRUCTION}', instruction)
         
         logging.debug(f"{self.model.config.name} prompt:  `{prompt}`".replace('\n', '\\n'))
 
@@ -114,64 +235,8 @@ class VLAModel:
         self.chat.append('user', text=prompt)
         
         return self.chat.embed_chat()[0]
-        
-    def predict_actions(self, image, actions={}, **kwargs):
-        if not actions:
-            actions = self.actions
-        elif isinstance(actions, str):
-            actions = self.action_configs[actions]
-            
-        num_actions = len(actions.mask)
-        
-        '''
-        for i in range(num_actions-1, 0, -1):
-            if actions.mask[i]:
-                break
-            else:
-                num_actions -= 1
-        '''
-        
-        reply = self.model.generate(
-            self.embed(image, **kwargs),
-            kv_cache=self.chat.kv_cache,
-            detokenize=False,
-            min_new_tokens=num_actions,
-            max_new_tokens=num_actions,
-            **kwargs,
-        ).wait()
-        
-        return self.decode_actions(reply.tokens[:num_actions], actions, **kwargs)
-        
-    def decode_actions(self, tokens, actions={}, return_tensors='np', **kwargs):
-        if not actions:
-            actions = self.actions
-        elif isinstance(actions, str):
-            actions = self.action_configs[actions]
-            
-        #print(f'NanoLLM tokens ({len(tokens)}) ', tokens)
-        
-        # map from vocab bins back into action space (-1,1)
-        pred_actions = self.vocab_size - convert_tensor(tokens, return_tensors='np')
-        pred_actions = np.clip(pred_actions - 1, a_min=0, a_max=self.bin_centers.shape[0] - 1)
-        pred_actions = self.bin_centers[pred_actions]
-        
-        # denormalize the actions using robot coefficients
-        if not actions.get('normalized', False):
-            action_high, action_low = actions['q99'], actions['q01']
-            pred_actions = np.where(
-                actions.mask,
-                0.5 * (pred_actions + 1) * (action_high - action_low) + action_low,
-                pred_actions,
-            )
-        #else:
-        #    logging.warning('NanoLLM skipping denormalization')
-            
-        return convert_tensor(pred_actions, return_tensors=return_tensors, **kwargs)
-     
-    def __call__(self, image, **kwargs):
-        return self.predict_actions(image, **kwargs)
-           
 
+           
                 
 if __name__ == "__main__":
 
@@ -230,7 +295,7 @@ if __name__ == "__main__":
         action_range = 2.0 
     else:
         action_key = 'bridge_orig' if 'bridge' in dataset.config.name else dataset.config.name
-        action_range = model.vla.action_configs[action_key].q99 - model.vla.action_configs[action_key].q01
+        action_range = model.vla.action_spaces[action_key].q99 - model.vla.action_spaces[action_key].q01
 
     def rmspe(y_true, y_pred):
         # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
@@ -287,17 +352,17 @@ if __name__ == "__main__":
         stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
         stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
         stats.eval_latency.append(time_elapsed)
-        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~error={np.mean(stats.eval_error):.4f}")  # q_err={stats.quant_error[-1]:.4f} ~q_err={np.mean(stats.quant_error):.4f}
+        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~{np.mean(stats.eval_error):.4f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
         
     # process the dataset
     for i, step in enumerate(dataset):
         time_begin = time.perf_counter()
-        actions = model.vla.predict_actions(step.images[0], actions=action_key, instruction=step.instruction)
+        actions = model.vla.predict_action(step.images[0], action_space=action_key, instruction=step.instruction, streaming=False)
         time_elapsed = time.perf_counter() - time_begin
         print_table(model.stats)
         stats.latency.append(time_elapsed)
         stats.error.append(nrmse(step.action, actions, y_range=action_range))
-        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~error={np.mean(stats.error):.4f}")
+        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~{np.mean(stats.error):.4f}")
         eval(step, i, actions, step.action)
         print(f"gt   {i}/{len(dataset)}                                 {step.action}")  
         stats.mean = mean_stats(stats)

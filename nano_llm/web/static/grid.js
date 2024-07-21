@@ -1083,6 +1083,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     
     if( has_options || has_suggestions ) {
       var input_html = '';
+      var multiple_html = param.multiple ? 'multiple="multiple"' : '';
       
       if( has_options ) {
         var options = param['options'];
@@ -1096,7 +1097,7 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
         select2_args[id] = {tags: true, placeholder: 'enter'}; //tags: true, placeholder: 'enter'};
       }
       
-      input_html += `<br/><select id="${id}" class="form-control select2" style="width: 100%;">\n`
+      input_html += `<br/><select id="${id}" class="form-control select2" style="width: 100%;" ${multiple_html}>\n`
       
       for( i in options ) {
         if( options[i] == value )

@@ -97,6 +97,7 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins.speech.whisper_asr import WhisperASR
 
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
+        from nano_llm.plugins.video.robo_suite import RoboSuite
         
         from nano_llm.plugins.tools.clock import Clock
         from nano_llm.plugins.tools.location import Location
@@ -129,6 +130,7 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(VideoOutput)
         DynamicPlugin.register(VideoOverlay)
         DynamicPlugin.register(RateLimit)
+        DynamicPlugin.register(RoboSuite)
         
         # database
         DynamicPlugin.register(NanoDB)

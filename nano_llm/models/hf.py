@@ -121,14 +121,11 @@ class HFModel(NanoLLM):
         stream = StreamingResponseHF(self, inputs, functions=functions, **kwargs)
         self.queue.put(stream)
         
-        if not streaming:
-            text = ''
-            for token in stream:
-                text += token
-            return stream.text  # return the fully-detokenized copy
-        
-        return stream
-           
+        if streaming:
+            return stream
+        else:
+            return stream.wait()
+     
     def _generate(self, stream):
         """
         Process a generation request in model's inference thread.

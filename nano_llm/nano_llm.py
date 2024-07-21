@@ -499,7 +499,7 @@ class NanoLLM():
                 output_dim=llm_hidden_size
             )
             
-            self.vla = VLAModel(self, actions=self.config.pop('norm_stats', {}))
+            self.vla = VLAModel(self, action_space=self.config.pop('norm_stats', {}))
         else:
             # load the image embedding model
             self.vision = [

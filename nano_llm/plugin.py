@@ -269,22 +269,30 @@ class Plugin(threading.Thread):
         """
         while not self.stop_flag:
             try:
-                if not self.input_event.wait(timeout=0.25):
-                    continue
-                    
-                self.input_event.clear()
-                
-                while not self.stop_flag:
-                    try:
-                        input, kwargs = self.input_queue.get(block=False)
-                        self.dispatch(input, **kwargs)
-                    except queue.Empty:
-                        break
+                self.process_inputs(timeout=0.25)
             except Exception as error:
                 logging.error(f"Exception occurred during processing of {self.name}\n\n{traceback.format_exc()}")
 
         logging.debug(f"{self.name} plugin stopped (thread {self.native_id})")
 
+    def process_inputs(self, timeout=0):
+        """
+        Waits for inputs up to the timeout in seconds (or ``None`` to wait forever)
+        """
+        if self.input_queue.empty():
+            if timeout is not None and timeout <= 0:
+                return
+                
+            self.input_event.wait(timeout=timeout)
+            self.input_event.clear()
+            
+        while not self.stop_flag:
+            try:
+                input, kwargs = self.input_queue.get(block=False)
+                self.dispatch(input, **kwargs)
+            except queue.Empty:
+                break
+                            
     def dispatch(self, input, **kwargs):
         """
         Invoke the process() function on incoming data

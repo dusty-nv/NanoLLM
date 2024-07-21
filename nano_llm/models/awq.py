@@ -169,11 +169,8 @@ class AWQModel(NanoLLM):
         self.queue.put(stream)
         
         if not streaming:
-            text = ''
-            for token in stream:
-                text += token
-            return stream.text  # return the fully-detokenized copy
-        
+            return stream.wait()
+
         return stream
     
     def _generate(self, stream):
@@ -263,10 +260,8 @@ class AWQModel(NanoLLM):
 
                 cache_position += logits.shape[1]
                 self.stats.output_tokens += 1
-
-                stream.add_tokens(token)
-                stream.event.set()
-                
+                stream.add_tokens(token, event=True)
+ 
                 # stop generation on EOS tokens
                 if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
                     break

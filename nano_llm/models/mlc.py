@@ -304,7 +304,7 @@ class MLCModel(NanoLLM):
             
         return embedding
         
-    def generate(self, inputs, streaming=True, detokenize=True, **kwargs):
+    def generate(self, inputs, streaming=True, **kwargs):
         """
         Generate output from input text, tokens, or an embedding.
         For detailed kwarg descriptions, see `transformers.GenerationConfig <https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.GenerationConfig>`_.
@@ -347,18 +347,15 @@ class MLCModel(NanoLLM):
             functions[idx] = Callback(function)
         '''
 
-        stream = StreamingResponse(self, inputs, detokenize=detokenize, **kwargs)
+        stream = StreamingResponse(self, inputs, **kwargs)
         
         self.queue.put(stream)
         
-        if not streaming:
-            stream.wait()
-            if detokenize:
-                return stream.text
-            else:
-                return stream.tokens
+        if streaming:
+            return stream
+        else:    
+            return stream.wait()
 
-        return stream
 
     def _generate(self, stream):
         """
@@ -471,12 +468,27 @@ class MLCModel(NanoLLM):
                 #self.stats.output_tokens += len(tokens)
                 output = prefill(self.embed_tokens(tokens, return_tensors='tvm'), stream.kv_cache)
                 continue
-                
-            stream.kv_cache.num_tokens += 1
-            self.stats.output_tokens += 1
 
+            self.stats.output_tokens += 1
+            stream.kv_cache.num_tokens += 1
             stream.event.set()
 
+            # stop generation on EOS tokens
+            if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
+                prefill(self.embed_tokens(tokens, return_tensors='tvm'), stream.kv_cache)
+                break
+
+            # don't require EOS for fixed generations
+            if min_new_tokens == max_new_tokens:
+                if len(stream.tokens) == min_new_tokens:
+                    break
+            elif len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
+                stream.add_tokens(self.tokenizer.eos_token_id) # add EOS token on early stop
+                stream.kv_cache.num_tokens += 1
+                self.stats.output_tokens += 1
+                prefill(self.embed_tokens(tokens + [self.tokenizer.eos_token_id], return_tensors='tvm'), stream.kv_cache)
+                break
+                
             # decode the next token
             if self.kv_cache_paged:
                 self._kv_cache_begin_forward(
@@ -499,21 +511,6 @@ class MLCModel(NanoLLM):
 
             self.stats.decode_time = time.perf_counter() - time_begin_decode
             self.stats.decode_rate = self.stats.output_tokens / self.stats.decode_time
-        
-            # stop generation on EOS tokens
-            if len(stream.tokens) >= min_new_tokens and ends_with_token(stream.tokens, stop_tokens, self.tokenizer):
-                break
-
-            # add EOS token on early stop
-            if min_new_tokens == max_new_tokens:
-                if len(stream.tokens) == min_new_tokens:
-                    break
-            elif len(stream.tokens) >= max_new_tokens - 1 or stream.stopping or stream.stopped:
-                stream.add_tokens(self.tokenizer.eos_token_id)
-                stream.kv_cache.num_tokens += 1
-                self.stats.output_tokens += 1
-                prefill(self.embed_tokens([self.tokenizer.eos_token_id], return_tensors='tvm'), stream.kv_cache)
-                break
 
         stream.stopped = True
         stream.event.set()
@@ -526,7 +523,9 @@ class MLCModel(NanoLLM):
         if do_sample:
             return self._sample_top_p_from_logits(logits, top_p, temperature, random.random())
         else:
-            return np.argmax(logits.numpy()) #, axis=-1)
+            logits = torch.utils.dlpack.from_dlpack(logits.to_dlpack())
+            return torch.argmax(logits).item()
+            #return np.argmax(logits.numpy()) #, axis=-1)
 
     def _run(self):
         """
