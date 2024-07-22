@@ -10,7 +10,7 @@ class WebClient(Plugin):
     def __init__(self, **kwargs):
         super().__init__(outputs=0, **kwargs)
 
-    def process(self, data, sender=None, channel=0, **kwargs): 
+    def process(self, data, sender=None, input_channel=0, **kwargs): 
         if not WebServer.Instance or not WebServer.Instance.connected:
             return
 

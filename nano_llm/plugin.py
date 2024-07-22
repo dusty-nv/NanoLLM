@@ -191,6 +191,8 @@ class Plugin(threading.Thread):
                         config_input, config_kwargs = self.input_queue.get(block=False)
                         if config_input is None and len(config_kwargs) > 0:  # still apply config
                             configs.append((config_input, config_kwargs))
+                        #else:
+                        #    logging.debug(f"{self.name} dropping inputs")
                     except queue.Empty:
                         break
                 for config in configs:
@@ -210,12 +212,12 @@ class Plugin(threading.Thread):
         #    return
 
         if channel >= 0:
-            kwargs.update(dict(sender=self, channel=channel))
+            kwargs.update(dict(sender=self, input_channel=channel))
             for output_plugin in self.outputs[channel]:
                 output_plugin.input(output, **kwargs)
         else:
             for output_channel in self.outputs:
-                kwargs.update(dict(sender=self, channel=output_channel))
+                kwargs.update(dict(sender=self, input_channel=output_channel))
                 for output_plugin in output_channel:
                     output_plugin.input(output, **kwargs)
                     

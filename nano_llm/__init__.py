@@ -12,4 +12,6 @@ from .agent import Agent, Pipeline
 from .plugin import Plugin
 from .plugins.bot_functions import bot_function, BotFunctions
 
+from .datasets import load_dataset, DatasetTypes
+
 from .version import __version__

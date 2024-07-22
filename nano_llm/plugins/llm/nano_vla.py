@@ -3,7 +3,7 @@ import os
 import time
 import logging
 
-from nano_llm.plugins import NanoLLM
+from .nano_llm import NanoLLM
 from nano_llm.utils import ImageExtensions, is_image, load_image
 
 
@@ -15,7 +15,7 @@ class NanoVLA(NanoLLM):
     """
     def __init__(self, model: str="openvla/openvla-7b", 
                  api: str="mlc", quantization: str="q4f16_ft", 
-                 max_context_len: int=None, drop_inputs: bool=True,
+                 max_context_len: int=384, drop_inputs: bool=True,
                  chat_template: str=None, system_prompt: str=None, **kwargs):
         """
         Load a Vision/Language Action model.
@@ -27,7 +27,7 @@ class NanoVLA(NanoLLM):
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
           drop_inputs (bool): If true, only the latest frame will be processed (older frames dropped)
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
-          system_prompt (str):  Set the system prompt (note: OpenVLA does not use this)          
+          system_prompt (str):  Set the system prompt (OpenVLA does not use this)          
         """
         super().__init__(model=model, api=api, quantization=quantization, 
                          max_context_len=max_context_len, drop_inputs=drop_inputs,
@@ -39,11 +39,11 @@ class NanoVLA(NanoLLM):
  
         self.vla = self.model.vla
         
-        self.add_parameter('action_space', type=str, default='normalized', help="Degrees of freedom (xyz, roll/pitch/yaw, gripper) and denormalization coefficients", suggestions=list(self.vla.action_spaces.keys())})
+        self.add_parameter('action_space', type=str, default='normalized', help="Degrees of freedom (xyz, roll/pitch/yaw, gripper) and normalization coefficients", suggestions=list(self.vla.action_spaces.keys()))
 
     @property
     def action_space(self):
-        return self.vla.action_space
+        return self.vla.action_space.name
         
     @action_space.setter
     def action_space(self, key):

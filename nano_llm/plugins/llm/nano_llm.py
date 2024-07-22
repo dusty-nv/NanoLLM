@@ -46,7 +46,11 @@ class NanoLLM(Plugin):
           chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
           system_prompt (str):  Set the system prompt (changing this will reset the chat)          
         """
-        super().__init__(outputs=['delta', 'partial', 'final', 'words', 'history', 'tools'], drop_inputs=drop_inputs, **kwargs)
+        super().__init__(
+            outputs=kwargs.pop('outputs', ['delta', 'partial', 'final', 'words', 'history', 'tools']), 
+            drop_inputs=drop_inputs, 
+            **kwargs
+        )
 
         load_time = time.perf_counter()
         
@@ -365,12 +369,19 @@ class NanoLLM(Plugin):
         """
         Output the chat history (typically with HTML formatting applied for web clients)
         """
-        if self.outputs[NanoLLM.OutputHistory]:
-            history = self.history.to_list(html=html)
-            if append:
-                if not isinstance(append, list):
-                    append = [append]
-                history.extend(append)
-            self.output(history, NanoLLM.OutputHistory, **kwargs)
+        if len(self.outputs) <= NanoLLM.OutputHistory:
+             return
+             
+        if len(self.outputs[NanoLLM.OutputHistory]) == 0:
+            return
+            
+        history = self.history.to_list(html=html)
+        
+        if append:
+            if not isinstance(append, list):
+                append = [append]
+            history.extend(append)
+            
+        self.output(history, NanoLLM.OutputHistory, **kwargs)
                        
             

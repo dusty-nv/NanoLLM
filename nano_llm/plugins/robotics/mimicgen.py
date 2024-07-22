@@ -6,35 +6,61 @@ import traceback
 
 import numpy as np
 import robosuite as rs
+import mimicgen
 
-from robosuite.devices import Keyboard
+from robosuite.devices import Keyboard, SpaceMouse
 from robosuite.utils.input_utils import input2action
 
 from nano_llm import Plugin
 from nano_llm.utils import filter_keys
 
 
-class RoboSuite(Plugin):
+class MimicGen(Plugin):
     """
-    Robot simulator and image generator using robosuite:
+    Robot simulator and image generator using mimicgen and robosuite:
+    
+      https://github.com/NVlabs/mimicgen
       https://github.com/ARISE-Initiative/robosuite
     """
-    def __init__(self, environment: str="Lift", robot: str="UR5e", gripper: str="RethinkGripper",
-                       camera: str="frontview", camera_width: int=640, camera_height: int=480,
-                       framerate: int=10, motion_select: str='random', **kwargs):
+    def __init__(self, environment: str="Stack_D0", robot: str="Panda", gripper: str="PandaGripper",
+                       camera: str="frontview", camera_width: int=512, camera_height: int=512,
+                       framerate: int=10, **kwargs):
         """
         Robot simulator and image generator using robosuite from robosuite.ai
         """
         super().__init__(outputs='image', **kwargs)
-        
+ 
         self.sim = None
         self.sim_config = {}
-        self.keyboard = None
         
-        self.add_parameters(environment=environment, robot=robot, gripper=gripper, camera=camera, 
-                            camera_width=camera_width, camera_height=camera_height, framerate=framerate,
-                            motion_select=motion_select)
+        self.keyboard = None
+        self.spacenav = None
 
+        try:
+            self.keyboard = Keyboard(pos_sensitivity=1.0, rot_sensitivity=1.0)
+            self.keyboard.start_control()
+        except Exception as error:
+            logging.warning(f"{self.name} failed to open keyboard device:\n\n{traceback.format_exc()}")
+          
+        try:
+            self.spacenav = SpaceMouse(pos_sensitivity=1.0, rot_sensitivity=1.0)
+            self.spacenav.start_control()
+        except Exception as error:
+            logging.warning(f"{self.name} failed to open spacenav device:\n\n{traceback.format_exc()}")
+
+        input_options = ['disabled', 'random', 'agent']
+        
+        if self.keyboard:
+            input_options.append('keyboard')
+            
+        if self.spacenav:
+            input_options.append('spacenav')
+      
+        self.add_parameters(environment=environment, robot=robot, gripper=gripper, camera=camera, 
+                            camera_width=camera_width, camera_height=camera_height, framerate=framerate)          
+                           
+        self.add_parameter('motion_select', type=str, default='disabled', options=input_options)
+        
     @classmethod
     def type_hints(cls):
         """
@@ -45,7 +71,7 @@ class RoboSuite(Plugin):
             robot = dict(options=list(rs.ALL_ROBOTS)),
             gripper = dict(options=list(rs.ALL_GRIPPERS)),
             camera = dict(options=['frontview', 'birdview', 'agentview', 'sideview', 'robot0_robotview', 'robot0_eye_in_hand']),
-            motion_select = dict(options=['stop', 'random', 'agent', 'keyboard']),
+            #motion_select = dict(options=['disabled', 'random', 'agent', 'keyboard']),
        )
     
     def config_sim(self):
@@ -77,10 +103,6 @@ class RoboSuite(Plugin):
         self.sim.reset()
         robot = self.sim.robots[0]
         
-        if self.keyboard is None:
-            self.keyboard = Keyboard(pos_sensitivity=1.0, rot_sensitivity=1.0)
-            self.keyboard.start_control()
-        
         logging.info(f"{self.name} setup sim environment with configuration:\n\n{pprint.pformat(config, indent=2)}\n\nrobot_dof={robot.dof}\naction_dim={robot.action_dim}\naction_limits=\n{pprint.pformat(robot.action_limits)}\n")
         
     def render(self):
@@ -89,18 +111,34 @@ class RoboSuite(Plugin):
         """
         self.config_sim()
         
-        dof = self.sim.robots[0].dof
+        dof = self.sim.robots[0].action_dim #.dof
         
-        if self.motion_select == 'stop':
+        if self.motion_select == 'disabled':
             action = np.zeros(dof)
         elif self.motion_select == 'random':
             action = np.random.randn(dof)
         elif self.motion_select == 'keyboard':
             action, gripper = input2action(device=self.keyboard, robot=self.sim.robots[0])
             logging.debug(f"{self.name} keyboard actions {action}")
+        elif self.motion_select == 'spacenav':
+            action, gripper = input2action(device=self.spacenav, robot=self.sim.robots[0])
         else:
-            raise ValueError(f"{self.name}.motion_select had invalid value '{self.motion_select}'  (options: {self.type_hints()['motion_select']['options']})")
+            raise ValueError(f"{self.name}.motion_select had invalid value '{self.motion_select}'  (options: {self.parameters['motion_select']['options']})")
+         
+        if action is None:
+            logging.debug(f"{self.name} input triggered sim reset\n")
+            self.sim.reset()
             
+            if self.keyboard:
+                self.keyboard.start_control()
+                
+            if self.spacenav:
+                self.spacenav.start_control()
+                
+            return
+         
+        #logging.debug(f"{self.name} {self.motion_select} actions:  {action}")
+              
         obs, reward, done, info = self.sim.step(action)
   
         image = obs.get(f'{self.camera}_image')

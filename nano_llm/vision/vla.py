@@ -27,9 +27,8 @@ import numpy as np
 
 from transformers import AutoModelForVision2Seq, AutoProcessor
 
-from nano_llm import NanoLLM, ChatHistory, remove_special_tokens
+from nano_llm import NanoLLM, ChatHistory
 from nano_llm.utils import AttributeDict, convert_tensor, print_table
-from nano_llm.vision.datasets import DatasetTypes, load_dataset
 
 
 class VLAModel:
@@ -125,7 +124,18 @@ class VLAModel:
         if isinstance(key, str):
             self._action_space = self.action_spaces[key]
         elif isinstance(key, dict):
-            self._actions_space = key
+            if not isinstance(key, AttributeDict):
+                key = AttributeDict(key)
+                
+            key.setdefault('q01', key.min)
+            key.setdefault('q99', key.max)
+            key.setdefault('mask', [True] * (len(key.min)-1) + [False])
+
+            for stat_key, stat in key.items():
+                if isinstance(stat, list):
+                    key[stat_key] = np.array(stat)
+                    
+            self._action_space = key
         else:
             raise TypeError(f"actions can be set to str or dict (was {type(key)})")
      
@@ -240,13 +250,9 @@ class VLAModel:
                 
 if __name__ == "__main__":
 
-    from nano_llm.utils import ArgParser, load_prompts, wrap_text
-    from nano_llm.plugins import VideoSource, VideoOutput
+    from nano_llm.utils import ArgParser
+    from nano_llm.datasets import DatasetTypes, load_dataset
 
-    from termcolor import cprint
-    from jetson_utils import cudaMemcpy, cudaToNumpy, cudaFont
-
-    # parse args and set some defaults
     parser = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input', 'video_output'])
     
     parser.add_argument("--eval-model", type=str, default=None, help="path to the original HuggingFace model to enable error comparison")
@@ -277,8 +283,9 @@ if __name__ == "__main__":
       
     # load vision-language-action model
     model = NanoLLM.from_pretrained(**vars(args))
-
-    assert(model.vla)
+    vla = model.vla
+    
+    assert(vla)
     assert(args.dataset)
 
     # gather performance and accuracy measurements
@@ -291,11 +298,15 @@ if __name__ == "__main__":
     )
        
     if args.normalized:
-        action_key = 'normalized'
-        action_range = 2.0 
+        vla.action_space = 'normalized'
+    elif hasattr(dataset, 'action_space'):
+        vla.action_space = dataset.action_space
+    elif 'bridge' in dataset.config.name:
+        vla.action_space = 'bridge_orig'
     else:
-        action_key = 'bridge_orig' if 'bridge' in dataset.config.name else dataset.config.name
-        action_range = model.vla.action_spaces[action_key].q99 - model.vla.action_spaces[action_key].q01
+        vla.action_space = dataset.config.name
+
+    action_range = vla.action_space.q99 - vla.action_space.q01
 
     def rmspe(y_true, y_pred):
         # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
@@ -303,11 +314,10 @@ if __name__ == "__main__":
     
     def nrmse(y_true, y_pred, y_range=None):
         # https://en.wikipedia.org/wiki/Root_mean_square_deviation#Normalization
-        if y_range is None:
-            if args.normalized:
-                y_range = 2.0
-            else:
-                y_range = np.max(y_true) - np.min(y_true)
+        if args.normalized:
+            y_range = 2.0
+        elif y_range is None:
+            y_range = np.max(y_true) - np.min(y_true)
         
         if isinstance(y_range, (list, np.ndarray)):
             return np.sqrt(np.nanmean(np.square((y_true - y_pred) / y_range)))  # y_range[y_range == 0.0] = 1.0
@@ -347,24 +357,24 @@ if __name__ == "__main__":
         prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
         time_begin = time.perf_counter()
         inputs = eval_processor(prompt, PIL.Image.fromarray(step.images[0])).to("cuda:0", dtype=eval_dtype)
-        eval_actions = eval_model.predict_action(**inputs, unnorm_key=action_key, do_sample=False)
+        eval_actions = eval_model.predict_action(**inputs, unnorm_key=vla.action_space, do_sample=False)
         time_elapsed = time.perf_counter() - time_begin
         stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
         stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
         stats.eval_latency.append(time_elapsed)
-        print(f"eval {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~{np.mean(stats.eval_error):.4f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
+        print(f"eval {i}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~{np.mean(stats.eval_error):.4f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
         
     # process the dataset
     for i, step in enumerate(dataset):
         time_begin = time.perf_counter()
-        actions = model.vla.predict_action(step.images[0], action_space=action_key, instruction=step.instruction, streaming=False)
+        actions = vla.predict_action(step.images[0], instruction=step.instruction, streaming=False)
         time_elapsed = time.perf_counter() - time_begin
         print_table(model.stats)
         stats.latency.append(time_elapsed)
         stats.error.append(nrmse(step.action, actions, y_range=action_range))
-        print(f"step {i}/{len(dataset)}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~{np.mean(stats.error):.4f}")
+        print(f"step {i}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~{np.mean(stats.error):.4f}")
         eval(step, i, actions, step.action)
-        print(f"gt   {i}/{len(dataset)}                                 {step.action}")  
+        print(f"gt   {i}                                {step.action}")  
         stats.mean = mean_stats(stats)
         if args.save_stats:
             with open(args.save_stats, 'w') as file:

@@ -84,7 +84,7 @@ class DynamicPlugin(Plugin):
     @classmethod
     def register_all(cls):
         from nano_llm.plugins import (
-            NanoLLM, VideoSource, VideoOutput,
+            NanoLLM, NanoVLA, VideoSource, VideoOutput,
             UserPrompt, AutoPrompt, VADFilter,
             TextStream, VideoOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder, 
@@ -97,16 +97,18 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins.speech.whisper_asr import WhisperASR
 
         from nano_llm.plugins.audio.web_audio import WebAudioIn, WebAudioOut
-        from nano_llm.plugins.video.robo_suite import RoboSuite
-        
+
         from nano_llm.plugins.tools.clock import Clock
         from nano_llm.plugins.tools.location import Location
         from nano_llm.plugins.tools.notification import Notification
         from nano_llm.plugins.tools.accuweather import AccuWeather
         from nano_llm.plugins.tools.home_assistant import HomeAssistant
         
+        from nano_llm.plugins.robotics import MimicGen, RobotDataset, ROS2Connector
+        
         # LLM
-        DynamicPlugin.register(NanoLLM)   
+        DynamicPlugin.register(NanoLLM)  
+        DynamicPlugin.register(NanoVLA)  
         DynamicPlugin.register(UserPrompt)
         DynamicPlugin.register(AutoPrompt)   
         DynamicPlugin.register(TextStream)
@@ -130,7 +132,6 @@ class DynamicPlugin(Plugin):
         DynamicPlugin.register(VideoOutput)
         DynamicPlugin.register(VideoOverlay)
         DynamicPlugin.register(RateLimit)
-        DynamicPlugin.register(RoboSuite)
         
         # database
         DynamicPlugin.register(NanoDB)
@@ -138,6 +139,11 @@ class DynamicPlugin(Plugin):
         #DynamicPlugin.register(DataTable)
         #DynamicPlugin.register(DataLogger)
         DynamicPlugin.register(EventFilter)
+        
+        # robotics
+        DynamicPlugin.register(MimicGen)
+        DynamicPlugin.register(RobotDataset)
+        DynamicPlugin.register(ROS2Connector)
         
         # tools
         DynamicPlugin.register(Clock)

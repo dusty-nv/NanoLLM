@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import numpy as np
+
 from nano_llm import Plugin
 
 
@@ -13,7 +15,10 @@ class TextStream(Plugin):
         self.add_parameter('partial_color', type=str, default='dodgerblue', help="Color for partial text that is not yet finalized.")
         self.add_parameter('delta_color', type=str, default='limegreen', help="Color to show the latest chunks of text from the stream.")
         
+        np.set_printoptions(floatmode='fixed', precision=5, linewidth=1000, edgeitems=30) 
+
     def process(self, text, partial=False, delta=False, **kwargs): 
+        text = str(text)
         text = text.replace('&', '&amp;')
         text = text.replace('<', '&lt;')
         text = text.replace('>', '&gt;')
