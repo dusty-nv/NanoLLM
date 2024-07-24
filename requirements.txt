@@ -26,5 +26,7 @@ getch
 tfds-nightly
 gsutil
 gdown
+apache_beam
+mlcroissant
 --index-url https://pypi.org/simple
 tensorflow

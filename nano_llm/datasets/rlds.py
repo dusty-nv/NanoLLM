@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import array
 import logging
 import subprocess
@@ -187,4 +188,31 @@ class RLDSDataset(TFDSDataset):
             return None
             
         return value   
+
+    @staticmethod
+    def export(dataset=None, dataset_type=None, output=None, width=None, height=None, 
+               max_episodes=None, max_steps=None, sample_steps=None, sample_actions=None, **kwargs):
+        """
+        Convert the episodes from the dataset into TFDS/RLDS format and save it to the output.
+        """
+        env={
+            '_DATASET': dataset,
+            '_DATASET_TYPE': dataset_type,
+            '_OUTPUT': output,
+            '_WIDTH': width,
+            '_HEIGHT': height,
+            '_MAX_EPISODES': max_episodes,
+            '_MAX_STEPS': max_steps,
+            '_SAMPLE_STEPS': sample_steps,
+            '_SAMPLE_ACTIONS': sample_actions,
+        }
+        
+        exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py')
+        
+        script = ''.join([f"export {key}={value} ; " for key, value in env.items() if value is not None])
+        script += f"mkdir -p {output} ; cd {output} ; cp {exporter} {os.path.basename(output)}.py ; "
+        script += f"tfds build ; "
+        
+        logging.info(f"RLDSDataset | converting {dataset} from {dataset_type} to RLDS/TFDS\n\n{script}")
+        subprocess.run(script, executable='/bin/bash', shell=True, check=True)
 
