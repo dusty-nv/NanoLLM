@@ -5,7 +5,7 @@ from .llm import *
 from .speech import *
 from .audio import *
 from .video import *
-from .database import *
+from .data import *
 
 from .callback import Callback
 from .chat_query import ChatQuery
