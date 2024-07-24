@@ -20,7 +20,7 @@ flask
 termcolor
 tabulate
 tqdm
-getch
+#getch
 
 # tensorflow_datasets (don't need tensorflow-gpu)
 tfds-nightly
