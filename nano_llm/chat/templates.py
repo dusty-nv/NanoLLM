@@ -21,6 +21,17 @@ ChatTemplates = {
         'bot': '${MESSAGE}<|eot_id|>',
         'stop': ['<|end_of_text|>', '<|eot_id|>'],
     },
+
+    # https://llama.meta.com/docs/model-cards-and-prompt-formats/llama3_1
+    'llama-3.1': {
+        'system_prompt': "You are a helpful and friendly AI assistant.",
+        'system': '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${MESSAGE}<|eot_id|>',
+        'user': '<|start_header_id|>user<|end_header_id|>\n\n${MESSAGE}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
+        'bot': '${MESSAGE}<|eot_id|>',
+        'stop': ['<|end_of_text|>', '<|eot_id|>', '<|eom_id|>'],
+        'tool_call': "<|python_tag|>(.*?)<|eom_id|>",
+        'tool_response': "<|start_header_id|>ipython<|end_header_id|>\n\n${MESSAGE}<|eot_id|>\n<|start_header_id|>assistant<|end_header_id|>\n\n",
+    },
     
     # https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0
     'tiny-llama': {
