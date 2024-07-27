@@ -97,8 +97,9 @@ class NanoLLM():
 
         # moved CLIP to after LLM is loaded because of MLC CUDA errors when running in subprocess
         model.init_vision(**kwargs)  
+        model.restore_config()
         model.config.load_time = time.perf_counter() - load_begin
-        
+
         print_table(model.config)
         print('')
         
@@ -379,7 +380,15 @@ class NanoLLM():
             json.dump(patched_config, config_file, indent=2)
             
         return patched_config
-     
+    
+    def restore_config(self, **kwargs):
+        # restore the config file back to the original so that HF can load it again
+        backup_path = self.config_path + '.backup'
+        
+        if os.path.isfile(backup_path): 
+            logging.debug(f"restoring original model config from {backup_path}")
+            shutil.copyfile(backup_path, self.config_path)
+            
     def config_vision(self, **kwargs):
         # Check the model config for multimodal support (can be in a variety of formats)
         model_type = self.config.model_type.lower()

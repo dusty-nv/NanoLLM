@@ -188,7 +188,7 @@ class HFModel(NanoLLM):
         
         # optionally use previous kv cache
         if stream.kv_cache is not None:
-            generate_kwargs['past_key_values'] = stream.kv_cache.state
+            generate_kwargs['past_key_values'] = stream.kv_cache.state  # TODO set cache_position to kv_cache.num_tokens?
             #self.stats.input_tokens -= len(stream.kv_cache)
 
         # begin generation
@@ -204,10 +204,11 @@ class HFModel(NanoLLM):
         self.stats.decode_time = time.perf_counter() - self.time_begin_decode
         self.stats.decode_rate = (self.stats.output_tokens-1) / self.stats.decode_time # subtract one because timing didn't start until after the first token
         
-        if stream.kv_cache is None:
-            stream.kv_cache = KVCacheHF(self, output.past_key_values)
-        else:    
-            stream.kv_cache.update(output.past_key_values)
+        if self.config.model_type != 'gemma2':  # caching support can vary by model
+            if stream.kv_cache is None:
+                stream.kv_cache = KVCacheHF(self, output.past_key_values)
+            else:    
+                stream.kv_cache.update(output.past_key_values)
 
         stream.stopped = True
         stream.event.set()   
@@ -271,7 +272,7 @@ class KVCacheHF(KVCache):
         if self.state is not None:
             # TODO this is one shorter than the input+output token lengths...
             # https://huggingface.co/docs/transformers/en/main_classes/output#transformers.modeling_outputs.BaseModelOutputWithPast.past_key_values
-            self.num_tokens = self.state[0][0].shape[2] 
+            self.num_tokens = self.state.get_seq_length() #self.state[0][0].shape[2] 
             
             
 class StopTokensCriteria(StoppingCriteria):

@@ -270,8 +270,6 @@ if __name__ == "__main__":
     if not args.model:
         args.model = "openvla/openvla-7b"
 
-    print(args)
-
     if args.dataset:
         dataset = load_dataset(**vars(args))
         
