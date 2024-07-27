@@ -434,6 +434,12 @@ class NanoLLM():
                     
                 rename_weights(self.model_path, llm_path, lambda layer: layer.replace('language_model.', ''))
 
+            dataset_config = os.path.join(self.model_path, 'dataset_statistics.json')
+            
+            if os.path.isfile(dataset_config):
+                with open(dataset_config) as f:
+                    self.config.norm_stats.update(json.load(f))
+                    
             self.model_path = llm_path
              
         # change model_type back to the base model    

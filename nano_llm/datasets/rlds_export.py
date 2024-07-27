@@ -152,8 +152,8 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                     episode = [episode[n] for n in range(0, len(episode), 2)]
                     episode[-1]['is_last'] = True
                     
-                if i % 25:
-                    print(f"processed step {i}")
+                #if i % 25:
+                #    print(f"processed step {i}")
                                
                 yield f"episode_{episodes}", {
                     'steps': episode,

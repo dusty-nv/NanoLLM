@@ -207,11 +207,13 @@ class RLDSDataset(TFDSDataset):
             '_SAMPLE_ACTIONS': sample_actions,
         }
         
-        exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py')
+        exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py') 
+        dataset_name = os.path.basename(output)
         
         script = ''.join([f"export {key}={value} ; " for key, value in env.items() if value is not None])
-        script += f"mkdir -p {output} ; cd {output} ; cp {exporter} {os.path.basename(output)}.py ; "
-        script += f"tfds build ; "
+        script += f"mkdir -p {output} ; cd {output} ; cp {exporter} {dataset_name}.py ; "
+        script += f"sed -i 's|RLDSDatasetBuilder|{dataset_name}|g' {dataset_name}.py ; "
+        script += f"tfds build --data_dir {output} --num-processes $(nproc) ; "
         
         logging.info(f"RLDSDataset | converting {dataset} from {dataset_type} to RLDS/TFDS\n\n{script}")
         subprocess.run(script, executable='/bin/bash', shell=True, check=True)

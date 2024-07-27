@@ -39,7 +39,7 @@ class RobomimicDataset:
 
     And then load the path to that instead (i.e. highres.hdf5)
     """
-    def __init__(self, path, max_episodes=None, max_steps=None, cache_dir="/data/datasets/robomimic", **kwargs):
+    def __init__(self, path, max_episodes=None, max_steps=None, remap_gripper=True, cache_dir="/data/datasets/robomimic", **kwargs):
         """
         Load the Robomimic dataset from the HDF5 file.
         """
@@ -60,14 +60,9 @@ class RobomimicDataset:
         self.num_steps = self.data.attrs['total']
         self.max_steps = max_steps
 
-        if 'action_space' not in self.data.attrs:
-            self.data.attrs['action_space'] = json.dumps(self.compute_stats())
-            self.file.flush()
-
-        self.action_space = AttributeDict(
-            json.loads(self.data.attrs['action_space'])
-        )
-
+        self.remap_gripper = remap_gripper
+        self.action_space = self.compute_stats()
+        
         logging.info(f"Robomimic | found {self.num_episodes} episodes, {self.num_steps} steps total in {self.path}\n\nAction Space:\n{pprint.pformat(self.action_space, indent=2)}\n\nImage Size:  {self.config.env_kwargs['camera_widths']} x {self.config.env_kwargs['camera_heights']}\n")
 
         
@@ -94,7 +89,7 @@ class RobomimicDataset:
             for i in range(episode_len):
                 step = AttributeDict(
                     #state = episode['states'][i], # MuJoCo states
-                    action = episode['actions'][i],
+                    action = self.remap(action=episode['actions'][i]),
                     images = [],
                     instruction = self.get_instruction(self.config.env_name),
                     is_first = (i == 0),
@@ -102,7 +97,7 @@ class RobomimicDataset:
                 )
                 
                 # remap gripper from [-1,1] to [0,1]
-                step.action[-1] = max(step.action[-1], 0) 
+                #step.action[-1] = max(step.action[-1], 0) 
                 
                 for obs_key, obs in episode['obs'].items():
                     if 'image' in obs_key:
@@ -127,11 +122,21 @@ class RobomimicDataset:
         actions = []
         
         for episode_key, episode in self.data.items():
-            actions.append(episode['actions'])
+            actions.append(self.remap(actions=episode['actions']))
             
         actions = np.concatenate(actions, axis=0)
+      
+        '''
+        if 'action_space' not in self.data.attrs:
+            self.data.attrs['action_space'] = json.dumps(self.compute_stats())
+            self.file.flush()
 
-        return dict(
+        self.action_space = AttributeDict(
+            json.loads(self.data.attrs['action_space'])
+        )
+        '''
+        
+        return AttributeDict(
             mean = actions.mean(0).tolist(),
             std = actions.std(0).tolist(),
             max = actions.max(0).tolist(),
@@ -139,9 +144,32 @@ class RobomimicDataset:
             q01 = np.quantile(actions, 0.01, axis=0).tolist(),
             q99 = np.quantile(actions, 0.99, axis=0).tolist()
         )
-                   
+    
+    def remap(self, action=None, actions=None, gripper=None):
+        if not self.remap_gripper:
+            if action is not None:
+                return action
+            elif actions is not None:
+                return actions
+            elif gripper_states is not None:
+                return gripper_states
+                
+        if gripper is not None:
+            return 1.0 - ((gripper + 1.0) * 0.5)
+         
+        if action is not None:
+            return np.concatenate([
+                action[:6], self.remap(gripper=action[-1])[None]
+            ], axis=0) 
+                 
+        if actions is not None:
+            return np.concatenate([
+                actions[:, :6],
+                self.remap(gripper=actions[:,-1])[:, None]
+            ], axis=1)
+                          
     def dump(self, max_steps=1):
-        print('Action space:', pprint.pformat(self.action_space))
+        print('Action space:\n', pprint.pformat(self.action_space))
         
         for i, step in enumerate(self):
             if max_steps and i >= max_steps:
@@ -151,5 +179,4 @@ class RobomimicDataset:
                 if 'image' in key:
                     value = [x.shape for x in value]
                 print(f"  '{key}':  {value}")
-
 
