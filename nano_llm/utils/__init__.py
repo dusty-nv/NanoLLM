@@ -46,7 +46,40 @@ def ends_with_token(input, tokens, tokenizer=None):
             
     return False
     
-   
+
+def KeyMap(keys, to='dict'):
+    """
+    Parse mappings of the form "x:y a:b", returning a dictionary from LHS->RHS.
+    """
+    if keys is None:
+        return {}
+    elif isinstance(keys, dict):
+        return keys
+    elif isinstance(keys, str):
+        keys = [keys.split(' ')]
+    elif not isinstance(keys, (list, tuple)):
+        raise TypeError("KeyMap expected dict, list[str], or str (was {type(keys)})")
+        
+    key_map = {}
+    
+    for key_list in keys:
+        if isinstance(key_list, str):
+            key_list = [key_list]
+            
+        for key in key_list:
+            key = key.split(':')
+            
+            if key[-1].lower() == 'none':
+                key[-1] = None
+                
+            key_map[key[0]] = key[-1]
+     
+    if to == 'str':
+        return ' '.join([f'{k}:{v}' for k,v in key_map.items()])
+    else:   
+        return key_map
+    
+      
 def filter_keys(dictionary, keep=None, remove=None):
     """
     Remove keys from a dict by either a list of keys to keep or remove.
@@ -61,6 +94,7 @@ def filter_keys(dictionary, keep=None, remove=None):
             del dictionary[key]
  
     return dictionary
+    
  
 def update_default(value, default=None, cast=None):
     """

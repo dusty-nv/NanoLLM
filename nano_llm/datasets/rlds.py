@@ -3,13 +3,15 @@ import os
 import array
 import logging
 import subprocess
+
 import numpy as np
+import multiprocessing as mp
 
 from glob import glob
 from pprint import pprint, pformat
 
 from .tfds import TFDSDataset
-from nano_llm.utils import AttributeDict
+from nano_llm.utils import AttributeDict, KeyMap
 
 
 class RLDSDataset(TFDSDataset):
@@ -31,10 +33,11 @@ class RLDSDataset(TFDSDataset):
 
         step_raw = next(iter(next(iter(self.dataset))['steps']))
         step_img = next(iter(self))
-
+        keys_img = list(step_img.images.keys())
+        
         layout = AttributeDict(
-            cameras = len(step_img.images),
-            image_size = step_img.images[0].shape,
+            cameras = keys_img,
+            image_size = step_img.images[keys_img[0]].shape,
             step = list(step_raw.keys()),
             action = step_raw['action'],
             observation = AttributeDict()
@@ -138,19 +141,19 @@ class RLDSDataset(TFDSDataset):
         """
         data = AttributeDict(
             action=step.get('action'),
-            images=[],
+            images={},
             instruction=None,
             is_first=bool(step.get('is_first')),
             is_last=bool(step.get('is_last')),
         )
         
         observation = step['observation']
-        image_keys = ['image', 'agentview_rgb']
+        image_keys = ['image', 'wrist_image', 'agentview_rgb']
 
         for image_key in image_keys:
             for observation_key in observation:
                 if image_key in observation_key:
-                    data.images.append(observation[observation_key].numpy())
+                    data.images[observation_key] = observation[observation_key].numpy()
 
         instruction = observation.get('natural_language_instruction', step.get('language_instruction'))
         
@@ -190,31 +193,55 @@ class RLDSDataset(TFDSDataset):
         return value   
 
     @staticmethod
-    def export(dataset=None, dataset_type=None, output=None, width=None, height=None, 
-               max_episodes=None, max_steps=None, sample_steps=None, sample_actions=None, **kwargs):
+    def export(dataset=None, dataset_type=None, output=None, 
+               width=None, height=None, max_episodes=None, max_steps=None, 
+               remap_keys=None, sample_steps=None, sample_actions=None, workers=-1, **kwargs):
         """
         Convert the episodes from the dataset into TFDS/RLDS format and save it to the output.
+        
+        ``remap_keys`` should be a dict or string from the original dataset's image names to the
+        RLDS names 'image' and 'wrist_image" - for example, from the command line::
+        
+            python3 -m nano_llm.datasets \
+                --dataset demos.hdf5 \
+                --dataset-type robomimic \
+                --convert rlds \
+                --remap_keys agentview:image eye_in_hand:wrist_image \
+                --output rlds/demos
+                
+        Unneeded or conflicting keys can be removed by setting them to None, like ``key:None``
         """
+        if workers is None or workers == 0:
+            workers = 1
+        elif workers < 0:
+            workers += mp.cpu_count()
+            
+        exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py') 
+        dataset_name = os.path.basename(output)
+        
         env={
-            '_DATASET': dataset,
             '_DATASET_TYPE': dataset_type,
+            '_DATASET': dataset,
             '_OUTPUT': output,
             '_WIDTH': width,
             '_HEIGHT': height,
             '_MAX_EPISODES': max_episodes,
             '_MAX_STEPS': max_steps,
+            '_REMAP_KEYS': KeyMap(remap_keys, to='str'),
             '_SAMPLE_STEPS': sample_steps,
             '_SAMPLE_ACTIONS': sample_actions,
+            '_NUM_WORKERS': workers,
+            '_DOF': 7,  # TODO read size from dataset
+            'RLDSDatasetBuilder': dataset_name,
         }
+
+        script = f"mkdir -p {output} ; cd {output} ; cp {exporter} {dataset_name}.py ; "
+
+        for var, value in env.items():
+            script += f"sed -i 's|{var}|{value}|g' {dataset_name}.py ; "
+            
+        script += f"tfds build --data_dir {output} --num-processes {workers} ; "
         
-        exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py') 
-        dataset_name = os.path.basename(output)
-        
-        script = ''.join([f"export {key}={value} ; " for key, value in env.items() if value is not None])
-        script += f"mkdir -p {output} ; cd {output} ; cp {exporter} {dataset_name}.py ; "
-        script += f"sed -i 's|RLDSDatasetBuilder|{dataset_name}|g' {dataset_name}.py ; "
-        script += f"tfds build --data_dir {output} --num-processes $(nproc) ; "
-        
-        logging.info(f"RLDSDataset | converting {dataset} from {dataset_type} to RLDS/TFDS\n\n{script}")
+        logging.info(f"RLDSDataset | converting {dataset} from {dataset_type} to RLDS/TFDS\n\n{pformat(env, indent=2)}\n\n{script}")
         subprocess.run(script, executable='/bin/bash', shell=True, check=True)
 

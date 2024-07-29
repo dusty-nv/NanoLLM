@@ -52,6 +52,9 @@ class NanoLLM(Plugin):
             **kwargs
         )
 
+        if max_context_len is not None and max_context_len <= 0:
+            max_context_len = None
+            
         load_time = time.perf_counter()
         
         if isinstance(model, str):

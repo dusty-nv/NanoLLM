@@ -306,6 +306,9 @@ if __name__ == "__main__":
 
     action_range = vla.action_space.q99 - vla.action_space.q01
 
+    logging.info(f"Action space:\n{vla.action_space}")
+    logging.info(f"Action range:\n{action_range}")
+    
     def rmspe(y_true, y_pred):
         # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
         return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))

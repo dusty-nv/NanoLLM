@@ -1,25 +1,33 @@
 #!/usr/bin/env python3
+# TFDS/RLDS dataset builder template (do not import)
 import os
 import cv2
+import threading
 
 import tensorflow_datasets as tfds
 import numpy as np
 
+from multiprocessing.pool import ThreadPool
+from collections import deque
 
-DATASET = os.environ.get('_DATASET')
-DATASET_TYPE = os.environ.get('_DATASET_TYPE')
+
+# these are set by RLDSDataset.export()
+DATASET = "_DATASET"
+DATASET_TYPE = "_DATASET_TYPE"
         
-MAX_EPISODES = int(os.environ.get('_MAX_EPISODES', 0))
-MAX_STEPS = int(os.environ.get('_MAX_STEPS', 0))
-   
-OUTPUT = str(os.environ.get('_OUTPUT'))
-WIDTH = int(os.environ.get('_WIDTH', 0))
-HEIGHT = int(os.environ.get('_HEIGHT', 0))                
-             
-SAMPLE_STEPS = int(os.environ.get('_SAMPLE_STEPS', 0))
-SAMPLE_ACTIONS = int(os.environ.get('_SAMPLE_ACTIONS', 0))
+MAX_EPISODES = _MAX_EPISODES
+MAX_STEPS = _MAX_STEPS
 
-DOF = int(os.environ.get('_DOF', 7))
+WIDTH = _WIDTH
+HEIGHT = _HEIGHT                
+OUTPUT = "_OUTPUT"  
+   
+REMAP_KEYS = "_REMAP_KEYS"
+SAMPLE_STEPS = _SAMPLE_STEPS
+SAMPLE_ACTIONS = _SAMPLE_ACTIONS
+NUM_WORKERS = _NUM_WORKERS  # number of parallel loaders
+
+DOF = _DOF
 
          
 class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
@@ -30,7 +38,7 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
     RELEASE_NOTES = {
       '1.0.0': 'Initial release.',
     }
-
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -88,24 +96,86 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         return {
             'train': self._generate_examples(),
         }
-
+        
     def _generate_examples(self):
         """Generator of examples for each split."""
-        from nano_llm import load_dataset
+        self.load_dataset()
+
+        if NUM_WORKERS:
+            print(f"Creating pool of {NUM_WORKERS} worker threads")
+            
+            worker_pool = ThreadPool(NUM_WORKERS) # HDF5/TFDS aren't multi-process
+            worker_jobs = deque()
         
+            for episode_id, episode in enumerate(self.dataset.episodes):
+                worker_jobs.append(worker_pool.apply_async(self.load_episode, args=[episode, episode_id]))
+                
+            while len(worker_jobs) > 0:
+                #print(f"{len(worker_jobs)} episodes remaining to be loaded")
+                yield worker_jobs.popleft().get()
+        else:
+            for episode_id, episode in enumerate(self.dataset.episodes):
+                yield(self.load_episode(episode, episode_id))
+                
+    def load_episode(self, episode, id):
+        steps = []
+        
+        for i, step in enumerate(episode):
+            obs = {}
+            
+            if 'state' in step:
+                obs['state'] = step.state
+            else:
+                obs['state'] = [0] * DOF
+                    
+            for img_key, image in step.images.items():
+                obs[img_key] = self.resize_image(image)      
+
+            steps.append({
+                'observation': obs,
+                'action': step.action.astype(np.float32),
+                'is_first': step.is_first,
+                'is_last': step.is_last,
+                'language_instruction': step.instruction
+            })
+
+        if self.sample_actions:
+            for n in range(len(steps)):
+                for m in range(n+1, min(n+sample_actions, len(steps))):
+                    steps[n]['action'][:-1] += steps[m]['action'][:-1]
+         
+        if self.sample_steps:
+            steps = [steps[n] for n in range(0, len(steps), self.sample_steps)]
+            steps[-1]['is_last'] = True
+            
+        #print(f"Thread {threading.get_ident()} loaded episode with {len(steps)} steps")
+        
+        return f"episode_{id}", {
+                'steps': steps,
+                'episode_metadata': {
+                    'file_path': OUTPUT,
+                }}
+                
+    def load_dataset(self):
+        from nano_llm import load_dataset
+        from nano_llm.utils import convert_tensor
+
         self.dataset = load_dataset(
             DATASET, 
             dataset_type=DATASET_TYPE, 
             max_episodes=MAX_EPISODES,
             max_steps=MAX_STEPS,
+            remap_keys=REMAP_KEYS,
+            width=WIDTH,
+            height=HEIGHT,
         )
+
+        step = next(iter(self.dataset))
         
         self.output = OUTPUT
-
         self.width = WIDTH
         self.height = HEIGHT
-        
-        step = next(iter(self.dataset))
+        self.convert_tensor = convert_tensor
         
         if not self.width or not self.height:
             size = step.images[0].shape
@@ -116,56 +186,10 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         
         self.sample_steps = SAMPLE_STEPS
         self.sample_actions = SAMPLE_ACTIONS
-        
-        episode = []        
-        episodes = 0
-        
-        for i, step in enumerate(self.dataset):
-            obs = {}
-            
-            if 'state' in step:
-                obs['state'] = step.state
-            else:
-                obs['state'] = [0] * DOF
-                    
-            if len(step.images) > 0:
-                obs['image'] = self.resize_image(step.images[0])
-            
-            if len(step.images) > 1:
-                obs['wrist_image'] = self.resize_image(step.images[1])
-                   
-            episode.append({
-                'observation': obs,
-                'action': step.action.astype(np.float32),
-                'is_first': step.is_first,
-                'is_last': step.is_last,
-                'language_instruction': step.instruction
-            })
-
-            if step.is_last:
-                if self.sample_actions:
-                    for n in range(len(episode)):
-                        for m in range(n+1, min(n+sample_actions, len(episode))):
-                            episode[n]['action'][:-1] += episode[m]['action'][:-1]
-                 
-                if self.sample_steps:
-                    episode = [episode[n] for n in range(0, len(episode), 2)]
-                    episode[-1]['is_last'] = True
-                    
-                #if i % 25:
-                #    print(f"processed step {i}")
-                               
-                yield f"episode_{episodes}", {
-                    'steps': episode,
-                    'episode_metadata': {
-                        'file_path': 'unknown',
-                     }
-                }
-                
-                episode = []
-                episodes += 1
-                
+                       
     def resize_image(self, image):
+        image = self.convert_tensor(image, return_tensors='np')
+        
         img_width = image.shape[-2]
         img_height = image.shape[-3]
         
@@ -178,4 +202,4 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             interpolation = cv2.INTER_CUBIC
         
         return cv2.resize(image, (self.height, self.width), interpolation=interpolation)
-        
+ 

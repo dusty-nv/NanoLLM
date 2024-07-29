@@ -103,6 +103,9 @@ class MimicGen(Plugin):
         self.sim.reset()
         robot = self.sim.robots[0]
         
+        self.next_action = None
+        self.last_action = None
+        
         logging.info(f"{self.name} setup sim environment with configuration:\n\n{pprint.pformat(config, indent=2)}\n\nrobot_dof={robot.dof}\naction_dim={robot.action_dim}\naction_limits=\n{pprint.pformat(robot.action_limits)}\n")
         
     def render(self):
@@ -122,6 +125,14 @@ class MimicGen(Plugin):
             logging.debug(f"{self.name} keyboard actions {action}")
         elif self.motion_select == 'spacenav':
             action, gripper = input2action(device=self.spacenav, robot=self.sim.robots[0])
+        elif self.motion_select == 'agent':
+            if self.next_action is not None:
+                action = self.next_action
+            else:
+                if self.last_action is not None:
+                    action = np.concatenate([np.zeros(dof-1), self.last_action[-1:]], axis=0)
+                else:
+                    action = np.zeros(dof)
         else:
             raise ValueError(f"{self.name}.motion_select had invalid value '{self.motion_select}'  (options: {self.parameters['motion_select']['options']})")
          
@@ -137,17 +148,20 @@ class MimicGen(Plugin):
                 
             return
          
-        #logging.debug(f"{self.name} {self.motion_select} actions:  {action}")
+        logging.debug(f"{self.name} {self.motion_select} actions:  {action}")
               
         obs, reward, done, info = self.sim.step(action)
   
         image = obs.get(f'{self.camera}_image')
         
         if 'sideview' in self.camera or 'frontview' in self.camera:
-            image = np.flip(image, axis=0)
+            image = np.flip(image, axis=0).copy() # https://discuss.pytorch.org/t/torch-from-numpy-not-support-negative-strides/3663/2
+
+        self.last_action = action
+        self.next_action = None
 
         self.output(image)
-
+ 
     def run(self):
         """
         Run capture continuously and attempt to handle disconnections
@@ -165,5 +179,13 @@ class MimicGen(Plugin):
             except Exception as error:
                 logging.error(f"Exception occurred in {self.name}\n\n{traceback.format_exc()}")
                 self.sim = None
+        
+    def process(self, action, partial=False, **kwargs):
+        """
+        Recieve action inputs and apply them to the simulation.
+        """
+        if not partial:
+            action[-1] = (action[-1] * 2.0 - 1.0) * -1.0
+            self.next_action = action
                 
 

@@ -65,9 +65,11 @@ class NanoVLA(NanoLLM):
         and will output the predicted actions (float32 np.ndarray) which can be
         denormalized by setting ``NanoVLA.action_config``
         """ 
+        print('input', type(input))
+        
         if isinstance(input, list):
             for i in input:
-                self.process(input, **kwargs)
+                self.process(i, **kwargs)
             return
 
         if isinstance(input, str):
@@ -88,6 +90,7 @@ class NanoVLA(NanoLLM):
         if self.interrupted:
             return
 
+        print('VLA action space', self.vla.action_space.name)
         stream = self.vla.predict_action(input, streaming=True)
         
         for action in stream:

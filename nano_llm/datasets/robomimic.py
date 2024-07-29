@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import os
+import h5py
 import json
 import pprint
 import logging
+import torchvision
+
 import numpy as np
 
-from nano_llm.utils import AttributeDict
+from nano_llm.utils import AttributeDict, KeyMap, convert_tensor
 
 
 class RobomimicDataset:
@@ -39,33 +42,34 @@ class RobomimicDataset:
 
     And then load the path to that instead (i.e. highres.hdf5)
     """
-    def __init__(self, path, max_episodes=None, max_steps=None, remap_gripper=True, cache_dir="/data/datasets/robomimic", **kwargs):
+    def __init__(self, path, max_episodes=None, max_steps=None, width=None, height=None,
+                 remap_keys={}, remap_gripper=True, cache_dir="/data/datasets/robomimic", **kwargs):
         """
         Load the Robomimic dataset from the HDF5 file.
         """
-        import h5py
-        
         self.path = path
-        self.file = h5py.File(self.path, 'r+')
+        self.file = h5py.File(self.path, 'r', locking=False, libver='latest')
         self.data = self.file['data']
         
         self.config = AttributeDict(json.loads(self.data.attrs['env_args']))
         self.config.name = self.config.env_name
 
-        self.episodes = sorted(list(self.data.keys()))
+        self.width = width
+        self.height = height
         
-        self.num_episodes = len(self.episodes)
         self.max_episodes = max_episodes
+        self.num_episodes = len(self.file['data'])
         
-        self.num_steps = self.data.attrs['total']
         self.max_steps = max_steps
-
+        self.num_steps = self.data.attrs['total']
+        self.new_steps = 0
+        
+        self.remap_keys = KeyMap(remap_keys)
         self.remap_gripper = remap_gripper
         self.action_space = self.compute_stats()
         
-        logging.info(f"Robomimic | found {self.num_episodes} episodes, {self.num_steps} steps total in {self.path}\n\nAction Space:\n{pprint.pformat(self.action_space, indent=2)}\n\nImage Size:  {self.config.env_kwargs['camera_widths']} x {self.config.env_kwargs['camera_heights']}\n")
+        logging.info(f"Robomimic | found {self.num_episodes} episodes, {self.num_steps} steps total in {self.path}\n\nDataset Config:\n\n{pprint.pformat(self.config, indent=2)}\n\nAction Space:\n\n{pprint.pformat(self.action_space, indent=2)}\n\nImage Size:  {self.config.env_kwargs['camera_widths']} x {self.config.env_kwargs['camera_heights']}\n")
 
-        
     def __len__(self):
         """
         Returns the number of timesteps or frames in the dataset, over all the episodes.
@@ -75,40 +79,55 @@ class RobomimicDataset:
     def __iter__(self):
         """
         Returns an iterator over all steps (or up to max_steps if it was set) with the episodes running back-to-back.  
-        `step.is_first` will be set on new episodes, and `set.is_last` will be set at the end of an episode.
+        `step.is_first` will be set on new episodes, and `step.is_last` will be set at the end of an episode.
         """
-        steps = 0
-        
-        for ep_idx, ep_key in enumerate(self.episodes):
-            if self.max_episodes and ep_idx >= self.max_episodes:
-                return
-            
-            episode = self.data[ep_key]
-            episode_len = episode.attrs['num_samples']
-            
-            for i in range(episode_len):
-                step = AttributeDict(
-                    #state = episode['states'][i], # MuJoCo states
-                    action = self.remap(action=episode['actions'][i]),
-                    images = [],
-                    instruction = self.get_instruction(self.config.env_name),
-                    is_first = (i == 0),
-                    is_last = (i == episode_len-1),
-                )
-                
-                # remap gripper from [-1,1] to [0,1]
-                #step.action[-1] = max(step.action[-1], 0) 
-                
-                for obs_key, obs in episode['obs'].items():
-                    if 'image' in obs_key:
-                        step.images.append(obs[i])
-
+        for episode in self.episodes:
+            for step in episode:
                 yield(step)
-                steps += 1
                 
-                if self.max_steps and steps >= self.max_steps:
-                    return
+    @property
+    def episodes(self):
+        """
+        Returns an iterator over all the episodes, nested over the steps in each episode::
+        
+            for episode in dataset.episodes():
+                for step in episode:
+                    ...
+        """
+        def generator(episode_key):
+            episode = self.data[episode_key]
+            actions = self.remap(actions=episode['actions'][()])
+            samples = int(episode.attrs['num_samples'])
+            images = {}
+            
+            for obs_key, obs in episode['obs'].items():
+                if 'image' in obs_key:
+                    obs_key = obs_key.replace('_image', '').replace('robot0_', '')
+                    obs_key = self.remap_keys.get(obs_key, obs_key)
+                    if obs_key:
+                        images[obs_key] = self.resize_image(obs[()])
+                        
+            for i in range(samples):
+                self.new_steps += 1
+                stop = bool(self.max_steps and self.new_steps >= self.max_steps)
+  
+                yield(AttributeDict(
+                    #state = episode['states'][i], # MuJoCo states
+                    action = actions[i],
+                    images = {key : image[i] for key, image in images.items()},
+                    instruction = self.get_instruction(self.config.env_name),
+                    is_first = bool(i == 0),
+                    is_last = bool(i == samples-1) or stop,
+                ))
 
+                if stop:
+                    return
+                
+        for episode_idx, episode_key in enumerate(self.data):
+            if self.max_episodes and episode_idx >= self.max_episodes:
+                return
+            yield(generator(episode_key))
+                
     def get_instruction(self, task):
         task = task.lower()
         if 'stack_three' in task:
@@ -145,6 +164,18 @@ class RobomimicDataset:
             q99 = np.quantile(actions, 0.99, axis=0).tolist()
         )
     
+    def resize_image(self, image):
+        img_width = image.shape[-2]
+        img_height = image.shape[-3]
+        
+        if self.width == img_width and self.height == img_height:
+            return images
+
+        return torchvision.transforms.functional.resize(
+            convert_tensor(image, return_tensors='pt', device='cuda').permute(0,3,1,2),
+            (self.height, self.width)  # default is bilinear
+        ).permute(0,2,3,1)
+
     def remap(self, action=None, actions=None, gripper=None):
         if not self.remap_gripper:
             if action is not None:
@@ -155,7 +186,7 @@ class RobomimicDataset:
                 return gripper_states
                 
         if gripper is not None:
-            return 1.0 - ((gripper + 1.0) * 0.5)
+            return 1.0 - ((gripper + 1.0) * 0.5) #(gripper + 1.0) * 0.5 #
          
         if action is not None:
             return np.concatenate([
@@ -169,14 +200,15 @@ class RobomimicDataset:
             ], axis=1)
                           
     def dump(self, max_steps=1):
-        print('Action space:\n', pprint.pformat(self.action_space))
-        
+        #import imageio
         for i, step in enumerate(self):
             if max_steps and i >= max_steps:
                 break 
             print(f"\nStep [{i}/{max_steps}]\n")
             for key, value in step.items():
                 if 'image' in key:
+                    #for n, img in enumerate(value):
+                    #    imageio.imwrite(f"/data/temp/robomimic_{n}.jpg", value[n])
                     value = [x.shape for x in value]
                 print(f"  '{key}':  {value}")
 
