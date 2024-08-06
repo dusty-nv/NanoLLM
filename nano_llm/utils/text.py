@@ -4,6 +4,8 @@ import time
 import signal
 import logging
 
+from .keys import validate_key
+
 
 def replace_text(text, dict):
     """
@@ -23,11 +25,16 @@ def wrap_text(font, image, text='', x=5, y=5, stream=0, **kwargs):
     Utility for cudaFont that draws text on a image with word wrapping.
     Returns the new y-coordinate after the text wrapping was applied.
     """
-    text_color=kwargs.get("color", font.White) 
-    background_color=kwargs.get("background", font.Gray40)
-    line_spacing = kwargs.get("line_spacing", 38)
-    line_length = kwargs.get("line_length", image.width // 16)
+    font_size = font.GetSize()
+    text_color = validate_key(kwargs, 'color', font.White) 
+    background_color = validate_key(kwargs, 'background', font.Gray40)
+    line_spacing = validate_key(kwargs, 'line_spacing', font_size + 4)
+    line_length = validate_key(kwargs, 'line_length', image.width // (font_size/2))
 
+    if line_length < 0:
+        font.OverlayText(image, text=text, x=x, y=y, color=text_color, background=background_color, stream=stream)
+        return y + line_spacing
+        
     text = text.split()
     current_line = ""
 
@@ -110,4 +117,39 @@ def code_tags(text, blocks=None, open_tag='<code>', close_tag='</code>'):
         
     return text 
    
-   
+ 
+def ends_with_token(input, tokens, tokenizer=None):
+    """
+    Check to see if the list of input tokens ends with any of the list of stop tokens.
+    This is typically used to check if the model produces a stop token like </s> or <eos>
+    """
+    if not isinstance(input, list):
+        input = [input]
+        
+    if not isinstance(tokens, list):
+        tokens = [tokens]
+     
+    if len(input) == 0 or len(tokens) == 0:
+        return False
+        
+    for stop_token in tokens:
+        if isinstance(stop_token, list):
+            if len(stop_token) == 1:
+                if input[-1] == stop_token[0]:
+                    return True
+            elif len(input) >= len(stop_token):
+                if tokenizer:
+                    input_text = tokenizer.decode(input, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+                    stop_text = tokenizer.decode(stop_token, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+                    #print('input_text', input_text, 'stop_text', f"'{stop_text}'")
+                    if input_text.endswith(stop_text):
+                        #print('STOPPING TEXT')
+                        return True
+                else:
+                    if input[-len(stop_token):] == stop_token:
+                        return True
+        elif input[-1] == stop_token:
+            return True
+            
+    return False
+ 

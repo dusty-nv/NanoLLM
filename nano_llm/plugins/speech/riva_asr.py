@@ -9,7 +9,7 @@ import riva.client
 import riva.client.audio_io
 
 from nano_llm.plugins import AutoASR
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio, validate
 
 
 class RivaASR(AutoASR):
@@ -101,7 +101,7 @@ class RivaASR(AutoASR):
         Args:
           asr_threshold (float): Minimum confidence for the output to be kept (only applies to 'final' transcripts)
         """   
-        self.confidence_threshold = update_default(asr_threshold, self.confidence_threshold, float)
+        self.confidence_threshold = validate(asr_threshold, self.confidence_threshold, float)
 
     def state_dict(self):
         return {

@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from nano_llm.plugins import AutoASR
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio
 
 try:
     from whisper_trt.model import load_trt_model

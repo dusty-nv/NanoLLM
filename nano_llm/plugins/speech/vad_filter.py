@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from nano_llm import Plugin
-from nano_llm.utils import convert_tensor, convert_audio, resample_audio, update_default
+from nano_llm.utils import convert_tensor, convert_audio, resample_audio
 
 try:
     from whisper_trt.vad import load_vad
@@ -69,9 +69,8 @@ class VADFilter(Plugin):
         self.add_parameter('vad_window', name='Window Length', type=float, default=vad_window)
         self.add_parameter('interrupt_after', type=float, default=interrupt_after)
         self.add_parameter('audio_chunk', type=float, default=audio_chunk)
-        
-        #self.apply_config(vad_threshold=vad_threshold, vad_window=vad_window, audio_chunk=audio_chunk)
-        
+
+
     def process(self, samples, sample_rate=None, **kwargs):
         """
         Apply VAD filtering to incoming audio, only allowing it to pass through when speaking is detected.
@@ -147,30 +146,4 @@ class VADFilter(Plugin):
             self._audio_chunk = int(value * self.sample_rate)
         else:
             self._audio_chunk = int(value)
-    
-    '''                
-    def apply_config(self, vad_threshold : float = None, vad_window : float = None, audio_chunk : float = None, **kwargs):
-        """
-        Update VAD settings.
-        
-        Args:
-          vad_threshold (float): If any of the audio chunks in the window are above this confidence,
-                                 then the audio will be forwarded to the next plugin (otherwise dropped).
-                                 This should be between 0 and 1, with a threshold of 0 emitting all audio.            
-          vad_window (float): The duration of time (in seconds) that the VAD filter processes over.
-                              If speaking isn't detected for this long, it will be considered silent.               
-          audio_chunk (float): The duration of time or number of audio samples processed per batch. 
-        """   
-        self.vad_threshold = update_default(vad_threshold, self.vad_threshold, float)
-        self.vad_window = update_default(vad_window, self.vad_window, float)
-    
-            
-
-    def state_dict(self):
-        return {
-            **super().state_dict(),
-            'vad_threshold': self.vad_threshold,
-            'vad_window': self.vad_window,
-            'audio_chunk': self.audio_chunk,
-       }
-    '''           
+   

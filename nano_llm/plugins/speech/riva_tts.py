@@ -8,7 +8,7 @@ import riva.client
 import riva.client.audio_io
 
 from .auto_tts import AutoTTS
-from nano_llm.utils import update_default
+from nano_llm.utils import validate
 
 
 class RivaTTS(AutoTTS):
@@ -87,11 +87,11 @@ class RivaTTS(AutoTTS):
           voice_volume (str): Increase or decrease the volume by [-13dB, 8dB]
           tts_buffering (str):  If 'punctuation', TTS will wait to generate until the end of sentences for better dynamics.  If 'time', TTS will wait until audio gap-out approaches.  If 'time,punctuation', will wait for both.
         """
-        self.voice = update_default(voice, self.voice, str)
-        self.rate = update_default(voice_rate, self.rate, str)
-        self.pitch = update_default(voice_pitch, self.pitch, str)
-        self.volume = update_default(voice_volume, self.volume, str)
-        self.buffering = update_default(tts_buffering, self.buffering, str)
+        self.voice = validate(voice, self.voice, str)
+        self.rate = validate(voice_rate, self.rate, str)
+        self.pitch = validate(voice_pitch, self.pitch, str)
+        self.volume = validate(voice_volume, self.volume, str)
+        self.buffering = validate(tts_buffering, self.buffering, str)
 
     def state_dict(self):
         return {
