@@ -14,25 +14,25 @@ class NanoVLA(NanoLLM):
     These are deltas, except the gripper is absolute (0=open, 1=closed)
     """
     def __init__(self, model: str="openvla/openvla-7b", 
-                 api: str="mlc", quantization: str="q4f16_ft", 
-                 max_context_len: int=384, drop_inputs: bool=True,
-                 chat_template: str=None, system_prompt: str=None, **kwargs):
+                 vision_api: str="auto", api: str="mlc", 
+                 quantization: str="q4f16_ft", 
+                 max_context_len: int=384, 
+                 drop_inputs: bool=True,
+                 **kwargs):
         """
         Load a Vision/Language Action model.
         
         Args:
           model (str): Either the path to the model, or HuggingFace model repo/name.
+          vision_api (str): Use TensorRT or HuggingFace (PyTorch) for vision encoders.
           api (str): The model backend to use (MLC - fastest, AWQ - accurate quantization, HF - compatability)
           quantization (str): For MLC: recommend q4f16_ft or 8f16_ft. For AWQ: the path to the quantized weights.
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
-          drop_inputs (bool): If true, only the latest frame will be processed (older frames dropped)
-          chat_template (str|dict): The chat template (by default, will attempt to determine from model type)
-          system_prompt (str):  Set the system prompt (OpenVLA does not use this)          
+          drop_inputs (bool): If true, only the latest frame will be processed (older frames dropped)      
         """
-        super().__init__(model=model, api=api, quantization=quantization, 
+        super().__init__(model=model, vision_api=vision_api, api=api, quantization=quantization, 
                          max_context_len=max_context_len, drop_inputs=drop_inputs,
-                         outputs=['actions'], chat_template=chat_template, 
-                         system_prompt=system_prompt, **kwargs)
+                         outputs=['actions'], **kwargs)
 
         if not self.model.vla:
             raise RuntimeError(f"{self.model.config.name} is not a supported VLA model")
@@ -53,7 +53,13 @@ class NanoVLA(NanoLLM):
     def type_hints(cls):
         return {
             **NanoLLM.type_hints(), 
-            'model': {'suggestions': ["openvla/openvla-7b"]}
+            'model': {
+                'suggestions': ["openvla/openvla-7b"]
+            },
+            'vision_api': {
+                'options': ['auto', 'tensorrt', 'hf'], 
+                'display_name': 'Vision API'
+            },
         }    
                
     def process(self, input, **kwargs):
@@ -65,8 +71,6 @@ class NanoVLA(NanoLLM):
         and will output the predicted actions (float32 np.ndarray) which can be
         denormalized by setting ``NanoVLA.action_config``
         """ 
-        print('input', type(input))
-        
         if isinstance(input, list):
             for i in input:
                 self.process(i, **kwargs)
@@ -76,8 +80,9 @@ class NanoVLA(NanoLLM):
             if input.endswith(ImageExtensions):
                 input = load_image(input)
             else:
-                self.vla.instruction = input
-                logging.warning(f"{self.name} using prompt instruction `{input}`")
+                if input and len(input.strip()) > 0:
+                    self.vla.instruction = input
+                    logging.warning(f"{self.name} using prompt instruction `{input}`")
                 return
         
         if not is_image(input):
@@ -90,12 +95,16 @@ class NanoVLA(NanoLLM):
         if self.interrupted:
             return
 
-        print('VLA action space', self.vla.action_space.name)
+        #print('VLA action space', self.vla.action_space.name)
+        time_begin = time.perf_counter()
         stream = self.vla.predict_action(input, streaming=True)
         
         for action in stream:
             self.output(stream.actions, partial=True)
         
+        time_elapsed = time.perf_counter() - time_begin
+        
         self.output(stream.actions)
+        self.send_stats(summary=[f"{1/time_elapsed:.1f} FPS"])
                
             
