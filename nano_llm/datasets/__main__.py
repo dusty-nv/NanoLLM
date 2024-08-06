@@ -14,7 +14,7 @@ parser.add_argument("--dataset-type", type=str, default=None, choices=list(Datas
 parser.add_argument("--max-episodes", type=int, default=None, help="the maximum number of episodes from the dataset to process")
 parser.add_argument("--max-steps", type=int, default=None, help="the maximum number of frames to process across all episodes")
 parser.add_argument("--rescan", action='store_true', help="rescan the dataset files for changes or rebuild the index")
-parser.add_argument("--dump", type=str, default=None, help="print out and save the dataset to viewable files under this path")
+parser.add_argument("--dump", nargs='*', default=None, help="print out and save the dataset to viewable files under this path")
 
 parser.add_argument("--convert", type=str, default=None, choices=['rlds'], help="convert a dataset into other formats (like RLDS/TFDS)")
 parser.add_argument("--output", type=str, default=None, help="path to export the converted dataset to (only when --convert is used)")
@@ -28,9 +28,13 @@ parser.add_argument("--sample-actions", type=int, default=None, help="window siz
 
 args = parser.parse_args()
 
-if args.dump:
+
+if args.dump is not None:
     args.convert = 'dump'
-    args.output = args.dump
+    if len(args.dump) > 0:
+        args.output = args.dump[0]
+elif not args.convert:
+    args.convert = 'dump'
     
 if args.convert:
     convert_dataset(**vars(args), output_type=args.convert)

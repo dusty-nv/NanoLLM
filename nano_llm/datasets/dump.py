@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import json
-import pprint
+import time
 import imageio
 import logging
 
@@ -9,6 +9,7 @@ import numpy as np
 import torch
 
 from nano_llm.utils import convert_tensor
+from pprint import pprint, pformat
 
 
 class DumpDataset:
@@ -24,15 +25,17 @@ class DumpDataset:
         if isinstance(dataset, str):
             from nano_llm.datasets import load_dataset
             dataset = load_dataset(dataset, **kwargs)
-                  
+
+        start = time.perf_counter()
+        steps = 0
+        
         ep_idx = 0
         ep_steps = []
         ep_images = {}
 
         for step_idx, step in enumerate(dataset):
-            print(f"\nEpisode {ep_idx}, Step {len(ep_steps)}\n")
-            pprint.pprint(DumpDataset.filter_dict(step), indent=2)
-            ep_steps += [DumpDataset.filter_dict(step, max_array_len=1024)]
+            logging.info(f"Episode {ep_idx}, Step {len(ep_steps)}\n\n{pformat(DumpDataset.filter_dict(step), indent=2)}\n\n")
+            ep_steps.append(DumpDataset.filter_dict(step, max_array_len=1024))
             
             for img_key, img in step.images.items():
                 ep_images.setdefault(img_key, []).append(convert_tensor(img, return_tensors='np'))
@@ -44,15 +47,19 @@ class DumpDataset:
                     DumpDataset.save_episode(ep_path, ep_steps, ep_images)
                     
             if step.is_last:
-                print(f"\nEnd of episode {ep_idx}, {len(ep_steps)} steps. {'Saved to ' + ep_path if output else ''}")
+                logging.info(f"End of episode {ep_idx}, {len(ep_steps)} steps. {'Saved to ' + ep_path if output else ''}")
                 ep_idx += 1
                 ep_steps = []
                 ep_images = {}
+                
+            steps += 1
 
         if output:
             DumpDataset.save_episode(ep_path, ep_steps, ep_images)
+
+        elapsed = time.perf_counter() - start
+        logging.info(f"Done dumping dataset {dataset.config.name}\n\n   * {ep_idx} episodes, {steps} steps in {elapsed:.2f} sec\n   * {elapsed/ep_idx:.2f} seconds per episode\n   * {elapsed/steps*1000:.1f} ms per step\n{'   * output: ' + output if output else ''}\n")
         
- 
     @staticmethod
     def save_episode(path, steps, images):
         """
