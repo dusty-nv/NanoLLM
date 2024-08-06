@@ -86,7 +86,7 @@ class DynamicPlugin(Plugin):
         from nano_llm.plugins import (
             NanoLLM, NanoVLA, VideoSource, VideoOutput,
             UserPrompt, AutoPrompt, VADFilter,
-            TextStream, VideoOverlay, RateLimit,
+            TextStream, TextOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder, 
             NanoDB, Deduplicate, DataTable, DataLogger, EventFilter,
         )
@@ -130,7 +130,7 @@ class DynamicPlugin(Plugin):
         # video
         DynamicPlugin.register(VideoSource)
         DynamicPlugin.register(VideoOutput)
-        DynamicPlugin.register(VideoOverlay)
+        DynamicPlugin.register(TextOverlay)
         DynamicPlugin.register(RateLimit)
         
         # database
