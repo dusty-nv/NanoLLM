@@ -97,16 +97,23 @@ class Plugin(threading.Thread):
         """
         self.destroy()
 
-    def process(self, input, **kwargs):
+    def process(self, input, sender=None, channel=0, timestamp=0, partial=False, **kwargs):
         """
         Abstract function that plugin instances should implement to process incoming data.
         Don't call this function externally unless ``threaded=False``, because
         otherwise the plugin's internal thread dispatches from the queue.
+        
+        The only argument required in subclasses ``process()`` signature is ``input``,
+        the others are optional.  Some plugins have additional kwargs that they use.
 
         Args:
         
-          input: input data to process from the previous plugin in the pipeline
-          kwargs: optional processing arguments that accompany this data
+          input:  Input data to process from the previous plugin in the pipeline
+          sender (Plugin) :  The :class:`NanoLLM.Plugin` instance that sent the message
+          channel (int|str):  The output channel of the sender this message is from
+          timestamp (float):  Time when the original data was captured or generated.
+          partial (bool):  True if this is mid-generation (like streaming LLM or ASR)
+          kwargs:  Optional processing arguments that accompany this data.
           
         Returns:
         
@@ -184,40 +191,38 @@ class Plugin(threading.Thread):
         """
         if self.threaded:
             #self.start() # thread may not be started if plugin only called from a callback
+            
             if self.drop_inputs:
-                configs = []
-                while True:
-                    try:
-                        config_input, config_kwargs = self.input_queue.get(block=False)
-                        if config_input is None and len(config_kwargs) > 0:  # still apply config
-                            configs.append((config_input, config_kwargs))
-                        #else:
-                        #    logging.debug(f"{self.name} dropping inputs")
-                    except queue.Empty:
-                        break
-                for config in configs:
-                    self.input_queue.put(config)
-                    self.input_event.set()
+                self.clear_inputs()
 
             self.input_queue.put((input,kwargs))
             self.input_event.set()
         else:
             self.dispatch(input, **kwargs)
-            
+           
     def output(self, output, channel=0, **kwargs):
         """
         Output data to the next plugin(s) on the specified channel (-1 for all channels)
         """
         #if output is None:
         #    return
+        
+        if isinstance(channel, str):
+            try:
+                channel = self.output_names.index(channel)
+            except Exception as error:
+                raise ValueError(f"invalid output channel name '{channel}' for {self.name} (outputs={self.output_names})")
 
+        if 'timestamp' not in kwargs:
+            kwargs['timestamp'] = time.perf_counter()
+            
         if channel >= 0:
-            kwargs.update(dict(sender=self, input_channel=channel))
+            kwargs.update(dict(sender=self, channel=channel))
             for output_plugin in self.outputs[channel]:
                 output_plugin.input(output, **kwargs)
         else:
             for output_channel in self.outputs:
-                kwargs.update(dict(sender=self, input_channel=output_channel))
+                kwargs.update(dict(sender=self, channel=output))
                 for output_plugin in output_channel:
                     output_plugin.input(output, **kwargs)
                     
@@ -290,7 +295,14 @@ class Plugin(threading.Thread):
             
         while not self.stop_flag:
             try:
-                input, kwargs = self.input_queue.get(block=False)
+                if self.drop_inputs:
+                    input, kwargs = self.clear_inputs()
+                else:
+                    input, kwargs = self.input_queue.get(block=False)
+                    
+                if input is None and not kwargs:
+                    break
+                   
                 self.dispatch(input, **kwargs)
             except queue.Empty:
                 break
@@ -353,14 +365,43 @@ class Plugin(threading.Thread):
                     
     def clear_inputs(self):
         """
-        Clear the input queue, dropping any data.
+        Clear the input queue, dropping any data except for the most recent which is returned.
+        in an (input, kwargs) tuple. If the queue was already empty, this will return None.  
         """
+        last = None
+        count = 0
+        
         while True:
             try:
-                self.input_queue.get(block=False)
+                last = self.input_queue.get(block=False)
+                count += 1
             except queue.Empty:
-                return         
+                break
+                
+        #if count > 0:
+        #    logging.debug(f"{self.name} | dropped {count} inputs")        
 
+        if last is None:
+            return (None, None)
+            
+        return last
+        '''
+        configs = []
+        while True:
+            try:
+                config_input, config_kwargs = self.input_queue.get(block=False)
+                if config_input is None and len(config_kwargs) > 0:  # still apply config
+                    configs.append((config_input, config_kwargs))
+                    logging.debug(f"{self.name} dropping inputs, but keeping {config_kwargs}")
+                else:
+                    logging.debug(f"{self.name} dropping inputs")
+            except queue.Empty:
+                break
+        for config in configs:
+            self.input_queue.put(config)
+            self.input_event.set()
+        '''
+                   
     def find(self, type):
         """
         Return the plugin with the specified type by searching for it among
