@@ -59,24 +59,4 @@ class PrintStream(Plugin):
             print(text, end='', flush=True)
         else:
             print(text)
-            
-    def apply_config(self, partial : bool = None, prefix : str = None, color : str = None, **kwargs):
-        """
-        Prints a text stream to stdout with formatting.
-        
-        Args:
-          partial (bool): If true, print token-by-token (otherwise, end with newline)
-          prefix (str): Text to print out before incoming text.
-          color (str): The color to print the output stream (or None for no colors)
-        """   
-        self.partial = update_default(partial, self.partial, bool)
-        self.prefix = update_default(prefix, self.prefix, str)
-        self.color = update_default(color, self.color, str)
 
-    def state_dict(self):
-        return {
-            **super().state_dict(),
-            'partial': self.partial,
-            'prefix': self.prefix,
-            'color': self.color,
-       }
