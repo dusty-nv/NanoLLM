@@ -455,6 +455,39 @@ function addVideoOutputWidget(name, id, title, grid_options) {
   return widget;
 }
 
+function addSimWidget(name, id, title, grid_options) {
+  const sim_id = `${id}_sim_controller`;
+  const reset_id = `${id}_sim_reset`;
+  const pause_id = `${id}_sim_pause`;
+  
+  const html = `
+    <p class="d-inline-flex gap-1">
+      <button type="button" class="btn btn-primary" id="${reset_id}">Reset</button>
+      <button type="button" class="btn btn-primary" data-bs-toggle="button" id="${pause_id}">Pause</button>
+    </p>
+  `;
+  
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 2, h: 4}, grid_options));
+  
+  let reset = document.getElementById(reset_id);
+  let pause = document.getElementById(pause_id);
+  
+  reset.addEventListener('click', function(e) {
+      msg = {};
+      msg[name] = {'reset': true};
+      sendWebsocket(msg); 
+  });
+  
+  pause.addEventListener('click', function(e) {
+      msg = {};
+      msg[name] = {'pause': pause.classList.contains('active')};
+      sendWebsocket(msg); 
+  });
+  
+  return widget; 
+}
+
+
 function addOutputListener(name, channel, listener) {
   if( ! (name in outputListeners) ) {
     outputListeners[name] = [listener];
@@ -632,6 +665,8 @@ function addPluginGridWidget(name, type, title, grid_options) {
       return addVideoOutputWidget(name, id, title, grid_options);
     case 'NanoDB':
       return addNanoDBWidget(name, id, title, grid_options);
+    case 'MimicGen':
+      return addSimWidget(name, id, title, grid_options);
     case 'TerminalPlugin':
       return addTerminalWidget(name, id, title, grid_options);
     case 'GraphEditor':
