@@ -115,7 +115,7 @@ class WebServer():
         self.ws_port = ws_port
         self.kwargs['ws_port'] = ws_port
 
-        self.ws_server = websocket_serve(self.on_websocket, host=self.host, port=self.ws_port, ssl_context=self.ssl_context, max_size=None)
+        self.ws_server = websocket_serve(self.on_websocket, host=self.host, port=self.ws_port, ssl_context=self.ssl_context, max_size=None, compression=None)
         self.ws_thread = threading.Thread(target=lambda: self.ws_server.serve_forever(), daemon=True)
         self.web_thread = threading.Thread(target=lambda: self.app.run(host=self.host, port=self.port, ssl_context=self.ssl_context, debug=True, use_reloader=False), daemon=True)
         
