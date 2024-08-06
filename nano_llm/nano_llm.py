@@ -481,6 +481,8 @@ class NanoLLM():
         if not self.has_vision:
             return
 
+        use_tensorrt = bool(vision_api == 'auto' or vision_api == 'trt' or vision_api == 'tensorrt')
+        
         if self.is_type('openvla'):
             from nano_llm.vision.vla import VLAModel
             
@@ -495,7 +497,11 @@ class NanoLLM():
                     hidden_state=-2,
                     num_classes=0,
                     dtype=torch.float16,
-                    use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
+                    use_tensorrt=use_tensorrt, 
+                    transform=dict(
+                        crop_pct=1.0, # disable
+                        crop_mode='center',
+                    ),
                 )
                 for i, timm_model_id in enumerate(self.config.timm_model_ids)
             ]
@@ -521,7 +527,7 @@ class NanoLLM():
                 CLIPVisionModel.from_pretrained(
                     vision_model if vision_model else self.config.mm_vision_tower,
                     crop=(kwargs.get('vision_scaling', 'resize') == 'crop'),
-                    use_tensorrt=(vision_api == 'auto' or vision_api == 'trt'), 
+                    use_tensorrt=(vision_api == 'auto' or vision_api == 'trt' or vision_api == 'tensorrt'), 
                     dtype=torch.float16)
             ]
             
