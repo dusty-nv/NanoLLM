@@ -25,8 +25,7 @@ class HFModel(NanoLLM):
         Load model from path on disk or HuggingFace repo name.
         """
         super(HFModel, self).__init__(model_path, **kwargs)
-    
-        self.model_path = model_path
+
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._run, daemon=True).start()  
@@ -36,15 +35,17 @@ class HFModel(NanoLLM):
 
         if init_empty_weights:
             with init_empty_weights_ctx():
-                self.model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16)
+                self.model = AutoModelForCausalLM.from_pretrained(self.model_path, 
+                    torch_dtype=torch.float16, trust_remote_code=True
+                )    
         else:
             if 'gtpq' in self.model_path:
-                self.model = AutoModelForCausalLM.from_pretrained(model_path, device=self.device, 
-                    torch_dtype=torch.float16, low_cpu_mem_usage=True
+                self.model = AutoModelForCausalLM.from_pretrained(self.model_path, device=self.device, 
+                    torch_dtype=torch.float16, low_cpu_mem_usage=True, trust_remote_code=True,
                 ).eval()
             else:
-                self.model = AutoModelForCausalLM.from_pretrained(model_path,
-                    torch_dtype=torch.float16, low_cpu_mem_usage=True
+                self.model = AutoModelForCausalLM.from_pretrained(self.model_path,
+                    torch_dtype=torch.float16, low_cpu_mem_usage=True, trust_remote_code=True,
                 ).to(self.device).eval()
         
         try:
@@ -55,7 +56,7 @@ class HFModel(NanoLLM):
         if not self.has_embed:
             logging.warning(f"{type(self)} model {self.config.name} did not have text embedding layer (disabling input_embeds)")
                 
-        self.has_embed = False # TODO monkey-patching for this    
+        self.has_embed = callable(getattr(self.model, 'get_input_embeddings'))
         self.load_config()
  
     def load_config(self):
@@ -269,10 +270,15 @@ class KVCacheHF(KVCache):
     def update(self, state):
         self.state = state
         
-        if self.state is not None:
+        if self.state is None:
+            return
+            
+        if isinstance(self.state, (tuple, list)):
             # TODO this is one shorter than the input+output token lengths...
+            self.state[0][0].shape[2] 
+        else:
             # https://huggingface.co/docs/transformers/en/main_classes/output#transformers.modeling_outputs.BaseModelOutputWithPast.past_key_values
-            self.num_tokens = self.state.get_seq_length() #self.state[0][0].shape[2] 
+            self.num_tokens = self.state.get_seq_length()
             
             
 class StopTokensCriteria(StoppingCriteria):
