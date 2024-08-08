@@ -71,7 +71,7 @@ class ChatHistory():
             else:
                 self.template = AttributeDict(ChatTemplates[chat_template])
         elif isinstance(chat_template, dict):
-            self.template = AttributeDict(template)
+            self.template = AttributeDict(chat_template)
         else:
             raise TypeError(f"chat_template should be a str or dict (was {type(chat_template)})")
 
