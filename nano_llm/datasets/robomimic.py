@@ -193,7 +193,7 @@ class RobomimicDataset:
             elif gripper_states is not None:
                 return gripper_states
                 
-        if gripper is not None:
+        if gripper is not None:  # invert from [-1,1] to [0,1]
             return 1.0 - ((gripper + 1.0) * 0.5) #(gripper + 1.0) * 0.5 #
          
         if action is not None:
