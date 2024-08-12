@@ -214,6 +214,9 @@ class VLAModel:
         
         # denormalize the actions using robot coefficients
         if not action_space.get('normalized', False):
+            #print(f'DECODE_ACTION DOF={self.dof} num_tokens={num_tokens} action_space=')
+            #pprint.pprint(action_space, indent=2)
+            #print('NANO NORMALIZED ACTIONS', pred_actions)
             action_high, action_low = action_space['q99'][:num_tokens], action_space['q01'][:num_tokens]
             pred_actions = np.where(
                 action_space['mask'][:num_tokens],
@@ -258,7 +261,8 @@ if __name__ == "__main__":
     parser.add_argument("--eval-model", type=str, default=None, help="path to the original HuggingFace model to enable error comparison")
     parser.add_argument("--dataset", type=str, default=None, required=True, help=f"path or name of the dataset to load")
     parser.add_argument("--dataset-type", type=str, default=None, choices=list(DatasetTypes.keys()), help=f"type of the dataset to load")
-    parser.add_argument("--dump", type=str, default=None, help="dump the OpenX dataset to a directory of individual image files")
+    parser.add_argument("--dump", type=str, default=None, help="dump the dataset to a directory of individual image files")
+    parser.add_argument("--camera", type=str, default=None, help="name of the camera in the dataset to use (default will use the first camera)")
     parser.add_argument("--max-images", type=int, default=1, help="the number of video frames to keep in the history")
     parser.add_argument("--max-episodes", type=int, default=None, help="the maximum number of episodes from the dataset to process")
     parser.add_argument("--max-steps", type=int, default=None, help="the maximum number of frames to process across all episodes")
@@ -334,7 +338,15 @@ if __name__ == "__main__":
             if 'latency' in key:
                 mean[key.replace('latency', 'fps')] = 1 / mean[key]
         return mean
-        
+     
+    def select_camera(images):
+        if args.camera:
+            if args.camera in images: # check if requested camera is there
+                return images[args.camera]
+            else:
+                raise KeyError(f"camera {args.camera} not in data, defaulting to {next(iter(images.keys()))} (options: {list(images.keys())})")
+        return next(iter(step.images.values())) # return the first camera
+              
     # load original unquantized model for eval
     if args.eval_model:
         eval_dtype = torch.float16 #torch.bfloat16
@@ -348,16 +360,17 @@ if __name__ == "__main__":
             trust_remote_code=True
         ).to("cuda:0")
         logging.success(f"loaded eval model {eval_model.__class__.__name__} from {args.eval_model}  ({eval_dtype})")
+        logging.debug(f"eval model image means:  {eval_processor.image_processor.means}  (std={eval_processor.image_processor.stds})")
         logging.debug(f"action bins difference:  {np.sum(np.abs(model.vla.bins - eval_model.bins))}")
         logging.debug(f"action bin centers diff: {np.sum(np.abs(model.vla.bin_centers - eval_model.bin_centers))}")
         assert(model.vla.vocab_size == eval_model.vocab_size)
         
-    def eval(step, i, actions, gt):
+    def eval(step, i, image, actions, gt):
         if not args.eval_model:
             return
         prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
         time_begin = time.perf_counter()
-        inputs = eval_processor(prompt, PIL.Image.fromarray(step.images[0])).to("cuda:0", dtype=eval_dtype)
+        inputs = eval_processor(prompt, PIL.Image.fromarray(image)).to("cuda:0", dtype=eval_dtype)
         eval_actions = eval_model.predict_action(**inputs, unnorm_key=vla.action_space, do_sample=False)
         time_elapsed = time.perf_counter() - time_begin
         stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
@@ -368,13 +381,14 @@ if __name__ == "__main__":
     # process the dataset
     for i, step in enumerate(dataset):
         time_begin = time.perf_counter()
-        actions = vla.predict_action(step.images[0], instruction=step.instruction, streaming=False)
+        image = select_camera(step.images)
+        actions = vla.predict_action(image, instruction=step.instruction, streaming=False)
         time_elapsed = time.perf_counter() - time_begin
         print_table(model.stats)
         stats.latency.append(time_elapsed)
         stats.error.append(nrmse(step.action, actions, y_range=action_range))
         print(f"step {i}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~{np.mean(stats.error):.4f}")
-        eval(step, i, actions, step.action)
+        eval(step, i, image, actions, step.action)
         print(f"gt   {i}                                {step.action}")  
         stats.mean = mean_stats(stats)
         if args.save_stats:
