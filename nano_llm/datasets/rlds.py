@@ -215,7 +215,13 @@ class RLDSDataset(TFDSDataset):
             workers = 1
         elif workers < 0:
             workers += mp.cpu_count()
+         
+        if not width:
+            width = 224
             
+        if not height:
+            height = 224
+               
         exporter = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'rlds_export.py') 
         dataset_name = os.path.basename(output)
         

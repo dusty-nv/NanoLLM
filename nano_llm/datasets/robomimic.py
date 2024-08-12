@@ -106,19 +106,31 @@ class RobomimicDataset:
                     obs_key = self.remap_keys.get(obs_key, obs_key)
                     if obs_key:
                         images[obs_key] = self.resize_images(obs[()])
-                        
+             
+            if 'instructions' in episode:
+                instructions = episode['instructions']
+            else:
+                instructions = self.get_instruction(self.config.env_name)  
+                 
             for i in range(samples):
                 self.new_steps += 1
+                
                 stop = bool(self.max_steps and self.new_steps >= self.max_steps)
-  
-                yield(AttributeDict(
+                step = AttributeDict(
                     #state = episode['states'][i], # MuJoCo states
                     action = actions[i],
                     images = {key : image[i] for key, image in images.items()},
-                    instruction = self.get_instruction(self.config.env_name),
                     is_first = bool(i == 0),
                     is_last = bool(i == samples-1) or stop,
-                ))
+                )
+
+                if instructions:
+                    if isinstance(instructions, str):
+                        step.instruction = instructions
+                    else:
+                        step.instruction = instructions[i].decode("utf-8")
+
+                yield(step)
 
                 if stop:
                     return
@@ -129,14 +141,14 @@ class RobomimicDataset:
             if self.max_steps and self.new_steps >= self.max_steps:
                 return
             yield(generator(episode_key))
-                
+               
     def get_instruction(self, task):
         task = task.lower()
         if 'stack_three' in task:
             return "stack the red block on top of the green block, and then the blue block on top of the red block."
         elif 'stack' in task:
             return "stack the red block on top of the green block"
-     
+    
     def compute_stats(self):
         logging.debug(f"Robomimic | calculating dataset statistics ({self.num_episodes} episodes, {self.num_steps} steps)")
         

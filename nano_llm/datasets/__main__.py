@@ -20,7 +20,7 @@ parser.add_argument("--convert", type=str, default=None, choices=['rlds'], help=
 parser.add_argument("--output", type=str, default=None, help="path to export the converted dataset to (only when --convert is used)")
 parser.add_argument("--width", type=int, default=None, help="change the image resolution when converting a dataset")
 parser.add_argument("--height", type=int, default=None, help="change the image resolution when converting a dataset")
-parser.add_argument("--workers", type=int, default=-1, help="the number of parallel workers to use for loading/exporting")
+parser.add_argument("--workers", type=int, default=0, help="the number of parallel workers to use for loading/exporting")
 
 parser.add_argument("--remap-keys", action='append', nargs='+', default=None, help="colon-separated k:v pairs to change the names of cameras or observations, from 'old_name:new_name'.  To remove a key, use 'name:None'")
 parser.add_argument("--sample-steps", type=int, default=None, help="the factor of which to subsample time steps by skipping every N")

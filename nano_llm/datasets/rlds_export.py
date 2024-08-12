@@ -29,7 +29,16 @@ NUM_WORKERS = _NUM_WORKERS  # number of parallel loaders
 
 DOF = _DOF
 
-         
+                        
+'''
+'wrist_image': tfds.features.Image(
+    shape=(HEIGHT, WIDTH, 3),
+    dtype=np.uint8,
+    encoding_format='png',
+    doc='Wrist camera RGB observation.',
+),
+'''
+                               
 class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
     """
     DatasetBuilder for RLDS/TFDS format
@@ -54,13 +63,7 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                             encoding_format='png',
                             doc='Main camera RGB observation.',
                         ),
-                        'wrist_image': tfds.features.Image(
-                            shape=(HEIGHT, WIDTH, 3),
-                            dtype=np.uint8,
-                            encoding_format='png',
-                            doc='Wrist camera RGB observation.',
-                        ),
-                        
+ 
                         'state': tfds.features.Tensor(
                             shape=(DOF,),
                             dtype=np.float32,
@@ -101,7 +104,7 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         """Generator of examples for each split."""
         self.load_dataset()
 
-        if NUM_WORKERS:
+        if NUM_WORKERS and NUM_WORKERS > 1:
             print(f"Creating pool of {NUM_WORKERS} worker threads")
             
             worker_pool = ThreadPool(NUM_WORKERS) # HDF5/TFDS aren't multi-process
@@ -126,8 +129,8 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             if 'state' in step:
                 obs['state'] = step.state
             else:
-                obs['state'] = [0] * DOF
-                    
+                obs['state'] = np.array([0] * DOF, dtype=np.float32)
+    
             for img_key, image in step.images.items():
                 obs[img_key] = self.resize_image(image)      
 
