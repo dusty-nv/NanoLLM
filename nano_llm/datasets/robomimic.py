@@ -96,7 +96,7 @@ class RobomimicDataset:
         """
         def generator(episode_key):
             episode = self.data[episode_key]
-            actions = self.remap(actions=episode['actions'][()])
+            actions = self.remap(actions=np.array(episode['actions']))
             samples = int(episode.attrs['num_samples'])
             images = {}
             
@@ -155,7 +155,7 @@ class RobomimicDataset:
         actions = []
         
         for episode_key, episode in self.data.items():
-            actions.append(self.remap(actions=episode['actions']))
+            actions.append(self.remap(actions=np.array(episode['actions'])))
             
         actions = np.concatenate(actions, axis=0)
       
@@ -209,15 +209,25 @@ class RobomimicDataset:
             return 1.0 - ((gripper + 1.0) * 0.5) #(gripper + 1.0) * 0.5 #
          
         if action is not None:
+            action[-1] = self.remap(gripper=action[-1])
+            return action
+            
+            '''
             return np.concatenate([
                 action[:6], self.remap(gripper=action[-1])[None]
             ], axis=0) 
-                 
+            '''
+            
         if actions is not None:
+            for s in range(actions.shape[0]):
+                actions[s,-1] = self.remap(gripper=actions[s,-1])
+            return actions   
+            '''
             return np.concatenate([
                 actions[:, :6],
                 self.remap(gripper=actions[:,-1])[:, None]
             ], axis=1)
+            '''
                           
     def dump(self, max_steps=1):
         #import imageio

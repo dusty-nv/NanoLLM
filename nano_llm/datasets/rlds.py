@@ -246,7 +246,12 @@ class RLDSDataset(TFDSDataset):
         for var, value in env.items():
             script += f"sed -i 's|{var}|{value}|g' {dataset_name}.py ; "
             
-        script += f"tfds build --data_dir {output} --num-processes {workers} ; "
+        script += f"tfds build --data_dir {output} "
+        
+        if workers > 1:
+            script += f"--num-processes {workers} "
+        
+        script += "; "
         
         logging.info(f"RLDSDataset | converting {dataset} from {dataset_type} to RLDS/TFDS\n\n{pformat(env, indent=2)}\n\n{script}")
         subprocess.run(script, executable='/bin/bash', shell=True, check=True)

@@ -76,11 +76,13 @@ class DumpDataset:
             json.dump(steps, f, indent=2)
 
         for img_key, img_list in images.items():
-            image_path = os.path.join(path, f'{img_key}.jpg')
             video_path = os.path.join(path, f'{img_key}.mp4')
- 
-            imageio.imwrite(image_path, img_list[int(len(img_list)/2)])
             imageio.mimsave(video_path, np.stack(img_list), fps=20)
+            
+            for i, image in enumerate(img_list):
+                image_path = os.path.join(path, f'{img_key}_{i}.jpg')
+                imageio.imwrite(image_path, image)
+            
 
     @staticmethod
     def filter_dict(obj, copy=True, max_array_len=8):
