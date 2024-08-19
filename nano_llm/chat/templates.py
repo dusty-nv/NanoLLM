@@ -132,7 +132,7 @@ ChatTemplates = {
     },
     
     # https://huggingface.co/openvla/openvla-7b
-    'open-vla': {
+    'openvla': {
         'user': "<s>${MESSAGE}",
         'bot': "${MESSAGE}",
     },
@@ -204,7 +204,7 @@ def ChatTemplate(model):
         else:
             chat_template = 'llava-v0'
     elif 'openvla' in model:
-        chat_template = 'open-vla'
+        chat_template = 'openvla'
     else:
         return None
         

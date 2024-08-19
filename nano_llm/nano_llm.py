@@ -488,7 +488,7 @@ class NanoLLM():
             
             weights_key = ['vision_backbone.featurizer.', 'vision_backbone.fused_featurizer.']
             self.vision = [
-                TIMMVisionModel(
+                TIMMVisionModel(  # .from_pretrained() disabled because added transform dict => cache hashing
                     timm_model_id, 
                     weights=self.model_path,
                     weights_key=lambda layer: layer.replace(weights_key[i], '').replace('scale_factor', 'gamma') if weights_key[i] in layer else None,

@@ -259,6 +259,7 @@ if __name__ == "__main__":
     parser = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input', 'video_output'])
     
     parser.add_argument("--eval-model", type=str, default=None, help="path to the original HuggingFace model to enable error comparison")
+    parser.add_argument("--action-space", type=str, default=None, help="action normalization key to use from the model config or dataset name")
     parser.add_argument("--dataset", type=str, default=None, required=True, help=f"path or name of the dataset to load")
     parser.add_argument("--dataset-type", type=str, default=None, choices=list(DatasetTypes.keys()), help=f"type of the dataset to load")
     parser.add_argument("--dump", type=str, default=None, help="dump the dataset to a directory of individual image files")
@@ -301,6 +302,8 @@ if __name__ == "__main__":
        
     if args.normalized:
         vla.action_space = 'normalized'
+    elif args.action_space:
+        vla.action_space = args.action_space
     elif hasattr(dataset, 'action_space'):
         vla.action_space = dataset.action_space
     elif 'bridge' in dataset.config.name:
@@ -376,7 +379,7 @@ if __name__ == "__main__":
         stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
         stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
         stats.eval_latency.append(time_elapsed)
-        print(f"eval {i}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.eval_latency):.2f} FPS  {eval_actions}  error={stats.eval_error[-1]:.4f} ~{np.mean(stats.eval_error):.4f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
+        print(f"eval {i}  {eval_actions}  accuracy {1-stats.eval_error[-1]:.4f} ~{1-np.mean(stats.eval_error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.eval_latency):.2f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
         
     # process the dataset
     for i, step in enumerate(dataset):
@@ -387,9 +390,9 @@ if __name__ == "__main__":
         print_table(model.stats)
         stats.latency.append(time_elapsed)
         stats.error.append(nrmse(step.action, actions, y_range=action_range))
-        print(f"step {i}  {time_elapsed*1000:.1f} ms  {1/time_elapsed:.2f} FPS  ~{1/np.mean(stats.latency):.2f} FPS  {actions}  error={stats.error[-1]:.4f} ~{np.mean(stats.error):.4f}")
+        print(f"step {i}  {actions}  accuracy {1-stats.error[-1]:.4f} ~{1-np.mean(stats.error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.latency):.2f}")
         eval(step, i, image, actions, step.action)
-        print(f"gt   {i}                                {step.action}")  
+        print(f"gt   {i}  {step.action}")  
         stats.mean = mean_stats(stats)
         if args.save_stats:
             with open(args.save_stats, 'w') as file:

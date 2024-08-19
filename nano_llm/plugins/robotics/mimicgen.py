@@ -191,6 +191,11 @@ class MimicGen(Plugin):
         """
         Get the natural language instruction or command for the robot to follow.
         """
+        instruct = getattr(self.sim, 'instruction', None)
+        
+        if instruct:
+            return instruct
+            
         env = self.environment.lower()
         
         if 'stack_three' in env:
