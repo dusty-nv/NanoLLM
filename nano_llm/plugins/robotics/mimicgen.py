@@ -34,9 +34,8 @@ class MimicGen(Plugin):
         self.sim = None
         self.sim_config = {}
 
-        self.frames = 0
         self.success = 0
-        self.episodes = 1
+        self.episodes = []
         
         self.reset = False
         self.pause = False
@@ -114,16 +113,39 @@ class MimicGen(Plugin):
             controller_configs=controller,
         )
         
-        self.sim.reset()
-        self.reset = False
-        
-        self.next_action = None
-        self.last_action = None
-        self.num_actions = 0
-        
+        self.reset_sim()
         robot = self.sim.robots[0]
         logging.info(f"{self.name} setup sim environment with configuration:\n\n{pprint.pformat(config, indent=2)}\n\nrobot_dof={robot.dof}\naction_dim={robot.action_dim}\naction_limits={pprint.pformat(robot.action_limits)}\n")
+    
+    def reset_sim(self):
+        """
+        Reset the episode from the sim's rendering thread
+        """
+        self.sim.reset()
+        self.clear_inputs()
         
+        self.reset = False 
+        self.episodes += [0]
+
+        self.last_action = None
+        self.next_action = None
+        self.num_actions = 0
+        
+        if self.keyboard:
+            self.keyboard.start_control()
+            
+        if self.spacenav:
+            self.spacenav.start_control()
+    
+    def reset_stats(self, reset=True):
+        """
+        Reset the episode statistics, and optionally the environment.
+        """
+        logging.info(f"{self.name} | resetting episode stats ({self.environment})\n")
+        self.episodes = []
+        self.success = 0
+        self.reset = reset
+                
     def render(self, action=None):
         """
         Render a frame from the simulator.
@@ -217,23 +239,7 @@ class MimicGen(Plugin):
         """
         if self.reset:
             logging.info(f"{self.name} | resetting sim environment ({self.environment})\n")
-            
-            self.sim.reset()
-            self.clear_inputs()
-            
-            self.reset = False 
-            self.episodes += 1
-            self.frames = 0
-            
-            self.last_action = None
-            self.next_action = None
-            self.num_actions = 0
-            
-            if self.keyboard:
-                self.keyboard.start_control()
-                
-            if self.spacenav:
-                self.spacenav.start_control()
+            self.reset_sim()
 
         if self.pause:
             time.sleep(0.25)
@@ -257,23 +263,30 @@ class MimicGen(Plugin):
             
         render_time = time.perf_counter() - time_begin
         sleep_time = (1.0 / self.framerate) - render_time
-        self.frames += 1
+        stats_text = [f"{int(render_time * 1000)}ms ({self.episodes[-1]})"]
+        
+        self.episodes[-1] += 1
+        success = hasattr(self.sim, '_check_success') and self.sim._check_success()
 
-        if (
-            hasattr(self.sim, '_check_success') and self.sim._check_success() or
-            self.horizon and self.frames >= self.horizon
-        ): 
+        if success:
             self.success += 1
+            
+        if success or self.horizon and self.episodes[-1] >= self.horizon and self.num_actions > 0:
             self.reset = True
             sleep_time = 0
-            
-        self.send_stats(summary=[
-            f"{int(render_time * 1000)} ms ({self.frames})",
-            f"{self.success}/{self.episodes} ({int(self.success/self.episodes*100)}%)",
-        ])
+            avg_length = sum(self.episodes) / len(self.episodes)
+            success_text = [f"{self.success}/{len(self.episodes)} ({int(self.success/len(self.episodes)*100)}%)"]
+        elif len(self.episodes) > 1:
+            avg_length = sum(self.episodes[:-1]) / (len(self.episodes)-1)
+            success_text = [f"{self.success}/{(len(self.episodes)-1)} ({int(self.success/(len(self.episodes)-1)*100)}%)"]
+        else:
+            avg_length = None
+            success_text = []
+ 
+        self.send_stats(summary=stats_text + success_text)
         
-        if self.frames < 2 or self.frames % 10 == 0:
-            logging.info(f"{self.name} | task={self.environment}  episode={self.episodes}  frame={self.frames}  time={render_time:.3f}  success={self.success}/{self.episodes} ({self.success/self.episodes*100:.1f}%)")
+        if self.reset or self.episodes[-1] < 2 or self.episodes[-1] % 10 == 0:
+            logging.info(f"{self.name} | task={self.environment}  episode={len(self.episodes)}  frame={self.episodes[-1]}{'  avg_frames=' + str(int(avg_length)) if avg_length else ''}  {'success=' + success_text[0] if success_text else ''}  {'(SUCCESS)' if success else '(FAIL)' if self.reset else ''}")
             
         if sleep_time > 0:
             time.sleep(sleep_time)
@@ -300,7 +313,7 @@ class MimicGen(Plugin):
         self.num_actions += 1
         
         if self.num_actions == 1:
-            self.frames = 1
+            self.episodes[-1] = 1
             
             
 

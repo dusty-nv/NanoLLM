@@ -483,11 +483,7 @@ function addSimWidget(name, id, title, grid_options) {
   
   reset_stats.addEventListener('click', function(e) {
       msg = {};
-      msg[name] = {
-        'episodes': 1,
-        'success': 0,
-        'reset': true,
-      };
+      msg[name] = {'reset_stats': true};
       sendWebsocket(msg); 
   });
   
