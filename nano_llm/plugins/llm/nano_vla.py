@@ -81,8 +81,9 @@ class NanoVLA(NanoLLM):
                 input = load_image(input)
             else:
                 if input and len(input.strip()) > 0:
+                    if self.vla.instruction != input:
+                        logging.warning(f"{self.name} using prompt instruction `{input}`")
                     self.vla.instruction = input
-                    logging.warning(f"{self.name} using prompt instruction `{input}`")
                 return
         
         if not is_image(input):

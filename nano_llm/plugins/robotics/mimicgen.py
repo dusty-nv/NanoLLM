@@ -24,15 +24,19 @@ class MimicGen(Plugin):
     """
     def __init__(self, environment: str="Stack_D0", robot: str="Panda", gripper: str="PandaGripper",
                        camera: str="frontview", camera_width: int=512, camera_height: int=512,
-                       framerate: int=10, genlock: bool=False, domain_randomization: str=None,
-                       repeat_actions: bool=False, partial_actions: bool=False, action_scale: float=1.0, **kwargs):
+                       framerate: int=10, genlock: bool=False, horizon: int=None, 
+                       repeat_actions: bool=False, action_scale: float=1.0, **kwargs):
         """
         Robot simulator and image generator using robosuite from robosuite.ai
         """
-        super().__init__(outputs=['image', 'instruct'], **kwargs)
+        super().__init__(outputs=['image', 'text'], **kwargs)
  
         self.sim = None
         self.sim_config = {}
+
+        self.frames = 0
+        self.success = 0
+        self.episodes = 1
         
         self.reset = False
         self.pause = False
@@ -40,6 +44,10 @@ class MimicGen(Plugin):
         self.keyboard = None
         self.spacenav = None
 
+        self.next_action = None
+        self.last_action = None
+        self.num_actions = 0
+        
         try:
             self.keyboard = Keyboard(pos_sensitivity=1.0, rot_sensitivity=1.0)
             self.keyboard.start_control()
@@ -62,8 +70,7 @@ class MimicGen(Plugin):
       
         self.add_parameters(environment=environment, robot=robot, gripper=gripper, camera=camera, 
                             camera_width=camera_width, camera_height=camera_height, framerate=framerate, 
-                            genlock=genlock, domain_randomization=domain_randomization, 
-                            repeat_actions=False, partial_actions=partial_actions, action_scale=action_scale)          
+                            genlock=genlock, horizon=horizon, repeat_actions=False, action_scale=action_scale)          
                            
         self.add_parameter('motion_select', type=str, default='disabled', options=input_options)
 
@@ -112,7 +119,8 @@ class MimicGen(Plugin):
         
         self.next_action = None
         self.last_action = None
-
+        self.num_actions = 0
+        
         robot = self.sim.robots[0]
         logging.info(f"{self.name} setup sim environment with configuration:\n\n{pprint.pformat(config, indent=2)}\n\nrobot_dof={robot.dof}\naction_dim={robot.action_dim}\naction_limits={pprint.pformat(robot.action_limits)}\n")
         
@@ -152,7 +160,7 @@ class MimicGen(Plugin):
         instruct = self.get_instruction()
         
         if instruct:
-            self.output(instruct, channel='instruct')
+            self.output(instruct, channel='text')
             
         self.output(image)
 
@@ -178,7 +186,7 @@ class MimicGen(Plugin):
             elif self.last_action is not None:
                 if self.repeat_actions:         # reuse the last action
                     action = self.last_action
-                else:                           # only reuse the gripper
+                else:                           # only reuse the gripper (absolute)
                     action = np.concatenate((np.zeros(dof-1), self.last_action[-1:]))
             else:                               # stopped state (no motion)
                 action = np.concatenate((np.zeros(dof-1), [1.0]))
@@ -212,11 +220,15 @@ class MimicGen(Plugin):
             
             self.sim.reset()
             self.clear_inputs()
+            
             self.reset = False 
+            self.episodes += 1
+            self.frames = 0
             
             self.last_action = None
             self.next_action = None
-    
+            self.num_actions = 0
+            
             if self.keyboard:
                 self.keyboard.start_control()
                 
@@ -228,25 +240,44 @@ class MimicGen(Plugin):
             self.clear_inputs()
             self.last_action = None
             self.next_action = None
+            self.num_actions = 0
             return
             
         self.process_inputs()
         time_begin = time.perf_counter()
         
         if self.genlock:
-            if self.next_action is not None or self.last_action is None:
+            if self.next_action is not None or self.num_actions == 0:
                 self.render() # only render on new input (or on empty pipeline)
+            else:
+                time.sleep(0.005)
+                return
         else:
             self.render()
             
         render_time = time.perf_counter() - time_begin
         sleep_time = (1.0 / self.framerate) - render_time
+        self.frames += 1
+
+        if (
+            hasattr(self.sim, '_check_success') and self.sim._check_success() or
+            self.horizon and self.frames >= self.horizon
+        ): 
+            self.success += 1
+            self.reset = True
+            sleep_time = 0
+            
+        self.send_stats(summary=[
+            f"{int(render_time * 1000)} ms ({self.frames})",
+            f"{self.success}/{self.episodes} ({int(self.success/self.episodes*100)}%)",
+        ])
         
-        self.send_stats(summary=[f"{int(render_time * 1000)} ms"])
-        
+        if self.frames < 2 or self.frames % 10 == 0:
+            logging.info(f"{self.name} | task={self.environment}  episode={self.episodes}  frame={self.frames}  time={render_time:.3f}  success={self.success}/{self.episodes} ({self.success/self.episodes*100:.1f}%)")
+            
         if sleep_time > 0:
             time.sleep(sleep_time)
-                    
+                          
     def run(self):
         """
         Simulator rendering loop that runs forever
@@ -262,14 +293,14 @@ class MimicGen(Plugin):
         """
         Recieve action inputs and apply them to the simulation.
         """
-        dof = self.sim.robots[0].action_dim
-        action = convert_tensor(action, return_tensors='np')
+        if partial:
+            return
+            
+        self.next_action = convert_tensor(action, return_tensors='np')    
+        self.num_actions += 1
         
-        if not partial:
-            self.next_action = action
-        elif self.partial_actions and len(action) < dof:
-            if self.repeat_actions and self.last_action is not None:
-                self.next_action = np.concatenate((action, self.last_action[len(action):]))
-            else:
-                self.next_action = np.concatenate((action, [0] * (dof-len(action)-1), [1]))       
+        if self.num_actions == 1:
+            self.frames = 1
+            
+            
 

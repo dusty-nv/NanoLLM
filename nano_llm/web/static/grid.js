@@ -458,11 +458,13 @@ function addVideoOutputWidget(name, id, title, grid_options) {
 function addSimWidget(name, id, title, grid_options) {
   const sim_id = `${id}_sim_controller`;
   const reset_id = `${id}_sim_reset`;
+  const reset_stats_id = `${id}_sim_reset`;
   const pause_id = `${id}_sim_pause`;
   
   const html = `
     <p class="d-inline-flex gap-1">
-      <button type="button" class="btn btn-primary" id="${reset_id}">Reset</button>
+      <button type="button" class="btn btn-primary" id="${reset_id}">Reset Episode</button>
+      <button type="button" class="btn btn-primary" id="${reset_stats_id}">Reset Stats</button>
       <button type="button" class="btn btn-primary" data-bs-toggle="button" id="${pause_id}">Pause</button>
     </p>
   `;
@@ -470,11 +472,22 @@ function addSimWidget(name, id, title, grid_options) {
   let widget = addGridWidget(id, title, html, null, Object.assign({w: 2, h: 4}, grid_options));
   
   let reset = document.getElementById(reset_id);
+  let reset_stats = document.getElementById(reset_stats_id);
   let pause = document.getElementById(pause_id);
   
   reset.addEventListener('click', function(e) {
       msg = {};
       msg[name] = {'reset': true};
+      sendWebsocket(msg); 
+  });
+  
+  reset_stats.addEventListener('click', function(e) {
+      msg = {};
+      msg[name] = {
+        'episodes': 1,
+        'success': 0,
+        'reset': true,
+      };
       sendWebsocket(msg); 
   });
   
