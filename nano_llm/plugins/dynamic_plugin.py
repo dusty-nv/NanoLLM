@@ -88,7 +88,7 @@ class DynamicPlugin(Plugin):
             UserPrompt, AutoPrompt, VADFilter,
             TextStream, TextOverlay, RateLimit,
             AudioInputDevice, AudioOutputDevice, AudioRecorder, 
-            NanoDB, Deduplicate, DataTable, DataLogger, EventFilter,
+            NanoDB, Deduplicate, DataTable, DataLogger, EventFilter, Mux,
         )
 
         from nano_llm.plugins.speech.riva_asr import RivaASR
@@ -139,6 +139,7 @@ class DynamicPlugin(Plugin):
         #DynamicPlugin.register(DataTable)
         #DynamicPlugin.register(DataLogger)
         DynamicPlugin.register(EventFilter)
+        DynamicPlugin.register(Mux)
         
         # robotics
         DynamicPlugin.register(MimicGen)

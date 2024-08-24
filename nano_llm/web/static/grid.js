@@ -13,6 +13,8 @@ function addGrid() {
   grid = GridStack.init({'column': 12, 'cellHeight': 50, 'float': true});
 
   grid.on('added', function(event, items) {
+    if( items === undefined )
+      return;
     items.forEach((item) => {
       console.log(`grid widget ${item.id} was added`, item);
       sendWebsocket({
@@ -24,6 +26,8 @@ function addGrid() {
   });
   
   grid.on('change', function(event, items) {
+    if( items === undefined )
+      return;
     items.forEach((item) => {
       console.log(`grid widget ${item.id} changed position/size`, item);
       sendWebsocket({
@@ -35,6 +39,8 @@ function addGrid() {
   });
   
   grid.on('removed', function(event, items) {
+    if( items === undefined )
+      return;
     items.forEach((item) => {
       console.log(`grid widget ${item.id} has been removed`, item);
       sendWebsocket({
@@ -458,7 +464,7 @@ function addVideoOutputWidget(name, id, title, grid_options) {
 function addSimWidget(name, id, title, grid_options) {
   const sim_id = `${id}_sim_controller`;
   const reset_id = `${id}_sim_reset`;
-  const reset_stats_id = `${id}_sim_reset`;
+  const reset_stats_id = `${id}_sim_reset_stats`;
   const pause_id = `${id}_sim_pause`;
   
   const html = `
@@ -469,7 +475,7 @@ function addSimWidget(name, id, title, grid_options) {
     </p>
   `;
   
-  let widget = addGridWidget(id, title, html, null, Object.assign({w: 2, h: 4}, grid_options));
+  let widget = addGridWidget(id, title, html, null, Object.assign({w: 4, h: 2}, grid_options));
   
   let reset = document.getElementById(reset_id);
   let reset_stats = document.getElementById(reset_stats_id);
@@ -478,12 +484,14 @@ function addSimWidget(name, id, title, grid_options) {
   reset.addEventListener('click', function(e) {
       msg = {};
       msg[name] = {'reset': true};
+      console.log(`resetting sim episode ${msg}`);
       sendWebsocket(msg); 
   });
   
   reset_stats.addEventListener('click', function(e) {
       msg = {};
       msg[name] = {'reset_stats': true};
+      console.log(`resetting sim stats ${msg}`);
       sendWebsocket(msg); 
   });
   
@@ -527,13 +535,7 @@ function addStateListener(name, listener) {
 function setStateDict(state_dicts) {
   for( plugin_name in state_dicts ) {
     const state_dict = state_dicts[plugin_name];
-    for( state_name in state_dict ) {
-      const id = document.getElementById(`${plugin_name}_config_${state_name}`);
-      if( id != null ) {
-        id.value = state_dict[state_name];
-      }
-    }
-    
+
     if( plugin_name in stateListeners )
       stateListeners[plugin_name].forEach((listener) => {listener(state_dict);});
 
@@ -630,10 +632,16 @@ function addPlugin(plugin) {
   style_el.innerHTML = style;
   document.head.appendChild(style_el);
 
-  const has_config_dialog = (Object.keys(plugin['parameters']).length > 0);
+  let has_config_dialog = false;
+  
+  for( i in plugin['parameters'] ) {
+    if( plugin['parameters'][i]['controls'].indexOf('dialog') >= 0 ) {
+        has_config_dialog = true;
+        break;
+    }
+  }
   
   $(`.${plugin_name}`).on('dblclick', function () {
-    //console.log(`double-click ${plugin_name}`);
     if( addPluginGridWidget(plugin_name, plugin['type'], plugin_title) == null ) {
       if( has_config_dialog ) {
         sendWebsocket({'get_state_dict': plugin_name});
@@ -645,10 +653,9 @@ function addPlugin(plugin) {
   
   if( has_config_dialog )
     addPluginDialog(plugin_name, 'config', plugin_title, null, plugin['parameters']);
-    
-  if( Object.keys(layout_grid).length > 0 ) {
+
+  if( Object.keys(layout_grid).length > 0 )
     addPluginGridWidget(plugin_name, plugin['type'], plugin_title, layout_grid);
-  }
 }
 
 function addPluginGridWidget(name, type, title, grid_options) {
@@ -942,7 +949,7 @@ function addGraphEditor(name, id, grid_options) {
     menuSelector: "#plugin_context_menu",
     menuSelected: function (invokedOn, selectedMenu) {
         //var msg = "You selected the menu item '" + selectedMenu.text() + "' on the value '" + invokedOn.text() + "'";
-        console.log('selected context menu', selectedMenu, msg);
+        console.log('selected context menu', selectedMenu);
     }
   });
 
@@ -1099,9 +1106,9 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     const param = parameters[param_name];
     const id = `${plugin_name}_${stage}_${param_name}`;
     
-    if( param['hidden'] )
-      continue;
-    
+    if( 'controls' in param && param['controls'].indexOf('dialog') < 0 )
+        continue;
+
     if( param_count > 0 && param_count % Math.ceil(num_params / num_columns) == 0 )
       html += `</div><div class="col-sm">`;
       
@@ -1199,11 +1206,12 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     let args = {};
     
     for( param_name in parameters ) {
-      if( parameters[param_name]['hidden'] )
+      const param = parameters[param_name];
+      if( 'controls' in param && param['controls'].indexOf('dialog') < 0 )
         continue;
       let value = document.getElementById(`${plugin_name}_${stage}_${param_name}`).value;
       if( value != undefined && value.length > 0 ) { // input.value are always strings
-        const type = parameters[param_name]['type'];
+        const type = param['type'];
         if( type == 'integer' || type == 'number' )
           value = Number(value);
         args[param_name] = value;
@@ -1237,7 +1245,45 @@ function addPluginDialog(plugin_name, stage, title, description, parameters, max
     $(`#${select2_id}`).select2(select2_args[select2_id]);
   }
   
+  if( stage == 'config' ) {
+    addStateListener(plugin_name, function(state_dict) {
+      for( state_name in state_dict ) {
+        if( state_name == 'parameters' ) {
+          updatePluginDialogControls(plugin_name, 'config', state_dict['parameters']);
+        }
+        else {
+          const id = document.getElementById(`${plugin_name}_config_${state_name}`);
+          if( id != null ) {
+            console.debug(`updating value from server:  ${plugin_name}.${state_name} => ${state_dict[state_name]}`);
+            id.value = state_dict[state_name];
+          }
+        }
+      }
+    });
+  }
+    
   return dialog_id;
+}
+
+function updatePluginDialogControls(plugin_name, stage, parameters) {
+  for( param_name in parameters ) {
+    const param = parameters[param_name];
+    const id = `#${plugin_name}_${stage}_${param_name}`;
+    
+    if( 'options' in param ) {
+      $(id).find('option').remove();
+      for( let k=0; k < param['options'].length; k++ ) {
+        const option = param['options'][k];
+        // https://select2.org/programmatic-control/add-select-clear-items#create-if-not-exists
+        $(id).append(new Option(option, option));
+        /*if( $(id).find("option[value='" + option + "']").length == 0 ) {
+            console.log(`${id} adding option ${option}`);
+            let newOption = new Option(option, option);
+            $(id).append(newOption); //.trigger('change');
+        }*/
+      }
+    }
+  }
 }
 
 function fitGridWidgetContents(el) {

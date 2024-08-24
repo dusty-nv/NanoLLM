@@ -121,7 +121,9 @@ class MimicGen(Plugin):
         """
         Reset the episode from the sim's rendering thread
         """
-        self.sim.reset()
+        if self.sim:
+            self.sim.reset()
+            
         self.clear_inputs()
         
         self.reset = False 

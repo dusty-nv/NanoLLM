@@ -138,7 +138,7 @@ class DynamicAgent(Agent):
         
         if globals:    
             self.global_states = {
-                'GraphEditor': {'layout_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 14}},
+                'GraphEditor': {'layout_grid': {'x': 0, 'y': 0, 'w': 8, 'h': 10}},
             }
             
             if self.terminal is not None:
@@ -165,8 +165,8 @@ class DynamicAgent(Agent):
         if input_plugin is None or output_plugin is None:
             return
         
-        output_plugin.outputs[output_channel].remove(input_plugin)
-
+        output_plugin.disconnect(input_plugin, channel=output_channel)
+ 
     def get_state_dict(self, name=''):
         if not name or name == 'agent':
             state_dict = {
@@ -408,7 +408,7 @@ class DynamicAgent(Agent):
             func = getattr(obj, attr)
 
             if callable(func):
-                logging.debug(f"websocket call:  {obj.__class__.__name__}.{attr}({msg})")
+                logging.debug(f"websocket | calling {obj.__class__.__name__}.{attr}({msg})")
                 
                 if isinstance(msg, dict):
                     response = func(**msg)
@@ -418,7 +418,7 @@ class DynamicAgent(Agent):
                 if isinstance(response, dict): #if response is not None:
                     self.webserver.send_message(response)
             else:
-               logging.debug(f"websocket setting:  {obj.__class__.__name__}.{attr} = {msg}")
+               logging.debug(f"websocket | setting {obj.__class__.__name__}.{attr} = {msg}")
                setattr(obj, attr, msg)
     
             return True

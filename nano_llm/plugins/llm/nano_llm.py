@@ -89,7 +89,7 @@ class NanoLLM(Plugin):
         self.add_parameter('drop_inputs', default=drop_inputs)
         self.add_parameter('system_prompt', default=self.history.system_prompt)
 
-        #self.add_parameter('tool_docs', type=str, read_only=True, hidden=True)
+        #self.add_parameter('tool_docs', type=str, read_only=True, controls=False)
 
         self.max_context_len = self.model.config.max_length
         self.wrap_tokens = kwargs.get('wrap_tokens', 512)

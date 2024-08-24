@@ -77,10 +77,11 @@ class Plugin(threading.Thread):
         else:
             raise TypeError(f"outputs should have been int, str, list[str], or None  (was {type(outputs)})")
 
+        self.inputs = []
         self.outputs = [[] for i in range(outputs)]
 
-        self.add_parameter('layout_grid', type=dict, default={}, hidden=True)
-        self.add_parameter('layout_node', type=dict, default={}, hidden=True)
+        self.add_parameter('layout_grid', type=dict, default={}, controls=False)
+        self.add_parameter('layout_node', type=dict, default={}, controls=False)
         
         if threaded:
             self.input_queue = queue.Queue()
@@ -88,6 +89,9 @@ class Plugin(threading.Thread):
 
         from nano_llm import BotFunctions
         self.BotFunctions = BotFunctions
+        
+        from nano_llm.plugins import Callback
+        self.Callback = Callback
         
         Plugin.Instances.append(self)
      
@@ -122,36 +126,74 @@ class Plugin(threading.Thread):
         """
         logging.warning(f"plugin {self.name} did not implement process() - dropping input")
     
-    def connect(self, plugin, channel=0, **kwargs):
+    def connect(self, plugin, channel=0, direction='send', **kwargs):
         """
-        Connect the output queue from this plugin with the input queue of another plugin,
-        so that this plugin sends its output data to the other one.
+        Connect the input/output of this plugin with another plugin or function, 
+        on the specified output channel for plugins with different types of outputs.
+        
+        In the ``send`` direction, this plugin's outputs are sent to the other plugin.
+        In the ``receive`` direction, this plugin recieves inputs that get output by the other.
         
         Args:
         
-          plugin (Plugin|callable): either the plugin to link to, or a callback function.
-          channel (int) -- the output channel of this plugin to link the other plugin to.
-                        
+          plugin (Plugin|callable): Either the plugin to link to, or a callback function.
+          channel (int|str): The output channel to use for whichever plugin is the output.
+          direction (str): If ``'send'``, the output from this plugin will be sent to the
+                           other plugin. If ``'receive'``, the other plugin will send its
+                           outputs to this plugin (``channel`` refers to the other plugin)                       
         Returns:
 
           A reference to this plugin instance (self)
         """
-        from nano_llm.plugins import Callback
-        
         if not isinstance(plugin, Plugin):
             if not callable(plugin):
                 raise TypeError(f"{type(self)}.connect() expects either a Plugin instance or a callable function (was {type(plugin)})")
-            plugin = Callback(plugin, **kwargs)
+            plugin = self.Callback(plugin, **kwargs)
             
-        self.outputs[channel].append(plugin)
-        
-        if isinstance(plugin, Callback):
-            logging.debug(f"connected {self.name} to {plugin.function.__name__} on channel={channel}")  # TODO https://stackoverflow.com/a/25959545
+        if direction == 'send':
+            self.outputs[channel].append(plugin)
+        elif direction == 'receive':
+            self.inputs.append((plugin, channel))
         else:
-            logging.debug(f"connected {self.name} to {plugin.name} on channel={channel}")
+            raise ValueError(f"connect() expects direction to be 'send' or 'receive' (was '{direction}')")
+                
+        if '__in_connect' not in kwargs:
+            plugin_name = plugin.function.__name__ if isinstance(plugin, self.Callback) else plugin.name
             
+            if direction == 'send':
+                reverse_direction, send_name, recieve_name = 'receive', self.name, plugin_name
+            elif direction == 'receive':
+                reverse_direction, send_name, recieve_name = 'send', plugin_name, self.name 
+                
+            plugin.connect(self, channel=channel, direction=reverse_direction, __in_connect=True)
+            logging.info(f"plugin | connected {send_name} to {recieve_name} on channel {channel}")  # TODO https://stackoverflow.com/a/25959545
+                
         return self
+    
+    def disconnect(self, plugin, channel=0, direction='send', **kwargs):
+        """
+        Disconnect this plugin from the other on the specified channel.
+        """
+        if direction == 'send':
+            self.outputs[channel].remove(plugin)
+        elif direction == 'receive':
+            self.inputs.remove((plugin, channel))
+        else:
+            raise ValueError(f"connect() expects direction to be 'send' or 'receive' (was '{direction}')")
         
+        if '__in_disconnect' not in kwargs:
+            plugin_name = plugin.function.__name__ if isinstance(plugin, self.Callback) else plugin.name
+            
+            if direction == 'send':
+                reverse_direction, send_name, recieve_name = 'receive', self.name, plugin_name
+            elif direction == 'receive':
+                reverse_direction, send_name, recieve_name = 'send', plugin_name, self.name 
+                
+            plugin.disconnect(self, channel=channel, direction=reverse_direction, __in_disconnect=True)
+            logging.info(f"plugin | disconnected {send_name} from {recieve_name} (channel {channel})") 
+        
+        return self
+                    
     def add(self, plugin, channel=0, **kwargs):
         """
         @deprecated Please use :func:``Plugin.connect``
@@ -452,8 +494,8 @@ class Plugin(threading.Thread):
         
         return self.tools[name]
         
-    def add_parameter(self, attribute: str, name=None, type=None, default=None,
-                      read_only=False, hidden=False, help=None, kwarg=None, end=None, **kwargs):
+    def add_parameter(self, attribute: str, name=None, type=None, default=None, read_only=False, 
+                      controls=True, help=None, kwarg=None, end=None, **kwargs):
         """
         Make an attribute that is shared in the state_dict and can be accessed/modified by clients.
         These will automatically show up in the studio web UI and can be sync'd over websockets.
@@ -479,7 +521,6 @@ class Plugin(threading.Thread):
             'display_name': name,
             'type': type,
             'read_only': read_only,
-            'hidden': hidden,
         }
         
         if hasattr(self, 'type_hints'):
@@ -490,6 +531,18 @@ class Plugin(threading.Thread):
         #if kwarg:
         #    param['kwarg'] = kwarg
         
+        if not controls or kwargs.get('hidden'):
+            controls = []
+        elif isinstance(controls, bool):
+            controls = ['dialog'] if controls else []
+        elif isinstance(controls, str):
+            controls = [controls]
+                    
+        if isinstance(controls, list):
+            param['controls'] = controls
+        else:
+            raise TypeError("expected bool, str, or list[str] for controls argument")
+       
         if not help:
             help = init.get('help')
         
@@ -523,7 +576,7 @@ class Plugin(threading.Thread):
                 if attr != 'name' and attr != 'type' and attr != 'connections':
                     logging.warning(f"attempted to set unknown parameter {self.name}.{attr}={value} (skipping)")
                 continue
-            logging.debug(f"{self.name} setting parameter '{attr}' to {value}")
+            logging.debug(f"plugin | setting {self.name}.{attr} = {value}")
             if self.parameters[attr]['type'] == 'boolean' and isinstance(value, str):
                 value = value.lower()
                 if value == 'true' or value == '1':
@@ -586,7 +639,7 @@ class Plugin(threading.Thread):
             })
         
         for attr, param in self.parameters.items():
-            if hidden or not param['hidden'] or config:
+            if hidden or param['controls'] or config:
                 state[attr] = getattr(self, attr)
             
         return state
