@@ -17,7 +17,7 @@ class Mux(Plugin):
         self.active_plugin = 'All'
         self.active_channel = 0
 
-        self.add_parameter('active_input', type=str, default='All', options=['All'], help="Select the input channel to output (others will be dropped unless 'All' is enabled)")
+        self.add_parameter('active_input', type=str, default='All', options=['All'], controls=['dialog', 'node'], help="Select the input channel to output (others will be dropped unless 'All' is enabled)")
 
     @property
     def active_input(self):
@@ -64,7 +64,7 @@ class Mux(Plugin):
         print('MUX CONNECTION_NAME', connection_name, options)
         if connection_name not in options:
             options.append(connection_name)
-            self.send_inputs()
+        self.send_inputs()
         return self
     
     def disconnect(self, plugin, channel=0, direction='send', **kwargs):
@@ -75,7 +75,7 @@ class Mux(Plugin):
         connection_name = self.input_to_str(plugin, channel)
         if connection_name in options:
             options.remove(connection_name)
-            self.send_inputs()
+        self.send_inputs()
         return self
     
     def send_inputs(self):

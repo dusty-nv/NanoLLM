@@ -599,6 +599,39 @@ function addPlugin(plugin) {
     }
   }
   
+  let control_html = '';
+  let has_state_listener = false;
+  
+  for( param_name in plugin['parameters'] ) {
+    const param = plugin['parameters'][param_name];
+    
+    if( 'controls' in param && param['controls'].indexOf('node') < 0 )
+        continue;
+        
+    if( 'options' in param ) {
+      control_html += `<select id="${plugin_name}_node_control_${param_name}" style="background: rgb(150,150,150);">\n`
+      
+      for( k in param['options'] ) {
+        const option = param['options'][k];
+        
+        if( option == param['default'] )
+          var selected = ` selected="selected"`;
+        else
+          var selected = '';
+        
+        control_html += `  <option${selected} value="${option}">${option}</option>\n`
+      }
+      
+      control_html += `</select>\n`;
+    }
+  }
+
+  if( control_html.length > 0 ) {
+    control_html = `<p id="${plugin_name}_node_controls" class="mt-2" style="font-family: monospace, monospace; font-size: 80%">${control_html}</p>\n`;
+    has_state_listener = true;
+    console.debug(`${plugin_name} node control:  ${control_html}`);
+  }
+  
   let stats_class = '';
   
   if( plugin['outputs'].length > 1 )
@@ -607,6 +640,7 @@ function addPlugin(plugin) {
   const html = `
     <div style="position: absolute; top: 5px;">
       ${truncate(plugin_title, 14)}
+      ${control_html}
       <p id="${plugin_name}_node_stats" class="${stats_class}" style="font-family: monospace, monospace; font-size: 80%"></p>
     </div>
   `;
@@ -615,23 +649,60 @@ function addPlugin(plugin) {
   nodeIdToName[node_id] = plugin_name;
   console.log(`added node id=${node_id} for {plugin_name}`);
   
-  let style = '';
-  let max_output_chars = 0;
+  var show_channel_names = (plugin['type'] != 'Mux');
+
+  if( show_channel_names ) {
+    let style = '';
+    let max_output_chars = 0;
+    
+    for( i in plugin['outputs'] ) {
+      const output = plugin['outputs'][i].toString();
+      max_output_chars = Math.max(max_output_chars, output.length);
+      style += `.${plugin_name} .outputs .output:nth-child(${Number(i)+1}):before {`;
+      style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 20}px;} `;
+    }
+      
+    style += `.outputs { margin-top: 20px; font-family: monospace, monospace; } `;
+    
+    var style_el = document.createElement('style');
+    style_el.id = `${plugin_name}_node_io_styles`;
+    style_el.innerHTML = style;
+    document.head.appendChild(style_el);
+  }
   
-  for( i in plugin['outputs'] ) {
-    const output = plugin['outputs'][i].toString();
-    max_output_chars = Math.max(max_output_chars, output.length);
-    style += `.${plugin_name} .outputs .output:nth-child(${Number(i)+1}):before {`;
-    style += `display: block; content: "${output}"; position: relative; min-width: 160px; font-size: 80%; bottom: 2px; right: ${(output.length-1) * 6 + 20}px;} `;
+  for( k in plugin['parameters'] ) {
+    const param_name = k;
+    const param = plugin['parameters'][param_name];
+
+    if( 'controls' in param && param['controls'].indexOf('node') < 0 )
+        continue;
+        
+    if( !('options' in param) )
+        continue;
+    
+    let control = document.getElementById(`${plugin_name}_node_control_${param_name}`);
+    
+    control.addEventListener('change', (event) => {
+      console.log(`setting ${plugin_name}.${param_name} = ${control.value}`, event);
+      msg = {};
+      msg[param_name] = control.value;
+      msg2 = {};
+      msg2[plugin_name] = msg;
+      sendWebsocket(msg2);
+    });   
+  }
+  
+  
+  if( has_state_listener ) {
+    addStateListener(plugin_name, function(state_dict) {
+      for( state_name in state_dict ) {
+        if( state_name == 'parameters' ) {
+          updatePluginNodeControls(plugin_name, state_dict['parameters']);
+        }
+      }
+    });
   }
     
-  style += `.outputs { margin-top: 20px; font-family: monospace, monospace; } `;
-  
-  var style_el = document.createElement('style');
-  style_el.id = `${plugin_name}_node_io_styles`;
-  style_el.innerHTML = style;
-  document.head.appendChild(style_el);
-
   let has_config_dialog = false;
   
   for( i in plugin['parameters'] ) {
@@ -657,6 +728,22 @@ function addPlugin(plugin) {
   if( Object.keys(layout_grid).length > 0 )
     addPluginGridWidget(plugin_name, plugin['type'], plugin_title, layout_grid);
 }
+
+function updatePluginNodeControls(plugin_name, parameters) {
+  for( param_name in parameters ) {
+    const param = parameters[param_name];
+    const id = `#${plugin_name}_node_control_${param_name}`;
+    
+    if( 'options' in param ) {
+      $(id).find('option').remove();
+      for( let k=0; k < param['options'].length; k++ ) {
+        const option = param['options'][k];
+        $(id).append(new Option(option, option));
+      }
+    }
+  }
+}
+
 
 function addPluginGridWidget(name, type, title, grid_options) {
   const id = `${name}_grid`;
