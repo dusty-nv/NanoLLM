@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import os
+import logging
+
 from .tfds import TFDSDataset
 from .rlds import RLDSDataset
 
@@ -7,6 +10,8 @@ from .dump import DumpDataset
 from .droid import DroidDataset
 from .bridge import BridgeDataset, BridgeDatasetRaw
 from .robomimic import RobomimicDataset
+
+from ..utils import download_model
 
 
 DatasetTypes = {
@@ -22,7 +27,7 @@ DatasetTypes = {
 }
 
 
-def load_dataset(dataset: str=None, dataset_type: str=None, **kwargs):
+def load_dataset(dataset: str=None, dataset_type: str=None, download=True, cache="/data/datasets/huggingface", **kwargs):
     """
     Dataset factory function that supports different dataset formats and sources.
     """
@@ -33,6 +38,20 @@ def load_dataset(dataset: str=None, dataset_type: str=None, **kwargs):
         else:    
             dataset_type = 'oxe'
     
+    if (
+        download and dataset and 
+        '/' in dataset and 
+        not os.path.isdir(dataset)
+    ):
+        try:
+            kwargs['name'] = dataset.split('/')[-1]
+            dataset = download_model(
+                dataset, type='dataset',
+                cache_dir=os.environ.get('HF_DATASETS', cache),
+            )   
+        except Exception as error:
+            logging.warning(f"could not download dataset {dataset} from HuggingFace Hub ({error})")
+            
     if dataset:    
         data = DatasetTypes[dataset_type](dataset, **kwargs)
     else:

@@ -16,13 +16,18 @@ class RobotDataset(Plugin):
         """
         self.dataset = load_dataset(path, dataset_type=dataset_type, max_episodes=max_episodes, max_steps=max_steps)
         
-        outputs = ['actions']
+        outputs = []
         
         for step in self.dataset:
-            for i, k in enumerate(step.images):
-                outputs.append(f'img_{i}')
+            if len(step.images) > 0:
+                for i, k in enumerate(step.images):
+                    outputs.append(f'img_{i}')
+            else:
+                outputs.append('image')
             break
       
+        outputs += ['text', 'action']
+        
         super().__init__(outputs=outputs, **kwargs)
         
         self.add_parameters(max_episodes=max_episodes, max_steps=max_steps, framerate=framerate)

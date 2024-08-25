@@ -47,7 +47,7 @@ class TFDSDataset:
         with open(config_path) as file:
             self.config = AttributeDict({
                 **json.load(file), 
-                **dict(name=os.path.basename(path.strip('/')), split=split),
+                **dict(name=kwargs.get('name', os.path.basename(path.strip('/'))), split=split),
                 **kwargs
             })
 
