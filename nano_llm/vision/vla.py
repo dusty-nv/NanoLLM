@@ -5,13 +5,12 @@
 #
 # You can run it on video files or devices like this:
 #
-#    huggingface-cli download --local-dir /data/models/openvla-7b openvla/openvla-7b
-#
-#    python3 -m nano_llm.vision.vla \
+#    python3 -m nano_llm.vision.vla --api mlc \
 #      --model openvla/openvla-7b \
-#      --eval-model /data/models/openvla-7b \
-#      --dataset bridge_orig \
-#      --max-episodes 1
+#      --quantization q4f16_ft \
+#      --dataset bridge_orig_ep100 \
+#      --dataset-type rlds \
+#      --max-episodes 10
 #
 import os
 import sys
@@ -249,14 +248,176 @@ class VLAModel:
         
         return self.chat.embed_chat()[0]
 
-           
+
+def vla_process_camera(model="openvla/openvla-7b", 
+                       video_source="/dev/video0", 
+                       prompt=None, action_space=None, **kwargs):
+    """
+    Run VLA model on images from a camera device or video stream.
+    """
+    from nano_llm.plugins import VideoSource
+    
+    np.set_printoptions(floatmode='fixed', precision=5, linewidth=1000, edgeitems=30) 
+    
+    # load vision-language-action model
+    model = NanoLLM.from_pretrained(model, **kwargs)
+    camera = VideoSource(video_source, cuda_stream=0, **kwargs)
+
+    assert(model.vla)
+    
+    if action_space:
+        model.vla.action_space = action_space
+      
+    if not prompt:
+        prompt = "point at the camera"
+        
+    while True:
+        image = camera.capture()
+        
+        if image is None:
+            continue
+            
+        time_begin = time.perf_counter()
+        actions = model.vla.predict_action(image, instruction=prompt)
+        time_elapsed = time.perf_counter() - time_begin
+        print(f"{actions}  latency={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f}")
+
+
+def vla_process_dataset(model="openvla/openvla-7b", 
+                        dataset="dusty-nv/bridge_orig_ep100",
+                        camera=None, action_space=None, normalized=False, 
+                        eval_model=None, save_stats=None, **kwargs):
+    """
+    VLA inference benchmark on robotics datasets to measure the accuracy and performance.
+    """           
+    np.set_printoptions(floatmode='fixed', precision=5, linewidth=1000, edgeitems=30) 
+    
+    # load vision-language-action model
+    model = NanoLLM.from_pretrained(model, **kwargs)
+    vla = model.vla
+    
+    assert(vla)
+    assert(dataset)
+
+    # gather performance and accuracy measurements
+    stats = AttributeDict(
+        latency = [],
+        eval_latency = [],
+        eval_error = [],
+        quant_error = [],
+        error = [],
+    )
+       
+    if normalized:
+        vla.action_space = 'normalized'
+    elif action_space:
+        vla.action_space = action_space
+    elif hasattr(dataset, 'action_space'):
+        vla.action_space = dataset.action_space
+    elif 'bridge' in dataset.config.name:
+        vla.action_space = 'bridge_orig'
+    else:
+        vla.action_space = dataset.config.name
+
+    action_range = vla.action_space.q99 - vla.action_space.q01
+
+    logging.info(f"Action space:\n{vla.action_space}")
+    logging.info(f"Action range:\n{action_range}")
+    
+    def rmspe(y_true, y_pred):
+        # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
+        return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))
+    
+    def nrmse(y_true, y_pred, y_range=None):
+        # https://en.wikipedia.org/wiki/Root_mean_square_deviation#Normalization
+        if normalized:
+            y_range = 2.0
+        elif y_range is None:
+            y_range = np.max(y_true) - np.min(y_true)
+        
+        if isinstance(y_range, (list, np.ndarray)):
+            return np.sqrt(np.nanmean(np.square((y_true - y_pred) / y_range)))  # y_range[y_range == 0.0] = 1.0
+        else:    
+            return np.sqrt(np.nanmean(np.square(y_true - y_pred))) / y_range
+    
+    def mean_stats(stats):
+        mean = AttributeDict(timesteps=len(stats.latency))
+        for key, samples in stats.items():
+            if not samples or not isinstance(samples, list):
+                continue
+            mean[key] = np.mean(samples)
+            if 'latency' in key:
+                mean[key.replace('latency', 'fps')] = 1 / mean[key]
+        return mean
+     
+    def select_camera(images):
+        if camera:
+            if camera in images: # check if requested camera is there
+                return images[camera]
+            else:
+                raise KeyError(f"camera {camera} not in data, defaulting to {next(iter(images.keys()))} (options: {list(images.keys())})")
+        return next(iter(step.images.values())) # return the first camera
+              
+    # load original unquantized model for eval
+    if eval_model:
+        eval_dtype = torch.float16 #torch.bfloat16
+        eval_model_name = eval_model
+        logging.info(f"loading eval model with HF Transformers from {eval_model_name}  ({eval_dtype})")
+        eval_processor = AutoProcessor.from_pretrained(eval_model, trust_remote_code=True) 
+        eval_model = AutoModelForVision2Seq.from_pretrained(
+            eval_model,
+            #attn_implementation="flash_attention_2",  # [Optional] Requires `flash_attn`
+            torch_dtype=eval_dtype, 
+            low_cpu_mem_usage=True, 
+            trust_remote_code=True
+        ).to("cuda:0")
+        logging.success(f"loaded eval model {eval_model.__class__.__name__} from {eval_model_name}  ({eval_dtype})")
+        logging.debug(f"eval model image means:  {eval_processor.image_processor.means}  (std={eval_processor.image_processor.stds})")
+        logging.debug(f"action bins difference:  {np.sum(np.abs(model.vla.bins - eval_model.bins))}")
+        logging.debug(f"action bin centers diff: {np.sum(np.abs(model.vla.bin_centers - eval_model.bin_centers))}")
+        assert(model.vla.vocab_size == eval_model.vocab_size)
+        
+    def eval(step, i, image, actions, gt):
+        if not eval_model:
+            return
+        prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
+        time_begin = time.perf_counter()
+        inputs = eval_processor(prompt, PIL.Image.fromarray(image)).to("cuda:0", dtype=eval_dtype)
+        eval_actions = eval_model.predict_action(**inputs, unnorm_key=vla.action_space, do_sample=False)
+        time_elapsed = time.perf_counter() - time_begin
+        stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
+        stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
+        stats.eval_latency.append(time_elapsed)
+        print(f"eval {i}  {eval_actions}  accuracy {1-stats.eval_error[-1]:.4f} ~{1-np.mean(stats.eval_error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.eval_latency):.2f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
+        
+    # process the dataset
+    for i, step in enumerate(dataset):
+        time_begin = time.perf_counter()
+        image = select_camera(step.images)
+        actions = vla.predict_action(image, instruction=step.instruction)
+        time_elapsed = time.perf_counter() - time_begin
+        print_table(model.stats)
+        stats.latency.append(time_elapsed)
+        stats.error.append(nrmse(step.action, actions, y_range=action_range))
+        print(f"step {i}  {actions}  accuracy {1-stats.error[-1]:.4f} ~{1-np.mean(stats.error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.latency):.2f}")
+        eval(step, i, image, actions, step.action)
+        print(f"gt   {i}  {step.action}")  
+        stats.mean = mean_stats(stats)
+        if save_stats:
+            with open(save_stats, 'w') as file:
+                json.dump(stats, file, indent=2)
                 
+    logging.success(f"Done processing {dataset.config.name} with {model.config.name}\n")
+    print_table(stats.mean)
+    return stats
+    
+               
 if __name__ == "__main__":
 
     from nano_llm.utils import ArgParser
     from nano_llm.datasets import DatasetTypes, load_dataset
 
-    parser = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input', 'video_output'])
+    parser = ArgParser(extras=ArgParser.Defaults + ['prompt', 'video_input'])
     
     parser.add_argument("--eval-model", type=str, default=None, help="path to the original HuggingFace model to enable error comparison")
     parser.add_argument("--action-space", type=str, default=None, help="action normalization key to use from the model config or dataset name")
@@ -278,126 +439,15 @@ if __name__ == "__main__":
     if args.dataset:
         dataset = load_dataset(**vars(args))
         
-    if args.dump:
-        dataset.dump(args.dump)
-        sys.exit(0)
+        if args.dump:
+            dataset.dump(args.dump)
+            sys.exit(0)
    
-    np.set_printoptions(floatmode='fixed', precision=5, linewidth=1000, edgeitems=30) 
+        vla_process_dataset(**{**vars(args), 'dataset': dataset})
+        
+    elif args.camera:
+        vla_process_camera(**vars(args))   
+    
       
-    # load vision-language-action model
-    model = NanoLLM.from_pretrained(**vars(args))
-    vla = model.vla
     
-    assert(vla)
-    assert(args.dataset)
-
-    # gather performance and accuracy measurements
-    stats = AttributeDict(
-        latency = [],
-        eval_latency = [],
-        eval_error = [],
-        quant_error = [],
-        error = [],
-    )
-       
-    if args.normalized:
-        vla.action_space = 'normalized'
-    elif args.action_space:
-        vla.action_space = args.action_space
-    elif hasattr(dataset, 'action_space'):
-        vla.action_space = dataset.action_space
-    elif 'bridge' in dataset.config.name:
-        vla.action_space = 'bridge_orig'
-    else:
-        vla.action_space = dataset.config.name
-
-    action_range = vla.action_space.q99 - vla.action_space.q01
-
-    logging.info(f"Action space:\n{vla.action_space}")
-    logging.info(f"Action range:\n{action_range}")
-    
-    def rmspe(y_true, y_pred):
-        # https://stackoverflow.com/questions/53165807/how-to-calculate-rmspe-in-python-using-numpy
-        return np.sqrt(np.nanmean(np.square(((y_true - y_pred) / y_true))))
-    
-    def nrmse(y_true, y_pred, y_range=None):
-        # https://en.wikipedia.org/wiki/Root_mean_square_deviation#Normalization
-        if args.normalized:
-            y_range = 2.0
-        elif y_range is None:
-            y_range = np.max(y_true) - np.min(y_true)
-        
-        if isinstance(y_range, (list, np.ndarray)):
-            return np.sqrt(np.nanmean(np.square((y_true - y_pred) / y_range)))  # y_range[y_range == 0.0] = 1.0
-        else:    
-            return np.sqrt(np.nanmean(np.square(y_true - y_pred))) / y_range
-    
-    def mean_stats(stats):
-        mean = AttributeDict(timesteps=len(stats.latency))
-        for key, samples in stats.items():
-            if not samples or not isinstance(samples, list):
-                continue
-            mean[key] = np.mean(samples)
-            if 'latency' in key:
-                mean[key.replace('latency', 'fps')] = 1 / mean[key]
-        return mean
-     
-    def select_camera(images):
-        if args.camera:
-            if args.camera in images: # check if requested camera is there
-                return images[args.camera]
-            else:
-                raise KeyError(f"camera {args.camera} not in data, defaulting to {next(iter(images.keys()))} (options: {list(images.keys())})")
-        return next(iter(step.images.values())) # return the first camera
-              
-    # load original unquantized model for eval
-    if args.eval_model:
-        eval_dtype = torch.float16 #torch.bfloat16
-        logging.info(f"loading eval model with HF Transformers from {args.eval_model}  ({eval_dtype})")
-        eval_processor = AutoProcessor.from_pretrained(args.eval_model, trust_remote_code=True) 
-        eval_model = AutoModelForVision2Seq.from_pretrained(
-            args.eval_model,
-            #attn_implementation="flash_attention_2",  # [Optional] Requires `flash_attn`
-            torch_dtype=eval_dtype, 
-            low_cpu_mem_usage=True, 
-            trust_remote_code=True
-        ).to("cuda:0")
-        logging.success(f"loaded eval model {eval_model.__class__.__name__} from {args.eval_model}  ({eval_dtype})")
-        logging.debug(f"eval model image means:  {eval_processor.image_processor.means}  (std={eval_processor.image_processor.stds})")
-        logging.debug(f"action bins difference:  {np.sum(np.abs(model.vla.bins - eval_model.bins))}")
-        logging.debug(f"action bin centers diff: {np.sum(np.abs(model.vla.bin_centers - eval_model.bin_centers))}")
-        assert(model.vla.vocab_size == eval_model.vocab_size)
-        
-    def eval(step, i, image, actions, gt):
-        if not args.eval_model:
-            return
-        prompt = f"In: What action should the robot take to {step.instruction}?\nOut:" 
-        time_begin = time.perf_counter()
-        inputs = eval_processor(prompt, PIL.Image.fromarray(image)).to("cuda:0", dtype=eval_dtype)
-        eval_actions = eval_model.predict_action(**inputs, unnorm_key=vla.action_space, do_sample=False)
-        time_elapsed = time.perf_counter() - time_begin
-        stats.quant_error.append(nrmse(eval_actions, actions, y_range=action_range))
-        stats.eval_error.append(nrmse(gt, eval_actions, y_range=action_range))
-        stats.eval_latency.append(time_elapsed)
-        print(f"eval {i}  {eval_actions}  accuracy {1-stats.eval_error[-1]:.4f} ~{1-np.mean(stats.eval_error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.eval_latency):.2f}  q_err={stats.quant_error[-1]:.4f} ~{np.mean(stats.quant_error):.4f}")
-        
-    # process the dataset
-    for i, step in enumerate(dataset):
-        time_begin = time.perf_counter()
-        image = select_camera(step.images)
-        actions = vla.predict_action(image, instruction=step.instruction, streaming=False)
-        time_elapsed = time.perf_counter() - time_begin
-        print_table(model.stats)
-        stats.latency.append(time_elapsed)
-        stats.error.append(nrmse(step.action, actions, y_range=action_range))
-        print(f"step {i}  {actions}  accuracy {1-stats.error[-1]:.4f} ~{1-np.mean(stats.error):.4f}  time={time_elapsed*1000:.1f} ms  fps={1/time_elapsed:.2f} ~{1/np.mean(stats.latency):.2f}")
-        eval(step, i, image, actions, step.action)
-        print(f"gt   {i}  {step.action}")  
-        stats.mean = mean_stats(stats)
-        if args.save_stats:
-            with open(args.save_stats, 'w') as file:
-                json.dump(stats, file, indent=2)
-                
-    logging.success(f"Done processing {dataset.config.name} with {model.config.name}\n")
-    print_table(stats.mean)
      

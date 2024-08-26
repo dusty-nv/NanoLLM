@@ -2,6 +2,7 @@
 # TFDS/RLDS dataset builder template (do not import)
 import os
 import cv2
+import logging
 import threading
 
 import tensorflow_datasets as tfds
@@ -132,7 +133,12 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                 obs['state'] = np.array([0] * DOF, dtype=np.float32)
     
             for img_key, image in step.images.items():
-                obs[img_key] = self.resize_image(image)      
+                if img_key == 'image_0' and 'image' not in step.images:
+                    img_key = 'image'
+                if img_key == 'image':
+                    obs[img_key] = self.resize_image(image) 
+                #else:
+                #    logging.warning(f"dropping unused {img_key} from observation")     
 
             steps.append({
                 'observation': obs,
@@ -150,7 +156,10 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         if self.sample_steps:
             steps = [steps[n] for n in range(0, len(steps), self.sample_steps)]
             steps[-1]['is_last'] = True
-            
+         
+        steps[0]['is_first'] = True
+        steps[-1]['is_last'] = True
+           
         #print(f"Thread {threading.get_ident()} loaded episode with {len(steps)} steps")
         
         return f"episode_{id}", {
@@ -161,7 +170,9 @@ class RLDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                 
     def load_dataset(self):
         from nano_llm import load_dataset
-        from nano_llm.utils import convert_tensor
+        from nano_llm.utils import convert_tensor, LogFormatter
+        
+        LogFormatter.config(level='debug')
 
         self.dataset = load_dataset(
             DATASET, 

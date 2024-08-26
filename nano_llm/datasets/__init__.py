@@ -26,13 +26,13 @@ def load_dataset(dataset: str=None, dataset_type: str=None, **kwargs):
     """
     Dataset factory function that supports different dataset formats and sources.
     """
-    if not dataset_type:
+    if not dataset_type or dataset_type == 'None':
         if dataset in DatasetTypes:
             dataset_type = dataset
             dataset = None
         else:    
             dataset_type = 'oxe'
-    
+
     if dataset:    
         data = DatasetTypes[dataset_type](dataset, **kwargs)
     else:

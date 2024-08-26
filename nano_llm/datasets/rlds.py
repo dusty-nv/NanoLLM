@@ -27,7 +27,7 @@ class RLDSDataset(TFDSDataset):
         self.tf = tf
         
         if max_episodes:
-            split = f"{split}[:{max_episodes}]"
+            split = f"{split}[:{max_episodes+1}]"
         
         super().__init__(path, split=split, cache_dir=cache_dir, **kwargs)
 
@@ -171,7 +171,7 @@ class RLDSDataset(TFDSDataset):
                 return None
             else:
                 data[key] = value
-                        
+      
         return data
 
     def filter_key(self, key, value):
@@ -186,7 +186,11 @@ class RLDSDataset(TFDSDataset):
         elif isinstance(value, self.tf.Tensor):
             if len(value) == 0:
                 return None
-            return value.numpy()
+            value = value.numpy()
+            if len(value) == 1 and value.dtype == np.bool:
+                return bool(value.item())
+            else:
+                return value
         elif not key.startswith('is_') and not value:
             return None
             
