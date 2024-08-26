@@ -18,6 +18,7 @@ class NanoVLA(NanoLLM):
                  quantization: str="q4f16_ft", 
                  max_context_len: int=384, 
                  drop_inputs: bool=True,
+                 yield_time: float=0,
                  **kwargs):
         """
         Load a Vision/Language Action model.
@@ -28,7 +29,8 @@ class NanoVLA(NanoLLM):
           api (str): The model backend to use (MLC - fastest, AWQ - accurate quantization, HF - compatability)
           quantization (str): For MLC: recommend q4f16_ft or 8f16_ft. For AWQ: the path to the quantized weights.
           max_context_len (str): The maximum chat length in tokens (by default, inherited from the model)  
-          drop_inputs (bool): If true, only the latest frame will be processed (older frames dropped)      
+          drop_inputs (bool): If true, only the latest frame will be processed (older frames dropped)    
+          yield_time (float): Sleep for this many milliseconds after each frame for other high-priority processes.  
         """
         super().__init__(model=model, vision_api=vision_api, api=api, quantization=quantization, 
                          max_context_len=max_context_len, drop_inputs=drop_inputs,
@@ -39,8 +41,15 @@ class NanoVLA(NanoLLM):
  
         self.vla = self.model.vla
         
+        self.add_parameter('yield_time', default=yield_time)
         self.add_parameter('action_space', type=str, default='normalized', help="Degrees of freedom (xyz, roll/pitch/yaw, gripper) and normalization coefficients", suggestions=list(self.vla.action_spaces.keys()))
 
+        show_params = ['drop_inputs', 'yield_time', 'action_space']
+        
+        for param_name, param in self.parameters.items():
+            if param_name not in show_params:
+                param['controls'] = []  # hide unused LLM settings
+            
     @property
     def action_space(self):
         return self.vla.action_space.name
@@ -108,4 +117,6 @@ class NanoVLA(NanoLLM):
         self.output(stream.actions)
         self.send_stats(summary=[f"{1/time_elapsed:.1f} FPS"])
                
+        if self.yield_time > 0:
+            time.sleep(self.yield_time/1000)
             

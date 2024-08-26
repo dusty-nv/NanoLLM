@@ -55,13 +55,11 @@ class Mux(Plugin):
             return input
                     
     def connect(self, plugin, channel=0, direction='send', **kwargs):
-        print('MUX CONNECT', plugin.name, channel, direction)
         super().connect(plugin, direction=direction, **kwargs)
         if direction == 'send':
             return self
         options = self.parameters['active_input']['options']
         connection_name = self.input_to_str(plugin, channel)
-        print('MUX CONNECTION_NAME', connection_name, options)
         if connection_name not in options:
             options.append(connection_name)
         self.send_inputs()
@@ -79,9 +77,6 @@ class Mux(Plugin):
         return self
     
     def send_inputs(self):
-        print('MUX SEND INPUTS', {
-            'parameters': {'active_input': self.parameters['active_input']}
-        })
         self.send_state(state_dict={
             'parameters': {'active_input': self.parameters['active_input']}
         })

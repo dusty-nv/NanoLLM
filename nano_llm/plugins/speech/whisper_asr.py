@@ -59,6 +59,7 @@ class WhisperASR(AutoASR):
         self.sample_rate = 16000  # what the Whisper models use
         self.last_partial = 0
         self.chunks = []
+        self.cuda_stream = torch.cuda.Stream('cuda:0')
         
         self.add_parameter('partial_transcripts', type=float, default=partial_transcripts)
         
@@ -70,8 +71,9 @@ class WhisperASR(AutoASR):
             self.model = load_trt_model(self.model_name, verbose=True)
             if use_cache:
                 self.ModelCache[self.model_name] = self.model
-                
-        self.model.transcribe(np.zeros(1536, dtype=np.float32)) # warmup
+          
+        with torch.cuda.StreamContext(self.cuda_stream), torch.inference_mode():      
+            self.model.transcribe(np.zeros(1536, dtype=np.float32)) # warmup
     
     @classmethod
     def type_hints(cls):
@@ -85,9 +87,11 @@ class WhisperASR(AutoASR):
             chunks = [chunks]
         
         time_begin = time.perf_counter()    
-        samples = torch.cat(chunks).cuda()
-        transcript = self.model.transcribe(samples)['text'].strip()
         
+        with torch.cuda.StreamContext(self.cuda_stream), torch.inference_mode():
+            samples = torch.cat(chunks).cuda()
+            transcript = self.model.transcribe(samples)['text'].strip()
+            
         time_elapsed = time.perf_counter() - time_begin
         time_audio = len(samples) / self.sample_rate
         rtfx = time_audio / time_elapsed
