@@ -99,9 +99,9 @@ class PiperTTS(AutoTTS):
             self.sample_rate = self.model_sample_rate
             
         self._voice = voice
-        self._speaker_id_map = self.voices_info[self._voice]['speaker_id_map']
-        
-        if not self._speaker_id_map:
+        try:
+            self._speaker_id_map = self.voices_info[self._voice]['speaker_id_map']
+        except:
             self._speaker_id_map = {'Default': 0}
         
         self._speaker_list = list(self._speaker_id_map.keys())
