@@ -287,11 +287,11 @@ class MLCModel(NanoLLM):
         if isinstance(tokens, torch.Tensor):
             tokens = tokens.numpy()
         
-        if not isinstance(input, tvm.runtime.ndarray.NDArray):
+        if not isinstance(tokens, tvm.runtime.ndarray.NDArray):
             if isinstance(tokens, list):
                 tokens = np.asarray([tokens], dtype=np.int32)
             elif not isinstance(tokens, np.ndarray):
-                raise TypeError(f"NanoLLM.embed_tokens() expects a list, np.ndarray, tvm.ndarray, or torch.Tensor (was {type(input)})")
+                raise TypeError(f"NanoLLM.embed_tokens() expects a list, np.ndarray, tvm.ndarray, or torch.Tensor (was {type(tokens)})")
                 
         if isinstance(tokens, np.ndarray):
             tokens = tvm.nd.array(tokens.astype(np.int32), self.device)
