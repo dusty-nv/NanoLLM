@@ -19,7 +19,6 @@ from pydantic import BaseModel, Field, ValidationError
 import threading
 import time
 
-
 class NodeType(str, Enum):
     """
     Enum for ROS2 object types
@@ -39,7 +38,9 @@ class ROSMessage(BaseModel):
     timer_period: Annotated[Optional[float], Field(description = "the period of the timer, ignored if type is not 'publisher'", default=0, ge=0.0)]
     timer_duration: Annotated[Optional[float], Field(description = "the duration of time that a message will be published, ignored if type is not 'publisher'", default=0, ge=0.0)]
     msg: Annotated[Optional[Union[dict, str]], Field(description = "the message payload for the topic, service request/response, or action goal/result", default=None)]
-
+    tool_called: Annotated[Optional[str], Field(description = "the tool from which an instance of ROSMessage was created", default=None)]
+    time_when_tool_was_called: Annotated[Optional[str], Field(description = "the time when the tool was called", default=None)]
+    
 
 class ROS2Connector(Plugin, Node):
     """super()
@@ -86,7 +87,7 @@ class ROS2Connector(Plugin, Node):
         self.service_clients = {}
         self.action_clients = {}
 
-        # Initialize timer, callback group, and goal handle dictionaries
+        # Initialize timer, callback group
         self.timers_dict = {}
         self.callback_groups = {}
 
@@ -114,6 +115,20 @@ class ROS2Connector(Plugin, Node):
             self.node.get_logger().error(f"Failed to create publisher: {e}")
             return False
 
+    def publish_ros_message(self, ros_msg: Any, msg: ROSMessage) -> bool:
+        """
+        Publish a ROS2 message to a topic.
+        """
+        assert(msg.node_type == NodeType.PUBLISHER)
+        try:
+            publisher = self.pubs.get(msg.name)
+            publisher.publish(ros_msg)
+            self.node.get_logger().info(f"Published message to topic: {msg.name}")
+            return True
+        except Exception as e:
+            self.node.get_logger().error(f"Failed to publish message: {e}")
+            return False
+        
     def timer_callback(self, ros_msg: Any, msg: ROSMessage, start_time: float) -> None:
         """
         Timer callback function for ROS2 publishers.
@@ -151,26 +166,8 @@ class ROS2Connector(Plugin, Node):
         received by subscriber and JSON dump to output.
         """
         json_msg = self.ros_msg_to_json(msg)
-        # replace payload of original message with received message
-        ros_msg.msg = json_msg
-        # convert ROS2Message to JSON dict
-        out_msg = ros_msg.model_dump()
-        self.output(out_msg)
-
-    def publish_ros_message(self, ros_msg: Any, msg: ROSMessage) -> bool:
-        """
-        Publish a ROS2 message to a topic.
-        """
-        assert(msg.node_type == NodeType.PUBLISHER)
-        try:
-            publisher = self.pubs.get(msg.name)
-            publisher.publish(ros_msg)
-            self.node.get_logger().info(f"Published message to topic: {msg.name}")
-            return True
-        except Exception as e:
-            self.node.get_logger().error(f"Failed to publish message: {e}")
-            return False
-
+        self.output(json_msg)
+        
     def create_service_client(self, msg: ROSMessage, msg_class) -> bool:
         """
         Create a ROS2 service client.
@@ -189,6 +186,7 @@ class ROS2Connector(Plugin, Node):
         """
         assert(msg.node_type == NodeType.SERVICE_CLIENT)
         request_msg = msg_class.Request()
+        self.node.get_logger().info(f"msg is: {msg.msg}")
         if msg.msg is not None:
             set_message.set_message_fields(request_msg, msg.msg)
         future = self.service_clients[msg.name]['client'].call_async(request_msg)
@@ -207,7 +205,7 @@ class ROS2Connector(Plugin, Node):
             self.output(out_msg)
 
             self.node.get_logger().info(f"Service call succeeded; this is the result: {out_msg}")
-            self.node.service_clients[msg.name]['is_processing'] = False
+            self.service_clients[msg.name]['is_processing'] = False
         except Exception as e:
             self.node.get_logger().error(f'Service call failed: {str(e)}')
 
@@ -246,13 +244,14 @@ class ROS2Connector(Plugin, Node):
             _get_result_future = goal_handle.get_result_async()
             _get_result_future.add_done_callback(get_result_callback)
 
-        # feedback callback for action client - varies depending on action type
-        # process for handling this is still under consideration
         def feedback_callback(feedback):
-            """
-            TODO: (Might vary across Plugin needs)
-            """
-            pass
+            feedback_dict = {}
+            for field in feedback.__slots__:
+                value = getattr(feedback, field)
+                feedback_dict[field] = value
+            msg.msg = feedback_dict
+            out_msg = msg.model_dump()
+            self.output(out_msg)         
 
         def get_result_callback(future):
             """
@@ -273,9 +272,11 @@ class ROS2Connector(Plugin, Node):
                 'result': self.ros_msg_to_json(results.result)
             }
 
+            msg.msg = results_json
+            out_msg = msg.model_dump()
             self.node.get_logger().info("Outputting results!")
             self.action_clients[msg.name]['is_processing'] = False
-            self.output(results_json)
+            self.output(out_msg)
 
         def send_goal():
             """
@@ -287,8 +288,7 @@ class ROS2Connector(Plugin, Node):
             _send_goal_future = action_client.send_goal_async(goal_msg,
                                                               feedback_callback=feedback_callback)
             _send_goal_future.add_done_callback(goal_response_callback)
-
-        # This will return a goal handle that can be used to cancel the goal
+            
         action_goal_handle = send_goal()
         try:
             pass
@@ -319,7 +319,6 @@ class ROS2Connector(Plugin, Node):
             msg_type, msg_class, _ = self.get_ros_message_type(msg)
             if msg.node_type not in (NodeType.ACTION_CLIENT, NodeType.SERVICE_CLIENT):
                 ros_msg = self.json_to_ros_msg(msg, msg_class)
-            # Convert JSON message payload to ROS2 message for any publishing
 
         node_type = msg.node_type
 
@@ -330,6 +329,7 @@ class ROS2Connector(Plugin, Node):
                     self.create_publisher(msg, msg_class)
                     # If the timer period is 0, publish the message immediately and only once
                     if msg.timer_period == 0:
+                        # publish the message just once
                         self.publish_ros_message(msg)
                         self.node.get_logger().info(f"Published message to topic: {msg.name}")
                 # if the publisher already exists and the message is not a string, we will publish without creating new publisher
@@ -343,6 +343,8 @@ class ROS2Connector(Plugin, Node):
                             if self.timers_dict[msg.name]["is_publishing"]:
                                 self.node.get_logger().warn(f"Publisher is already publishing to topic: {msg.name}. Overwriting current publisher.")
                             self.timers_dict[msg.name]["timer"].destroy()
+                        
+                        # create new timer with the new start_time, publishing is true until timer_duration is reached
                         self.timers_dict[msg.name] = {
                             "timer": self.node.create_timer(msg.timer_period, 
                                                             partial(self.timer_callback, ros_msg=ros_msg, 
@@ -350,13 +352,12 @@ class ROS2Connector(Plugin, Node):
                                                             callback_group=self.callback_groups[msg.name]),
                             "is_publishing": True
                         }
-
-                # If the message is a string and message == 'destroy', we destroy the publisher
+                
                 elif isinstance(msg.msg, str) and msg.msg.lower() == 'destroy':
                     if self.timers_dict.get(msg.name):
                         if self.timers_dict[msg.name]["is_publishing"]:
                             self.node.get_logger().warn(f"Publisher is publishing to topic: {msg.name}. Stopping publishing and destroying publisher.")
-
+                        
                         # destroy the timer
                         self.timers_dict[msg.name]["timer"].destroy()
                         del self.timers_dict[msg.name]
@@ -368,7 +369,7 @@ class ROS2Connector(Plugin, Node):
                     self.node.get_logger().info(f"Publisher destroyed: {msg.name}")
                     while not rclpy.ok():
                         pass
-
+                
                 else:
                     self.node.get_logger().error(f"Received unknown msg for publisher: {msg.msg}")
 
@@ -380,66 +381,57 @@ class ROS2Connector(Plugin, Node):
                     else:
                         self.node.get_logger().warn(f"Subscriber to {msg.name} already exists.")
 
-                # if msg.msg == "destroy" then we simply destroy the subscriber
+                # if msg.msg == "destroy" then destroy the subscriber
                 elif isinstance(msg.msg, str) and msg.msg.lower() == 'destroy':
                     self.node.destroy_subscription(self.subs[msg.name])
                     del self.subs[msg.name]
                     self.node.get_logger().info(f"Subscriber destroyed: {msg.name}")
 
-                # msg.msg is populated with something other than "destroy"
                 else:
                     self.node.get_logger().error(f"Received unknown msg for subscriber: {msg.msg}")
-
+            
             case NodeType.SERVICE_CLIENT:
-                # if the service client does not exist, we create it and send the service request
                 if not self.service_clients.get(msg.name):
                     self.create_service_client(msg, msg_class)
                     self.send_service_request_async(msg, msg_class)
-
-                # if the service client does exist, we send the service request without redundantly creating/destroying it
+                
                 elif self.service_clients.get(msg.name) and not isinstance(msg.msg, str):
                     if self.service_clients[msg.name]['is_processing']:
                         self.node.get_logger().warn(f"Service client {msg.name} is already processing a request. Please wait until the current process completes.")
                     else:
                         self.send_service_request_async(msg, msg_class)
 
-                # if the message is a string and message == 'destroy', we destroy the service client and any associated overhead
                 elif isinstance(msg.msg, str) and msg.msg.lower() == 'destroy':
 
                     if self.service_clients[msg.name]['is_processing']:
                         self.node.get_logger().warn(f"Service client {msg.name} is currently processing a request. Destroying client anyways and aborting process.")
-
+                    
                     self.node.destroy_client(self.service_clients[msg.name]['client'])
                     del self.service_clients[msg.name]
                     del self.callback_groups[msg.name]
                     self.node.get_logger().info(f"Service client destroyed: {msg.name}")
-
+                
                 else:
                     self.node.get_logger().error(f"Received unknown msg for service client: {msg.msg}")
 
-            # If we are dealing with an action client
             case NodeType.ACTION_CLIENT:
-                # we create an action client if one does not exist for specified action and send goal
                 if not self.action_clients.get(msg.name) and not isinstance(msg.msg, str):
                     self.create_action_client(msg, msg_class)
                     self.action_clients[msg.name]['goal_handle'] = self.send_action_goal(msg, msg_class)
-
-                # if client already exists for action type, don't bother creating another -- just send goal
+                
                 elif self.action_clients.get(msg.name) and not isinstance(msg.msg, str):
                     if self.action_clients[msg.name]['is_processing']:
                         self.node.get_logger().warn(f"Action client {msg.name} is already processing a goal. Please wait until the current process completes.")
                     else:
                         self.action_clients[msg.name]['goal_handle'] = self.send_action_goal(msg, msg_class)
-
-                # cancel the current goal if there is one. If not, do nothing and communicate to the user that there is not a goal to cancel
+                
                 elif isinstance(msg.msg, str) and msg.msg.lower() == 'cancel':
                     if self.action_clients[msg.name]['is_processing']:
                         cancel_future = self.action_clients[msg.name]['goal_handle'].cancel_goal_async()
                         cancel_future.add_done_callback(partial(self.cancel_done_callback, msg))
                     else:
                         self.node.get_logger().warn(f"Action client {msg.name} is not currently processing a goal. Cannot cancel.")
-
-                # we will destroy the action client so long as it is not processing a goal. If goal is being processed, prompt user to cancel and do nothing.
+                
                 elif isinstance(msg.msg, str) and msg.msg.lower() == 'destroy':
                     if self.action_clients[msg.name]['is_processing']:
                         self.node.get_logger().warn(f"Action client {msg.name} is currently processing a goal. You must cancel the goal first or wait for processing to complete.")
@@ -451,7 +443,7 @@ class ROS2Connector(Plugin, Node):
 
                 else:
                     self.node.get_logger().error(f"Received unknown msg for action client: {msg.msg}")
-
+            
             case _:
                 self.node.get_logger().error(f"Invalid ROS2 node type: {msg.node_type}")
 
@@ -470,23 +462,23 @@ class ROS2Connector(Plugin, Node):
                 logging.error(f"Exception occurred during processing of {self.name}\n\n{traceback.format_exc()}")
 
         logging.debug(f"{self.name} plugin stopped (thread {self.native_id})")
-
+    
     # Override the Plugin.remove_plugin method to shutdown and remove the ROS2 node
     def destroy(self):
         """
         Stop a plugin thread's running, and unregister it from the global instances.
-        """
+        """ 
         self.exec.shutdown()
         self.node.destroy_node()
         rclpy.shutdown()
 
         self.stop()
-
+                
         try:
             Plugin.Instances.remove(self)
         except ValueError:
             logging.warning(f"Plugin {getattr(self, 'name', '')} wasn't in global instances list when being deleted")
-
+        
         plugin.destroy()
         del plugin
 
